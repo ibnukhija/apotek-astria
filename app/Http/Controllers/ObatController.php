@@ -8,9 +8,12 @@ use App\Models\Kategori;
 
 class ObatController extends Controller
 {
-    public function index() {
-        $obats = Obat::with('kategori')->get();
-        return view('obat.index', compact('obats'));
+    public function index()
+    {
+        $obats = Obat::with('kategori')->paginate(10);
+        
+        $kategoris = Kategori::all();
+        return view('obat.index', compact('obats', 'kategoris'));
     }
 
     public function store(Request $request) {

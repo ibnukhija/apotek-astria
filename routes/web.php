@@ -10,4 +10,7 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 Route::middleware(['auth', 'cekrole:karyawan'])->group(function () {
     Route::resource('obat', ObatController::class);
+    
+    // Route untuk menambah kategori via AJAX
+    Route::post('/kategori/ajax', [KategoriController::class, 'storeAjax'])->name('kategori.storeAjax');
 });
