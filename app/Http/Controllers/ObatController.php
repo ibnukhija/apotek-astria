@@ -45,7 +45,7 @@ class ObatController extends Controller
         ]);
 
         $obat->update($validateData);
-        return redirect()->route('obat.index')->with('succes', 'Data obat berhasil diperbarui!');
+        return redirect()->route('obat.index')->with('success', 'Data obat berhasil diperbarui!');
     }
 
     public function destroy($id) {
