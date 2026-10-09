@@ -1,0 +1,10 @@
+# Mengabaikan konfigurasi IDE
+.idea/
+.vscode/
+
+# Mengabaikan file sistem operasi
+.DS_Store
+Thumbs.db
+
+# Mengabaikan file kredensial/rahasia
+.env
