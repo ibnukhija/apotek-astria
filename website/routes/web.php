@@ -10,8 +10,10 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 Route::middleware(['auth', 'cekrole:karyawan'])->group(function () {
-    Route::resource('obat', ObatController::class);
-    
-    // Route untuk menambah kategori via AJAX
+    Route::resource('obat', ObatController::class)->only(['index', 'store', 'update', 'destroy']);
+
+    Route::resource('kategori', KategoriController::class)->only(['index', 'store', 'update', 'destroy']);
+
+    // Menambah kategori dari form produk (live search) via AJAX
     Route::post('/kategori/ajax', [KategoriController::class, 'storeAjax'])->name('kategori.storeAjax');
 });
