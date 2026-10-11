@@ -17,7 +17,7 @@ class AuthController extends Controller
             'password' => 'required',
         ]);
 
-        if (Auth::attempt($credentials)) {
+        if (Auth::attempt($credentials + ['status' => 'aktif'])) {
             $request->session()->regenerate();
             return redirect()->intended('/obat'); //jika berhasil akan diarhkan ke hlman kelola produk
         }

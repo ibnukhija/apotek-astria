@@ -2,15 +2,81 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FFFFFF"
-    android:gravity="center"
+    android:background="#F8F9FA"
     android:orientation="vertical">
 
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#FFFFFF"
+        android:elevation="2dp"
+        android:orientation="vertical"
+        android:padding="12dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Kategori"
+            android:textColor="#757575"
+            android:textSize="11sp" />
+
+        <Spinner
+            android:id="@+id/spKategori"
+            android:layout_width="match_parent"
+            android:layout_height="44dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Cari obat"
+            android:textColor="#757575"
+            android:textSize="11sp" />
+
+        <AutoCompleteTextView
+            android:id="@+id/actvCari"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:background="@drawable/bg_edittext"
+            android:hint="Ketik nama obat..."
+            android:inputType="text"
+            android:singleLine="true"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:textSize="13sp" />
+    </LinearLayout>
+
     <TextView
+        android:id="@+id/tvRingkasan"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="12dp"
+        android:text="0 obat"
+        android:textColor="#757575"
+        android:textSize="12sp" />
+
+    <ProgressBar
+        android:id="@+id/progressBar"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Halaman Stok Obat"
-        android:textSize="18sp"
-        android:textColor="#333333" />
+        android:layout_gravity="center"
+        android:visibility="gone" />
 
+    <TextView
+        android:id="@+id/tvEmpty"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginTop="32dp"
+        android:text="Obat tidak ditemukan"
+        android:textColor="#757575"
+        android:visibility="gone" />
+
+    <ListView
+        android:id="@+id/lvStok"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:divider="@null"
+        android:dividerHeight="0dp" />
 </LinearLayout>
