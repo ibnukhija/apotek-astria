@@ -12,7 +12,7 @@ class MainActivity : AppCompatActivity() {
 
         val bottomNav = findViewById<BottomNavigationView>(R.id.bottom_navigation)
 
-        // Tampilkan Beranda sebagai default saat aplikasi dibuka
+        // Memuat fragment pertama saat aplikasi berhasil masuk
         loadFragment(BerandaFragment())
 
         bottomNav.setOnItemSelectedListener { item ->
