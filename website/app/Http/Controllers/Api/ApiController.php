@@ -20,7 +20,7 @@ class ApiController extends Controller
         $transaksiHariIni = Transaksi::whereDate('created_at', $hariIni)->count();
         
         // Obat yang stoknya kurang dari atau sama dengan 10 (menipis)
-        $obatMenipis = Obat::where('stok', '<=', 10)->where('status', 'tersedia')->get();
+        $obatMenipis = Obat::where('stok', '<', 10)->where('status', 'tersedia')->get();
 
         // 5 transaksi terbaru
         $transaksiTerbaru = Transaksi::with('user')->latest()->limit(5)->get();
