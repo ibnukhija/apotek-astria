@@ -1,6 +1,44 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-             android:layout_width="match_parent"
-             android:layout_height="match_parent">
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:paddingVertical="12dp"
+    android:background="?android:attr/selectableItemBackground">
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/tv_kode_trx"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="TRX-0000"
+            android:textColor="#333333"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tv_waktu_kasir"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="00:00 / Nama Kasir"
+            android:textColor="#9E9E9E"
+            android:textSize="12sp"
+            android:layout_marginTop="2dp"/>
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/tv_total_harga"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_vertical"
+        android:text="Rp0"
+        android:textColor="#333333"
+        android:textSize="14sp"
+        android:textStyle="bold" />
+
+</LinearLayout>
