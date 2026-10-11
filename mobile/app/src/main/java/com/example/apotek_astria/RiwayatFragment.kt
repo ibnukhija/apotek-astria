@@ -26,7 +26,7 @@ class RiwayatFragment : Fragment() {
     private lateinit var adapter: RiwayatAdapter
 
     // Gunakan IP Laptop Anda untuk pengetesan lokal
-    private val baseUrl = "http://10.125.116.156:8000/api/riwayat"
+    private val baseUrl = "http://192.168.0.3:8000/api/riwayat"
 
     override fun onCreateView(
         inflater: LayoutInflater,
