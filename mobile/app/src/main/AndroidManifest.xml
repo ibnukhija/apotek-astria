@@ -22,7 +22,9 @@
             android:name=".MainActivity"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
-
+        <activity
+            android:name=".KaryawanActivity"
+            android:exported="false" />
         <!-- LoginActivity diatur sebagai halaman pertama yang terbuka -->
         <activity
             android:name=".LoginActivity"
