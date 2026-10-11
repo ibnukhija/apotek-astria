@@ -217,7 +217,7 @@
                 </div>
                 <div>
                     <label class="block mb-2 text-sm font-semibold">Nama Obat</label>
-                    <input type="text" name="nama_obat" id="f_nama_obat" required placeholder="Contoh: Paracetamol 500mg"
+                    <input type="text" name="nama_obat" id="f_nama_obat" required placeholder="Contoh: nama obat dan dosisnya"
                         class="w-full p-3 border border-border-color rounded-lg text-sm outline-none focus:border-soft-teal">
                 </div>
 
@@ -250,15 +250,27 @@
 
                 <div>
                     <label class="block mb-2 text-sm font-semibold">Harga Beli (Rp)</label>
-                    <input type="number" name="harga_beli" id="f_harga_beli" min="0" required
-                        class="w-full p-3 border border-border-color rounded-lg text-sm outline-none focus:border-soft-teal">
+                    <div class="relative">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-text pointer-events-none">Rp</span>
+                        <input type="text" inputmode="numeric" id="f_harga_beli_tampil" required autocomplete="off"
+                            class="w-full p-3 pl-8 border border-border-color rounded-lg text-sm outline-none focus:border-soft-teal">
+                        {{-- Angka polos yang dikirim ke server (tanpa titik) --}}
+                        <input type="hidden" name="harga_beli" id="f_harga_beli">
+                    </div>
                 </div>
 
                 <div>
                     <label class="block mb-2 text-sm font-semibold">Margin Keuntungan</label>
                     <div class="flex gap-2">
-                        <input type="number" name="margin" id="f_margin" min="0" step="any" required
-                            class="w-full p-3 border border-border-color rounded-lg text-sm outline-none focus:border-soft-teal">
+                        <div class="relative flex-1">
+                            {{-- Nominal: Rp di kiri. Persen: % di kanan --}}
+                            <span id="margin_prefix" class="hidden absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-text pointer-events-none">Rp</span>
+                            <input type="text" inputmode="decimal" id="f_margin_tampil" required autocomplete="off"
+                                class="w-full p-3 pr-10 border border-border-color rounded-lg text-sm outline-none focus:border-soft-teal">
+                            {{-- Angka polos yang dikirim ke server --}}
+                            <input type="hidden" name="margin" id="f_margin">
+                            <span id="margin_suffix" class="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-text pointer-events-none">%</span>
+                        </div>
                         <select name="tipe_margin" id="f_tipe_margin"
                             class="p-3 border border-border-color rounded-lg text-sm outline-none focus:border-soft-teal bg-pure-white cursor-pointer">
                             <option value="persen">Persen</option>
@@ -388,18 +400,63 @@ $('areaFooter').addEventListener('click', (e) => {
 
 /* ---------- FORMAT RUPIAH & HARGA JUAL OTOMATIS ---------- */
 const rupiah = (n) => 'Rp' + Math.round(n).toLocaleString('id-ID');
+const tampilBeli  = $('f_harga_beli_tampil');
+const tampilMargin = $('f_margin_tampil');
 
 function hitungHargaJual() {
+    // Simbol margin: Nominal -> Rp di depan angka, Persen -> % di belakang angka
+    const nominal = $('f_tipe_margin').value === 'nominal';
+    $('margin_suffix').classList.toggle('hidden', nominal);
+    $('margin_prefix').classList.toggle('hidden', !nominal);
+    tampilMargin.classList.toggle('pl-8', nominal);
+    tampilMargin.classList.toggle('pr-10', !nominal);
+
     const beli = parseFloat($('f_harga_beli').value) || 0;
     const margin = parseFloat($('f_margin').value) || 0;
-    const jual = $('f_tipe_margin').value === 'persen'
-        ? Math.round(beli * (1 + margin / 100))
-        : beli + Math.round(margin);
+    const jual = nominal
+        ? beli + Math.round(margin)
+        : Math.round(beli * (1 + margin / 100));
     $('f_harga_jual').value = rupiah(jual);
 }
-['f_harga_beli', 'f_margin', 'f_tipe_margin'].forEach(id => {
-    $(id).addEventListener('input', hitungHargaJual);
-    $(id).addEventListener('change', hitungHargaJual);
+
+/* Harga beli: tampil dengan titik ribuan (8.000), yang dikirim ke server tetap angka polos (8000) */
+function setHargaBeli(angka) {
+    const bersih = String(angka ?? '').replace(/\D/g, '');
+    $('f_harga_beli').value = bersih;
+    tampilBeli.value = bersih ? Number(bersih).toLocaleString('id-ID') : '';
+}
+
+tampilBeli.addEventListener('input', () => {
+    setHargaBeli(tampilBeli.value);
+    hitungHargaJual();
+});
+
+/* Margin: Nominal tampil dengan titik ribuan (20.000), Persen boleh desimal (12,5).
+   Yang dikirim ke server angka polos (20000 atau 12.5) */
+function formatMargin() {
+    if ($('f_tipe_margin').value === 'nominal') {
+        const bersih = tampilMargin.value.replace(/\D/g, '');
+        $('f_margin').value = bersih;
+        tampilMargin.value = bersih ? Number(bersih).toLocaleString('id-ID') : '';
+    } else {
+        let s = tampilMargin.value.replace(/[^\d.,]/g, '').replace(/\./g, ',');
+        const b = s.split(',');
+        s = b[0] + (b.length > 1 ? ',' + b.slice(1).join('') : '');
+        tampilMargin.value = s;
+        $('f_margin').value = s.replace(',', '.');
+    }
+}
+
+tampilMargin.addEventListener('input', () => { formatMargin(); hitungHargaJual(); });
+
+// Ganti Persen <-> Nominal: ubah tampilan angka sesuai tipe baru
+$('f_tipe_margin').addEventListener('change', () => {
+    const v = parseFloat($('f_margin').value);
+    tampilMargin.value = isNaN(v)
+        ? ''
+        : ($('f_tipe_margin').value === 'nominal' ? String(Math.round(v)) : String(v).replace('.', ','));
+    formatMargin();
+    hitungHargaJual();
 });
 
 /* ---------- KODE OBAT OTOMATIS (OBT-xxx, MELANJUTKAN KODE TERAKHIR) ---------- */
@@ -421,9 +478,14 @@ function isiForm(d) {
     $('f_kode_obat').value   = d.kode_obat ?? '';
     $('f_nama_obat').value   = d.nama_obat ?? '';
     $('f_satuan').value      = d.satuan ?? 'Strip';
-    $('f_harga_beli').value  = d.harga_beli ?? '';
-    $('f_margin').value      = d.margin ?? '';
+    setHargaBeli(d.harga_beli ? Math.round(Number(d.harga_beli)) : '');
+    // Tipe margin harus diisi dulu sebelum margin, karena format angka bergantung pada tipe
     $('f_tipe_margin').value = d.tipe_margin ?? 'persen';
+    const m = d.margin ?? '';
+    tampilMargin.value = (m === '' || m === null) ? '' : ($('f_tipe_margin').value === 'nominal'
+        ? String(Math.round(Number(m)))
+        : String(Number(m)).replace('.', ','));
+    formatMargin();
     $('f_stok').value        = d.stok ?? '';
     $('f_status').value      = d.status ?? 'tersedia';
     $('kategori_id_input').value = d.kategori_id ?? '';
@@ -463,7 +525,7 @@ function renderKategori() {
 
     const hasil = k === ''
         ? kategoriData
-        : kategoriData.filter(x => x.nama_kategori.toLowerCase().includes(k));
+        : kategoriData.filter(x => x.nama_kategori.toLowerCase().startsWith(k));
 
     hasil.forEach(x => {
         const li = document.createElement('li');
