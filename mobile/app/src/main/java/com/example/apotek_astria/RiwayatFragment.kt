@@ -117,6 +117,9 @@ class RiwayatFragment : Fragment() {
         val request = JsonObjectRequest(
             Request.Method.GET, url, null,
             { response ->
+                // PENGAMAN: Batalkan proses jika pengguna sudah pindah tab/layar
+                if (!isAdded || _binding == null) return@JsonObjectRequest
+
                 binding.progressBar.visibility = View.GONE
                 transaksiList.clear()
 
@@ -173,8 +176,11 @@ class RiwayatFragment : Fragment() {
                 binding.tvEmpty.visibility = if (transaksiList.isEmpty()) View.VISIBLE else View.GONE
             },
             { error ->
+                // PENGAMAN: Batalkan proses jika pengguna sudah pindah tab/layar
+                if (!isAdded || _binding == null) return@JsonObjectRequest
+
                 binding.progressBar.visibility = View.GONE
-                Toast.makeText(requireContext(), "Gagal memuat riwayat transaksi", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Gagal memuat riwayat transaksi", Toast.LENGTH_SHORT).show()
             }
         )
 
