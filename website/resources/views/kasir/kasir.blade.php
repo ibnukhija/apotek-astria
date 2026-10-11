@@ -97,8 +97,22 @@
             <span class="font-bold">Total Harga</span>
             <span id="totalHarga" class="text-xl font-bold">Rp0</span>
         </div>
-        <button type="button" id="btnBayar"
-            class="w-full mt-4 bg-soft-teal text-white p-3.5 rounded-lg font-bold hover:opacity-90 transition">
+
+        <!-- Input Uang Diterima & Kembalian -->
+        <div class="mt-4 mb-4">
+            <label class="block text-xs font-semibold text-gray-text mb-1 uppercase">Uang Diterima (Rp)</label>
+            <input type="number" id="uang_diterima" min="0" placeholder="0"
+                class="w-full p-2.5 border border-border-color rounded-lg text-sm font-semibold outline-none focus:border-soft-teal"
+                oninput="hitungKembalian()">
+
+            <div class="flex justify-between items-center mt-2 text-sm">
+                <span class="text-gray-text">Kembalian:</span>
+                <span id="kembalian_teks" class="font-bold text-gray-800">Rp0</span>
+            </div>
+        </div>
+
+        <button type="button" id="btn_bayar"
+            class="w-full bg-soft-teal text-white p-3.5 rounded-lg font-bold hover:opacity-90 transition opacity-50 cursor-not-allowed" disabled>
             Bayar
         </button>
     </div>
@@ -174,6 +188,34 @@ $('areaFooter').addEventListener('click', (e) => {
 /* ---------- KERANJANG ---------- */
 const keranjang = {};   // { id: { id, nama, harga, stok, qty } }
 const rupiah = (n) => 'Rp' + Math.round(n).toLocaleString('id-ID');
+let totalBelanja = 0; // Sesuaikan dengan variabel total belanja keranjang Anda
+
+function hitungKembalian() {
+    const inputUang = parseFloat(document.getElementById('uang_diterima').value) || 0;
+    const kembalian = inputUang - totalBelanja;
+    const kembalianEl = document.getElementById('kembalian_teks');
+    const btnBayar = document.getElementById('btn_bayar'); // id tombol bayar
+
+    if (totalBelanja === 0) {
+        kembalianEl.innerText = 'Rp0';
+        kembalianEl.className = 'font-bold text-gray-800';
+        btnBayar.disabled = true;
+        btnBayar.classList.add('opacity-50', 'cursor-not-allowed');
+        return;
+    }
+
+    if (kembalian >= 0 && inputUang >= totalBelanja) {
+        kembalianEl.innerText = 'Rp' + Math.round(kembalian).toLocaleString('id-ID');
+        kembalianEl.className = 'font-bold text-soft-teal';
+        btnBayar.disabled = false;
+        btnBayar.classList.remove('opacity-50', 'cursor-not-allowed');
+    } else {
+        kembalianEl.innerText = 'Uang Kurang (Rp' + Math.abs(Math.round(kembalian)).toLocaleString('id-ID') + ')';
+        kembalianEl.className = 'font-bold text-muted-coral';
+        btnBayar.disabled = true;
+        btnBayar.classList.add('opacity-50', 'cursor-not-allowed');
+    }
+}
 
 function renderKeranjang() {
     const items = Object.values(keranjang);
@@ -182,6 +224,8 @@ function renderKeranjang() {
     if (!items.length) {
         area.innerHTML = '<p class="text-gray-text">Belum ada produk dipilih.</p>';
         $('totalHarga').textContent = 'Rp0';
+        totalBelanja = 0;
+        hitungKembalian();
         return;
     }
 
@@ -201,8 +245,9 @@ function renderKeranjang() {
         </div>
     `).join('');
 
-    const total = items.reduce((s, i) => s + i.harga * i.qty, 0);
-    $('totalHarga').textContent = rupiah(total);
+    totalBelanja = items.reduce((s, i) => s + i.harga * i.qty, 0);
+    $('totalHarga').textContent = rupiah(totalBelanja);
+    hitungKembalian();
 }
 
 function tambahItem(d) {
@@ -237,31 +282,58 @@ $('daftarKeranjang').addEventListener('click', (e) => {
     renderKeranjang();
 });
 
-/* ---------- BAYAR (stok berkurang otomatis) ---------- */
-const urlBayar = "{{ route('kasir.bayar') }}";
+/* ---------- BAYAR (stok berkurang otomatis & transaksi tersimpan) ---------- */
+const urlBayar = "{{ route('kasir.store') }}";
 const csrfToken = "{{ csrf_token() }}";
 
-$('btnBayar').addEventListener('click', async () => {
+const btnBayar = document.getElementById('btn_bayar');
+btnBayar.addEventListener('click', async () => {
     const items = Object.values(keranjang).map(i => ({ obat_id: i.id, jumlah: i.qty }));
     if (!items.length) { alert('Keranjang masih kosong.'); return; }
 
-    const res = await fetch(urlBayar, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'X-CSRF-TOKEN': csrfToken
-        },
-        body: JSON.stringify({ items })
-    });
-    const j = await res.json();
+    const inputUang = parseFloat(document.getElementById('uang_diterima').value) || 0;
+    if (inputUang < totalBelanja) {
+        alert('Nominal uang yang diterima kurang dari total belanja.');
+        return;
+    }
 
-    if (res.ok && j.success) {
-        alert('Pembayaran berhasil. Stok sudah dikurangi.');
-        window.location.reload();
-    } else {
-        const pesan = j.errors?.stok?.[0] || j.message || 'Gagal memproses pembayaran.';
-        alert(pesan);
+    btnBayar.disabled = true;
+    btnBayar.innerText = 'Memproses...';
+
+    try {
+        const res = await fetch(urlBayar, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': csrfToken
+            },
+            body: JSON.stringify({
+                items,
+                total_bayar: inputUang
+            })
+        });
+        const j = await res.json();
+
+        if (res.ok && j.success) {
+            alert('Pembayaran berhasil. Transaksi telah dicatat.');
+            if (j.transaksi_id) {
+                window.open('/kasir/struk/' + j.transaksi_id, '_blank');
+            }
+            window.location.reload();
+        } else {
+            const pesan = j.errors?.stok?.[0] || j.errors?.total_bayar?.[0] || j.message || 'Gagal memproses pembayaran.';
+            alert(pesan);
+            btnBayar.disabled = false;
+            btnBayar.innerText = 'Bayar';
+            hitungKembalian();
+        }
+    } catch (err) {
+        console.error('Gagal memproses pembayaran:', err);
+        alert('Terjadi kesalahan koneksi atau server.');
+        btnBayar.disabled = false;
+        btnBayar.innerText = 'Bayar';
+        hitungKembalian();
     }
 });
 

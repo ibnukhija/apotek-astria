@@ -23,7 +23,10 @@ Route::middleware(['auth', 'cekrole:karyawan'])->group(function () {
 
     // Kasir: cari produk dan filter kategori
     Route::get('/kasir', [KasirController::class, 'index'])->name('kasir.index');
-
-    // Kasir: bayar (kurangi stok otomatis)
     Route::post('/kasir/bayar', [KasirController::class, 'bayar'])->name('kasir.bayar');
+    Route::post('/kasir/transaksi', [KasirController::class, 'store'])->name('kasir.store');
+
+    // Tambahan untuk riwayat & struk Sprint 2
+    Route::get('/kasir/riwayat', [KasirController::class, 'riwayat'])->name('kasir.riwayat');
+    Route::get('/kasir/struk/{id}', [KasirController::class, 'cetakStruk'])->name('kasir.struk');
 });
