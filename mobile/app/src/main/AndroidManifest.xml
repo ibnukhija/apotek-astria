@@ -14,22 +14,25 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Apotekastria">
+        android:theme="@style/Theme.Apotekastria"
+        android:usesCleartextTraffic="true"> <!-- Untuk koneksi HTTP Volley -->
+
+        <!-- MainActivity sekarang bukan lagi launcher -->
         <activity
             android:name=".MainActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+
+        <!-- LoginActivity diatur sebagai halaman pertama yang terbuka -->
+        <activity
+            android:name=".LoginActivity"
             android:exported="true"
-            android:usesCleartextTraffic="true"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity
-            android:name=".LoginActivity"
-            android:exported="false"
-            android:windowSoftInputMode="adjustResize" />
     </application>
 
 </manifest>
