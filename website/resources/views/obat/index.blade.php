@@ -4,7 +4,7 @@
 
 @section('content')
 
-{{-- JUDUL HALAMAN --}}
+{{-- ================= JUDUL HALAMAN ================= --}}
 <div class="flex justify-between items-center mb-5 shrink-0">
     <div>
         <h2 class="m-0 text-2xl font-bold">Kelola Data Produk</h2>
@@ -23,23 +23,24 @@
     </div>
 </div>
 
-@if(session('success'))
+{{-- ================= NOTIFIKASI ================= --}}
+@if (session('success'))
     <div class="bg-[#E8F4F2] text-soft-teal p-4 rounded-lg mb-5 font-semibold border border-soft-teal shrink-0">
         {{ session('success') }}
     </div>
 @endif
 
-@if($errors->any())
+@if ($errors->any())
     <div class="bg-red-50 text-red-600 p-4 rounded-lg mb-5 border border-red-300 shrink-0">
         <ul class="list-disc pl-5 m-0">
-            @foreach($errors->all() as $error)
+            @foreach ($errors->all() as $error)
                 <li>{{ $error }}</li>
             @endforeach
         </ul>
     </div>
 @endif
 
-{{-- KOTAK RINGKASAN --}}
+{{-- ================= KOTAK RINGKASAN ================= --}}
 <div class="grid grid-cols-4 gap-4 mb-5 shrink-0">
     <div class="bg-pure-white border border-border-color rounded-xl p-4 flex items-center gap-4 shadow-sm">
         <div class="w-12 h-12 rounded-xl bg-[#E8F4F2] flex items-center justify-center shrink-0">
@@ -47,7 +48,7 @@
         </div>
         <div>
             <div class="text-sm text-gray-text">Total produk aktif</div>
-            <div><span class="text-3xl font-bold">{{ $ringkasan['total'] }}</span> <span class="text-sm text-gray-text">{{ $ringkasan['kategori'] }} kategori</span></div>
+            <div><span class="text-3xl font-bold">{{ $ringkasan['total'] ?? 0 }}</span> <span class="text-sm text-gray-text">{{ $ringkasan['kategori'] ?? 0 }} kategori</span></div>
         </div>
     </div>
 
@@ -57,7 +58,7 @@
         </div>
         <div>
             <div class="text-sm text-gray-text">Stok cukup</div>
-            <div><span class="text-3xl font-bold">{{ $ringkasan['cukup'] }}</span> <span class="text-sm text-green-700">aman</span></div>
+            <div><span class="text-3xl font-bold">{{ $ringkasan['cukup'] ?? 0 }}</span> <span class="text-sm text-green-700">aman</span></div>
         </div>
     </div>
 
@@ -67,7 +68,7 @@
         </div>
         <div>
             <div class="text-sm text-gray-text">Stok menipis</div>
-            <div><span class="text-3xl font-bold">{{ $ringkasan['menipis'] }}</span> <span class="text-sm text-yellow-700">perlu restok</span></div>
+            <div><span class="text-3xl font-bold">{{ $ringkasan['menipis'] ?? 0 }}</span> <span class="text-sm text-yellow-700">perlu restok</span></div>
         </div>
     </div>
 
@@ -77,15 +78,15 @@
         </div>
         <div>
             <div class="text-sm text-gray-text">Hampir habis</div>
-            <div><span class="text-3xl font-bold">{{ $ringkasan['hampir_habis'] }}</span> <span class="text-sm text-red-700">segera restok</span></div>
+            <div><span class="text-3xl font-bold">{{ $ringkasan['hampir_habis'] ?? 0 }}</span> <span class="text-sm text-red-700">segera restok</span></div>
         </div>
     </div>
 </div>
 
-{{-- TABEL PRODUK --}}
+{{-- ================= AREA KONTEN UTAMA (TABEL & SEARCH) ================= --}}
 <div class="flex-1 min-h-0 bg-pure-white border border-border-color rounded-xl flex flex-col overflow-hidden shadow-sm">
 
-    {{-- Pencarian + filter kategori (dikirim lewat URL agar ikut ke semua halaman) --}}
+    {{-- Pencarian & Filter --}}
     <form method="GET" action="{{ route('obat.index') }}" id="filterForm"
           class="flex gap-4 items-center p-4 border-b border-border-color bg-pure-white shrink-0">
         <div class="flex-1 relative">
@@ -95,10 +96,10 @@
                 class="w-full py-2.5 px-3 pl-9 border border-border-color rounded-lg text-sm outline-none focus:border-soft-teal">
         </div>
 
-        <select name="kategori" onchange="this.form.submit()"
+        <select name="kategori" id="filterKategori"
             class="w-52 py-2.5 px-3 border border-border-color rounded-lg text-sm outline-none focus:border-soft-teal bg-pure-white cursor-pointer">
             <option value="">Semua kategori</option>
-            @foreach($kategoris as $kategori)
+            @foreach ($kategoris as $kategori)
                 <option value="{{ $kategori->id }}" @selected(request('kategori') == $kategori->id)>
                     {{ $kategori->nama_kategori }}
                 </option>
@@ -106,11 +107,12 @@
         </select>
     </form>
 
-    <div class="flex-1 overflow-y-auto">
+    {{-- Tabel Produk (area yang diganti lewat AJAX) --}}
+    <div class="flex-1 overflow-y-auto transition-opacity" id="areaTabel">
         <table class="w-full text-left border-collapse">
             <thead class="sticky top-0 bg-off-white z-10">
                 <tr>
-                    @foreach(['KODE', 'NAMA PRODUK', 'KATEGORI', 'STOK', 'HARGA BELI', 'MARGIN', 'HARGA JUAL'] as $judul)
+                    @foreach (['KODE', 'NAMA PRODUK', 'KATEGORI', 'STOK', 'HARGA BELI', 'MARGIN', 'HARGA JUAL'] as $judul)
                         <th class="p-3 px-5 text-xs text-gray-text font-bold uppercase border-b border-border-color">{{ $judul }}</th>
                     @endforeach
                     <th class="p-3 px-5 text-xs text-gray-text font-bold uppercase border-b border-border-color text-center">AKSI</th>
@@ -118,32 +120,26 @@
             </thead>
 
             <tbody>
-                @forelse($obats as $obat)
-                    @php $stok = $obat->stok_info; @endphp
+                @forelse ($obats as $obat)
                     <tr class="border-b border-border-color hover:bg-off-white transition">
                         <td class="p-4 px-5 text-gray-text text-sm">{{ $obat->kode_obat }}</td>
 
                         <td class="p-4 px-5 text-sm">
                             <strong>{{ $obat->nama_obat }}</strong>
-                            @if($obat->status === 'tidak')
+                            @if ($obat->status === 'tidak')
                                 <span class="ml-1 text-[10px] bg-gray-100 text-gray-text px-2 py-0.5 rounded-full font-semibold">Tidak tersedia</span>
                             @endif
                             <br>
                             <span class="text-xs text-gray-text">{{ $obat->satuan }}</span>
                         </td>
-
                         <td class="p-4 px-5 text-sm">{{ $obat->kategori->nama_kategori ?? '-' }}</td>
 
                         <td class="p-4 px-5 text-sm font-semibold">
-                            <span class="px-2.5 py-1 rounded-full text-xs whitespace-nowrap {{ $stok['kelas'] }}">
-                                {{ $obat->stok }} ({{ $stok['label'] }})
-                            </span>
+                            @php($info = $obat->stok_info)
+                            <span class="{{ $info['kelas'] }} px-2.5 py-1 rounded-full text-xs">{{ $obat->stok }} ({{ $info['label'] }})</span>
                         </td>
-
                         <td class="p-4 px-5 text-sm">Rp{{ number_format($obat->harga_beli, 0, ',', '.') }}</td>
-
                         <td class="p-4 px-5 text-sm">{{ $obat->margin_teks }}</td>
-
                         <td class="p-4 px-5 text-sm font-bold text-soft-teal">Rp{{ number_format($obat->harga_jual, 0, ',', '.') }}</td>
 
                         <td class="p-4 px-5 text-sm text-center whitespace-nowrap">
@@ -177,7 +173,7 @@
                 @empty
                     <tr>
                         <td colspan="8" class="p-10 text-center text-gray-text">
-                            @if(request()->hasAny(['q', 'kategori']))
+                            @if (request()->hasAny(['q', 'kategori']))
                                 Tidak ada produk yang cocok dengan pencarian.
                             @else
                                 Belum ada data produk di apotek.
@@ -189,21 +185,19 @@
         </table>
     </div>
 
-    {{-- KETERANGAN + PAGINATION --}}
-    <div class="p-4 px-5 border-t border-border-color bg-pure-white shrink-0 flex flex-wrap justify-between items-center gap-4">
+    {{-- Keterangan & Pagination (area yang diganti lewat AJAX) --}}
+    <div id="areaFooter" class="p-4 px-5 border-t border-border-color bg-pure-white shrink-0 flex flex-wrap justify-between items-center gap-4">
         <div class="text-sm text-gray-text font-medium">
             Menampilkan {{ $obats->firstItem() ?? 0 }}-{{ $obats->lastItem() ?? 0 }} dari {{ $obats->total() }} produk
             <span class="block text-xs font-normal mt-0.5">
-                Keterangan stok: Cukup ({{ \App\Models\Obat::BATAS_CUKUP }} ke atas),
-                Menipis ({{ \App\Models\Obat::BATAS_HAMPIR_HABIS }}-{{ \App\Models\Obat::BATAS_CUKUP - 1 }}),
-                Hampir habis (kurang dari {{ \App\Models\Obat::BATAS_HAMPIR_HABIS }})
+                Keterangan stok: Cukup (25 ke atas), Menipis (10-24), Hampir habis (kurang dari 10)
             </span>
         </div>
         <div class="pagination-custom">{{ $obats->links() }}</div>
     </div>
 </div>
 
-{{-- MODAL TAMBAH / EDIT PRODUK --}}
+{{-- ================= MODAL TAMBAH / EDIT PRODUK ================= --}}
 <div id="productModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center backdrop-blur-sm">
     <div class="bg-pure-white w-full max-w-xl rounded-xl p-8 shadow-xl max-h-[90vh] overflow-y-auto">
         <h3 id="modalJudul" class="mt-0 text-xl font-bold mb-1">Tambah Data Produk</h3>
@@ -218,27 +212,28 @@
             <div class="grid grid-cols-2 gap-5 mb-6">
                 <div>
                     <label class="block mb-2 text-sm font-semibold">Kode Obat</label>
-                    <input type="text" name="kode_obat" id="f_kode_obat" required
+                    <input type="text" name="kode_obat" id="f_kode_obat" required placeholder="Otomatis"
                         class="w-full p-3 border border-border-color rounded-lg text-sm outline-none focus:border-soft-teal">
                 </div>
                 <div>
                     <label class="block mb-2 text-sm font-semibold">Nama Obat</label>
-                    <input type="text" name="nama_obat" id="f_nama_obat" required
+                    <input type="text" name="nama_obat" id="f_nama_obat" required placeholder="Contoh: Paracetamol 500mg"
                         class="w-full p-3 border border-border-color rounded-lg text-sm outline-none focus:border-soft-teal">
                 </div>
 
-                {{-- KATEGORI: LIVE SEARCH --}}
+                {{-- KATEGORI: LIVE SEARCH COMBOBOX --}}
                 <div class="relative col-span-1" id="kategori-wrapper">
                     <label class="block mb-2 text-sm font-semibold">Kategori</label>
                     <input type="hidden" name="kategori_id" id="kategori_id_input">
-                    <input type="text" id="kategori_search" placeholder="Ketik untuk mencari kategori..." autocomplete="off"
+                    <input type="text" id="kategori_search" placeholder="Ketik untuk mencari kategori..." autocomplete="off" required
                         class="w-full p-3 border border-border-color rounded-lg text-sm outline-none focus:border-soft-teal bg-pure-white">
+
                     <div id="kategori_dropdown"
                         class="hidden absolute z-50 w-full mt-1 bg-pure-white border border-border-color rounded-lg shadow-lg overflow-hidden">
                         <ul id="kategori_list" class="max-h-40 overflow-y-auto m-0 p-0 list-none"></ul>
                         <div id="kategori_tambah"></div>
                         <div class="px-3 py-2 border-t border-border-color bg-off-white text-[11px] text-gray-text">
-                            Pencarian dari awalan huruf. Penulisan otomatis: huruf awal besar, sisanya kecil.
+                            Pencarian dari awalan huruf. Penulisan otomatis disesuaikan.
                         </div>
                     </div>
                 </div>
@@ -308,27 +303,90 @@
     </div>
 </div>
 
+{{-- ================= CSS ================= --}}
 <style>
-.pagination-custom nav div.hidden.sm\:flex-1 > div:first-child { display: none !important; }
-.pagination-custom nav div.hidden.sm\:flex-1 > div:last-child { margin-left: auto; }
+    /* Merapikan Pagination Tailwind Bawaan Laravel */
+    .pagination-custom nav div.hidden.sm\:flex-1 > div:first-child { display: none !important; }
+    .pagination-custom nav div.hidden.sm\:flex-1 > div:last-child { margin-left: auto; }
 </style>
 
+{{-- ================= JAVASCRIPT ================= --}}
 <script>
 const kategoriData = @json($kategoris->map(fn ($k) => ['id' => $k->id, 'nama_kategori' => $k->nama_kategori])->values());
 const urlObat = "{{ url('/obat') }}";
 const urlTambahKategori = "{{ route('kategori.storeAjax') }}";
+const urlGenerateKode = "{{ url('/obat/generate-kode') }}";
 const csrf = "{{ csrf_token() }}";
 
 const $ = (id) => document.getElementById(id);
 
-/* ---------- PENCARIAN PRODUK (otomatis kirim setelah berhenti mengetik) ---------- */
-let timerCari;
-$('searchProduct').addEventListener('input', function () {
+/* ---------- PENCARIAN & FILTER PRODUK (AJAX, TANPA RELOAD) ---------- */
+const formFilter  = $('filterForm');
+const searchInput = $('searchProduct');
+let timerCari, kontrolCari;
+
+function buatUrl() {
+    const params = new URLSearchParams();
+    new FormData(formFilter).forEach((v, k) => { if (v !== '') params.append(k, v); });
+    const qs = params.toString();
+    return formFilter.action + (qs ? '?' + qs : '');
+}
+
+async function muatTabel(url) {
+    kontrolCari?.abort();                    // batalkan request lama yang belum selesai
+    const kontrol = kontrolCari = new AbortController();
+    const area = $('areaTabel');
+    area.classList.add('opacity-50');
+
+    try {
+        const res = await fetch(url, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            signal: kontrol.signal
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+
+        const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
+        const tabelBaru  = doc.getElementById('areaTabel');
+        const footerBaru = doc.getElementById('areaFooter');
+
+        // Kalau bukan halaman yang diharapkan (misal sesi habis -> redirect login), muat biasa
+        if (!tabelBaru || !footerBaru) { window.location.href = url; return; }
+
+        $('areaTabel').innerHTML  = tabelBaru.innerHTML;
+        $('areaFooter').innerHTML = footerBaru.innerHTML;
+        history.replaceState(null, '', url);  // URL ikut berubah, bisa di-refresh/dibagikan
+    } catch (err) {
+        if (err.name !== 'AbortError') console.error('Gagal memuat tabel:', err);
+    } finally {
+        if (kontrolCari === kontrol) area.classList.remove('opacity-50');
+    }
+}
+
+// Ketik -> tunggu 300 ms -> ambil data
+searchInput.addEventListener('input', () => {
     clearTimeout(timerCari);
-    timerCari = setTimeout(() => $('filterForm').submit(), 450);
+    timerCari = setTimeout(() => muatTabel(buatUrl()), 300);
 });
 
-/* ---------- FORMAT & HARGA JUAL OTOMATIS ---------- */
+// Ganti kategori -> langsung ambil data
+$('filterKategori').addEventListener('change', () => muatTabel(buatUrl()));
+
+// Tekan Enter -> jangan reload, pakai cara yang sama
+formFilter.addEventListener('submit', (e) => {
+    e.preventDefault();
+    clearTimeout(timerCari);
+    muatTabel(buatUrl());
+});
+
+// Klik nomor halaman pagination -> juga tanpa reload
+$('areaFooter').addEventListener('click', (e) => {
+    const a = e.target.closest('a[href]');
+    if (!a) return;
+    e.preventDefault();
+    muatTabel(a.href);
+});
+
+/* ---------- FORMAT RUPIAH & HARGA JUAL OTOMATIS ---------- */
 const rupiah = (n) => 'Rp' + Math.round(n).toLocaleString('id-ID');
 
 function hitungHargaJual() {
@@ -344,7 +402,21 @@ function hitungHargaJual() {
     $(id).addEventListener('change', hitungHargaJual);
 });
 
-/* ---------- MODAL TAMBAH / EDIT ---------- */
+/* ---------- KODE OBAT OTOMATIS (OBT-xxx, MELANJUTKAN KODE TERAKHIR) ---------- */
+function isiKodeBaru() {
+    const inputKode = $('f_kode_obat');
+    inputKode.value = 'Memuat kode...';
+
+    fetch(urlGenerateKode, { headers: { 'Accept': 'application/json' } })
+        .then(res => res.json())
+        .then(data => { inputKode.value = data.kode || ''; })
+        .catch(err => {
+            console.error('Gagal memuat kode otomatis:', err);
+            inputKode.value = '';
+        });
+}
+
+/* ---------- MODAL TAMBAH / EDIT PRODUK ---------- */
 function isiForm(d) {
     $('f_kode_obat').value   = d.kode_obat ?? '';
     $('f_nama_obat').value   = d.nama_obat ?? '';
@@ -369,6 +441,8 @@ function bukaModal(mode, data = {}) {
     $('formMethod').disabled = !edit;
     $('formMethod').value = 'PUT';
     isiForm(edit ? data : {});
+    // Mode tambah: ambil kode berikutnya (kecuali form dibuka ulang dengan kode lama setelah validasi gagal)
+    if (!edit && !data.kode_obat) isiKodeBaru();
     $('productModal').classList.remove('hidden');
 }
 
@@ -377,52 +451,33 @@ function tutupModal() {
     $('kategori_dropdown').classList.add('hidden');
 }
 
-/* ---------- KATEGORI: LIVE SEARCH (awalan huruf, penulisan dirapikan) ---------- */
-const kunci  = (s) => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
-const rapikan = (s) => s.trim().replace(/\s+/g, ' ').toLowerCase()
-    .replace(/(^|[\s-])(\p{L})/gu, (m, a, b) => a + b.toUpperCase());
-
-// Pisahkan nama menjadi bagian yang cocok dengan ketikan (disorot) dan sisanya.
-function pisahSorot(nama, panjangKunci) {
-    let hitung = 0, i = 0;
-    while (i < nama.length && hitung < panjangKunci) {
-        if (/[\p{L}\p{N}]/u.test(nama[i])) hitung++;
-        i++;
-    }
-    return [nama.slice(0, i), nama.slice(i)];
-}
-
+/* ---------- KATEGORI COMBOBOX (LIVE SEARCH & ADD) ---------- */
 const kInput = $('kategori_search'), kHidden = $('kategori_id_input');
 const kDropdown = $('kategori_dropdown'), kList = $('kategori_list'), kTambah = $('kategori_tambah');
 
 function renderKategori() {
     const ketikan = kInput.value;
-    const k = kunci(ketikan);
+    const k = ketikan.toLowerCase().trim();
     kList.innerHTML = '';
     kTambah.innerHTML = '';
 
     const hasil = k === ''
         ? kategoriData
-        : kategoriData.filter(x => kunci(x.nama_kategori).startsWith(k));
+        : kategoriData.filter(x => x.nama_kategori.toLowerCase().includes(k));
 
     hasil.forEach(x => {
         const li = document.createElement('li');
-        li.className = 'px-3 py-2.5 text-sm cursor-pointer hover:bg-[#E8F4F2] transition';
-        const [cocok, sisa] = pisahSorot(x.nama_kategori, k.length);
-        const b = document.createElement('b');
-        b.className = 'text-soft-teal';
-        b.textContent = cocok;
-        li.append(b, document.createTextNode(sisa));
-        li.onmousedown = (e) => { e.preventDefault(); pilihKategori(x.id, x.nama_kategori); };
+        li.className = 'px-3 py-2.5 text-sm cursor-pointer hover:bg-[#E8F4F2] transition text-dark-slate';
+        li.textContent = x.nama_kategori;
+        li.onmousedown = (e) => { e.preventDefault(); selectKategori(x.id, x.nama_kategori); };
         kList.appendChild(li);
     });
 
-    // Tawarkan kategori baru hanya jika belum ada yang sama persis (selalu tampil di bawah daftar).
-    if (k !== '' && !kategoriData.some(x => kunci(x.nama_kategori) === k)) {
+    if (k !== '' && !kategoriData.some(x => x.nama_kategori.toLowerCase() === k)) {
         const div = document.createElement('div');
         div.className = 'px-3 py-2.5 text-sm cursor-pointer font-bold text-soft-teal border-t border-border-color hover:bg-[#E8F4F2]';
-        div.textContent = '+ Tambah kategori baru "' + rapikan(ketikan) + '"';
-        div.onmousedown = (e) => { e.preventDefault(); tambahKategoriBaru(rapikan(ketikan)); };
+        div.textContent = '+ Tambah kategori baru "' + ketikan + '"';
+        div.onmousedown = (e) => { e.preventDefault(); tambahKategoriBaru(ketikan); };
         kTambah.appendChild(div);
     }
 
@@ -431,7 +486,7 @@ function renderKategori() {
     }
 }
 
-function pilihKategori(id, nama) {
+function selectKategori(id, nama) {
     kHidden.value = id;
     kInput.value = nama;
     kDropdown.classList.add('hidden');
@@ -442,7 +497,7 @@ kInput.addEventListener('input', () => { kHidden.value = ''; renderKategori(); k
 document.addEventListener('click', (e) => {
     if (!$('kategori-wrapper').contains(e.target)) {
         kDropdown.classList.add('hidden');
-        if (!kHidden.value) kInput.value = '';   // belum memilih kategori yang sah
+        if (!kHidden.value) kInput.value = '';
     }
 });
 
@@ -456,7 +511,7 @@ function tambahKategoriBaru(nama) {
     .then(({ ok, j }) => {
         if (ok && j.success) {
             kategoriData.push(j.data);
-            pilihKategori(j.data.id, j.data.nama_kategori);
+            selectKategori(j.data.id, j.data.nama_kategori);
         } else {
             alert(j.message || 'Gagal menambahkan kategori.');
         }
@@ -464,8 +519,8 @@ function tambahKategoriBaru(nama) {
     .catch(() => alert('Terjadi kesalahan sistem saat menyimpan kategori.'));
 }
 
-/* ---------- BUKA KEMBALI FORM JIKA VALIDASI GAGAL ---------- */
-@if($errors->any() && old('_mode'))
+/* ---------- KEMBALIKAN DATA FORM JIKA VALIDASI ERROR ---------- */
+@if ($errors->any() && old('_mode'))
     bukaModal(@json(old('_mode')), {
         id: @json(old('_id')),
         kode_obat: @json(old('kode_obat')),

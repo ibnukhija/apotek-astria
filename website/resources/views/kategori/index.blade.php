@@ -10,22 +10,28 @@
         <span class="text-gray-text text-sm">Pengelompokan obat tanpa data ganda</span>
     </div>
 
-    <button type="button" onclick="document.getElementById('nama_kategori').focus()"
-        class="bg-soft-teal text-white px-5 py-2.5 border-none rounded-lg font-bold shadow-sm cursor-pointer hover:opacity-90 transition">
-        + Tambah Kategori
-    </button>
+    <div class="flex items-center gap-4">
+        <span class="text-gray-text text-sm font-medium">
+                {{ \Carbon\Carbon::now()->locale('id')->translatedFormat('d F Y') }}
+            </span>
+            
+            <button type="button" onclick="document.getElementById('nama_kategori').focus()"
+                class="bg-soft-teal text-white px-5 py-2.5 border-none rounded-lg font-bold shadow-sm cursor-pointer hover:opacity-90 transition">
+                + Tambah Kategori
+        </button>
+    </div>
 </div>
 
 @if(session('success'))
-    <div class="bg-[#E8F4F2] text-soft-teal p-4 rounded-lg mb-5 font-semibold border border-soft-teal shrink-0">
-        {{ session('success') }}
-    </div>
+<div class="bg-[#E8F4F2] text-soft-teal p-4 rounded-lg mb-5 font-semibold border border-soft-teal shrink-0">
+    {{ session('success') }}
+</div>
 @endif
 
 @if($errors->has('hapus') || ($errors->has('nama_kategori') && old('_mode') === 'edit'))
-    <div class="bg-red-50 text-red-600 p-4 rounded-lg mb-5 border border-red-300 shrink-0">
-        {{ $errors->first('hapus') ?: $errors->first('nama_kategori') }}
-    </div>
+<div class="bg-red-50 text-red-600 p-4 rounded-lg mb-5 border border-red-300 shrink-0">
+    {{ $errors->first('hapus') ?: $errors->first('nama_kategori') }}
+</div>
 @endif
 
 <div class="flex-1 min-h-0 flex gap-5 items-start">
@@ -42,29 +48,31 @@
             </thead>
             <tbody>
                 @forelse($kategoris as $kategori)
-                    <tr class="border-b border-border-color hover:bg-off-white transition">
-                        <td class="p-4 px-5 text-sm"><strong>{{ $kategori->nama_kategori }}</strong></td>
-                        <td class="p-4 px-5 text-sm">{{ $kategori->obat_count }} obat</td>
-                        <td class="p-4 px-5 text-sm">
-                            <button type="button"
-                                onclick="bukaEdit({{ $kategori->id }}, @js($kategori->nama_kategori))"
-                                class="text-soft-teal font-semibold mr-3 hover:underline">Edit</button>
+                <tr class="border-b border-border-color hover:bg-off-white transition">
+                    <td class="p-4 px-5 text-sm"><strong>{{ $kategori->nama_kategori }}</strong></td>
+                    <td class="p-4 px-5 text-sm">{{ $kategori->obat_count }} obat</td>
+                    <td class="p-4 px-5 text-sm">
+                        <button type="button"
+                            onclick="bukaEdit({{ $kategori->id }}, @js($kategori->nama_kategori))"
+                            class="text-soft-teal font-semibold mr-3 hover:underline">Edit</button>
 
-                            @if($kategori->obat_count > 0)
-                                <span class="text-gray-400 font-semibold cursor-not-allowed">Hapus</span>
-                                <span class="block text-xs text-gray-text">tidak dapat dihapus, masih dipakai obat</span>
-                            @else
-                                <form action="{{ route('kategori.destroy', $kategori->id) }}" method="POST" class="inline-block"
-                                      onsubmit="return confirm('Hapus kategori {{ addslashes($kategori->nama_kategori) }}?');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="text-muted-coral font-semibold hover:underline">Hapus</button>
-                                </form>
-                            @endif
-                        </td>
-                    </tr>
+                        @if($kategori->obat_count > 0)
+                        <span class="text-gray-400 font-semibold cursor-not-allowed">Hapus</span>
+                        <span class="block text-xs text-gray-text">tidak dapat dihapus, masih dipakai obat</span>
+                        @else
+                        <form action="{{ route('kategori.destroy', $kategori->id) }}" method="POST" class="inline-block"
+                            onsubmit="return confirm('Hapus kategori {{ addslashes($kategori->nama_kategori) }}?');">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="text-muted-coral font-semibold hover:underline">Hapus</button>
+                        </form>
+                        @endif
+                    </td>
+                </tr>
                 @empty
-                    <tr><td colspan="3" class="p-10 text-center text-gray-text">Belum ada kategori.</td></tr>
+                <tr>
+                    <td colspan="3" class="p-10 text-center text-gray-text">Belum ada kategori.</td>
+                </tr>
                 @endforelse
             </tbody>
         </table>
@@ -83,9 +91,9 @@
                 class="w-full p-3 border rounded-lg text-sm outline-none focus:border-soft-teal {{ $errors->has('nama_kategori') && old('_mode') === 'add' ? 'border-muted-coral' : 'border-border-color' }}">
 
             @if($errors->has('nama_kategori') && old('_mode') === 'add')
-                <div class="bg-[#FDE4DB] text-[#C0392B] rounded-lg p-2.5 text-sm mt-3">
-                    {{ $errors->first('nama_kategori') }}
-                </div>
+            <div class="bg-[#FDE4DB] text-[#C0392B] rounded-lg p-2.5 text-sm mt-3">
+                {{ $errors->first('nama_kategori') }}
+            </div>
             @endif
 
             <p class="text-xs text-gray-text mt-3 mb-4">
@@ -122,10 +130,10 @@
 </div>
 
 <script>
-function bukaEdit(id, nama) {
-    document.getElementById('edit_nama').value = nama;
-    document.getElementById('editForm').action = "{{ url('/kategori') }}/" + id;
-    document.getElementById('editModal').classList.remove('hidden');
-}
+    function bukaEdit(id, nama) {
+        document.getElementById('edit_nama').value = nama;
+        document.getElementById('editForm').action = "{{ url('/kategori') }}/" + id;
+        document.getElementById('editModal').classList.remove('hidden');
+    }
 </script>
 @endsection

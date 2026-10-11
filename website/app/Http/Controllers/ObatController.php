@@ -16,10 +16,10 @@ class ObatController extends Controller
                 $kata = trim($request->q);
                 $query->where(function ($w) use ($kata) {
                     $w->where('nama_obat', 'like', "%{$kata}%")
-                      ->orWhere('kode_obat', 'like', "%{$kata}%");
+                        ->orWhere('kode_obat', 'like', "%{$kata}%");
                 });
             })
-            ->when($request->filled('kategori'), fn ($query) => $query->where('kategori_id', $request->kategori))
+            ->when($request->filled('kategori'), fn($query) => $query->where('kategori_id', $request->kategori))
             ->orderBy('kode_obat')
             ->paginate(10)
             ->withQueryString();
@@ -33,7 +33,7 @@ class ObatController extends Controller
             'kategori'     => $kategoris->count(),
             'cukup'        => (clone $aktif)->where('stok', '>=', Obat::BATAS_CUKUP)->count(),
             'menipis'      => (clone $aktif)->where('stok', '>=', Obat::BATAS_HAMPIR_HABIS)
-                                            ->where('stok', '<', Obat::BATAS_CUKUP)->count(),
+                ->where('stok', '<', Obat::BATAS_CUKUP)->count(),
             'hampir_habis' => (clone $aktif)->where('stok', '<', Obat::BATAS_HAMPIR_HABIS)->count(),
         ];
 
@@ -66,6 +66,12 @@ class ObatController extends Controller
         return redirect()->route('obat.index')->with('success', 'Data obat berhasil dihapus!');
     }
 
+    // Generate Kode Obat Otomatis via AJAX (Berdasarkan Nama Obat)
+    public function generateKode()
+    {
+        return response()->json(['kode' => Obat::buatKode()]);
+    }
+        
     /**
      * Validasi input dan hitung harga jual otomatis di server
      * (nilai harga_jual dari browser tidak dipercaya).

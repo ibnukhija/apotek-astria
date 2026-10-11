@@ -16,4 +16,7 @@ Route::middleware(['auth', 'cekrole:karyawan'])->group(function () {
 
     // Menambah kategori dari form produk (live search) via AJAX
     Route::post('/kategori/ajax', [KategoriController::class, 'storeAjax'])->name('kategori.storeAjax');
+
+    // Generate Kode Obat via AJAX
+    Route::get('/obat/generate-kode', [ObatController::class, 'generateKode'])->name('obat.generateKode');
 });

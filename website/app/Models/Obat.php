@@ -13,6 +13,9 @@ class Obat extends Model
     /** Stok mulai angka ini = "Cukup" (hijau). Di antaranya = "Menipis" (kuning). */
     public const BATAS_CUKUP = 25;
 
+    // Awalan Kode Obat
+    public const PREFIX_KODE = 'OBT';
+
     protected $table = 'obat';
 
     protected $guarded = ['id'];
@@ -43,6 +46,19 @@ class Obat extends Model
         return $hargaBeli + (int) round($margin);
     }
 
+    // Generate Kode Obat Otomatis
+    public static function buatKode(): string
+    {
+        $awal = self::PREFIX_KODE . '-';
+
+        $urutTerbesar = static::where('kode_obat', 'like', $awal . '%')
+            ->pluck('kode_obat')
+            ->map(fn ($kode) => (int) substr($kode, strlen($awal)))
+            ->max() ?? 0;
+
+        return sprintf('%s%03d', $awal, $urutTerbesar + 1);
+    }
+
     /**
      * Label dan warna status stok.
      *   stok < 10        => Hampir habis (merah)
@@ -59,7 +75,9 @@ class Obat extends Model
             return ['label' => 'Menipis', 'kelas' => 'bg-yellow-100 text-yellow-700'];
         }
 
-        return ['label' => 'Cukup', 'kelas' => 'bg-green-100 text-green-700'];
+        if ($stok >= self::BATAS_CUKUP) {
+            return ['label' => 'Cukup', 'kelas' => 'bg-green-100 text-green-700'];
+        }
     }
 
     public function getStokInfoAttribute(): array
