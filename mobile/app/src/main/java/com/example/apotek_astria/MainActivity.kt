@@ -1,5 +1,6 @@
 package com.example.apotek_astria
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.widget.ImageView
@@ -20,17 +21,17 @@ class MainActivity : AppCompatActivity() {
         btnLogout = findViewById(R.id.btn_logout)
         val bottomNav = findViewById<BottomNavigationView>(R.id.bottom_navigation)
 
-        // Logout click listener
         btnLogout.setOnClickListener {
-            // TODO: Tambahkan fungsi hapus session/token sebelum pindah ke Login
+            // Hapus session login di SharedPreferences
+            val sharedPref = getSharedPreferences("SesiApotek", Context.MODE_PRIVATE)
+            sharedPref.edit().clear().apply()
+
             val intent = Intent(this, LoginActivity::class.java)
             startActivity(intent)
             finish()
         }
-
         // Memuat fragment pertama saat aplikasi berhasil masuk
         loadFragment(BerandaFragment(), "Beranda")
-
         bottomNav.setOnItemSelectedListener { item ->
             var selectedFragment: Fragment? = null
             var title = ""

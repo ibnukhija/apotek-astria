@@ -29,18 +29,17 @@ class BerandaFragment : Fragment() {
         return binding.root
     }
 
+    //
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
         // Tampilkan loading, sembunyikan layout data dulu
         binding.pbLoading.visibility = View.VISIBLE
-
         // Panggil fungsi untuk mengambil data dari Laravel
         loadDashboardData()
     }
 
     private fun loadDashboardData() {
-        // GANTI IP DI BAWAH INI SESUAI DENGAN IP WIFI LAPTOP TEMAN ANDA / ANDA
+        // GANTI IP SESUAI DENGAN IP WIFI LAPTOP
         val url = "http://192.168.0.3:8000/api/dashboard"
 
         val request = JsonObjectRequest(Request.Method.GET, url, null,
