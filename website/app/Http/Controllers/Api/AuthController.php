@@ -33,6 +33,6 @@ class AuthController extends Controller
         return response()->json([
             'success' => false, 
             'message' => 'Username/Password salah atau bukan Owner'
-        ], 401);
+        ], 200);
     }
 }

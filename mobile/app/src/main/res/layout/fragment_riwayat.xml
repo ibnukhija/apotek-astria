@@ -1,16 +1,142 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    xmlns:tools="http://schemas.android.com/tools"
-    tools:context=".RiwayatFragment">
+    android:orientation="vertical"
+    android:background="#F8F9FA">
 
-    <TextView
+    <!-- Header Atas -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#208B7A"
+        android:padding="16dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Riwayat &amp; Laporan"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <!-- Filter Tanggal (DatePickerDialog) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="12dp"
+        android:background="#FFFFFF"
+        android:elevation="2dp">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="6dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Dari"
+                android:textColor="#757575"
+                android:textSize="11sp" />
+
+            <EditText
+                android:id="@+id/etTanggalMulai"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:background="@drawable/bg_edittext"
+                android:focusable="false"
+                android:clickable="true"
+                android:hint="Pilih tanggal"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="6dp"
+            android:layout_marginEnd="6dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Sampai"
+                android:textColor="#757575"
+                android:textSize="11sp" />
+
+            <EditText
+                android:id="@+id/etTanggalSelesai"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:background="@drawable/bg_edittext"
+                android:focusable="false"
+                android:clickable="true"
+                android:hint="Pilih tanggal"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/btnFilter"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:layout_gravity="bottom"
+            android:text="Filter"
+            android:backgroundTint="#208B7A"
+            android:textColor="#FFFFFF"
+            android:textSize="12sp"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp" />
+
+        <Button
+            android:id="@+id/btnReset"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:layout_gravity="bottom"
+            android:layout_marginStart="4dp"
+            android:text="Reset"
+            android:backgroundTint="#757575"
+            android:textColor="#FFFFFF"
+            android:textSize="12sp"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp" />
+    </LinearLayout>
+
+    <!-- Indikator Loading & Teks Kosong -->
+    <ProgressBar
+        android:id="@+id/progressBar"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Riwayat"
-        android:textSize="24sp"
-        android:textStyle="bold"
-        android:layout_gravity="center" />
+        android:layout_gravity="center"
+        android:layout_marginTop="24dp"
+        android:visibility="gone" />
 
-</FrameLayout>
+    <TextView
+        android:id="@+id/tvEmpty"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginTop="32dp"
+        android:text="Tidak ada data transaksi"
+        android:textColor="#757575"
+        android:visibility="gone" />
+
+    <!-- Widget ListView Sesuai Soal PML & Backlog PTT -->
+    <ListView
+        android:id="@+id/lvRiwayat"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:divider="@null"
+        android:dividerHeight="0dp" />
+
+</LinearLayout>
