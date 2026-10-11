@@ -56,7 +56,7 @@ class LoginActivity : AppCompatActivity() {
     }
 
     private fun prosesLogin(user: String, pass: String) {
-        val url = "http://192.168.0.3:8000/api/login-mobile"
+        val url = com.example.apotek_astria.network.ApiConfig.URL_LOGIN
 
         val jsonBody = JSONObject()
         jsonBody.put("username", user)

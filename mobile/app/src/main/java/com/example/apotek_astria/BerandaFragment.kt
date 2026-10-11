@@ -32,15 +32,20 @@ class BerandaFragment : Fragment() {
     //
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        // Tampilkan loading, sembunyikan layout data dulu
+        
+        // Direct ke halaman Riwayat saat klik Lihat Semua
+        binding.tvLihatSemua.setOnClickListener {
+            val bottomNav = requireActivity().findViewById<com.google.android.material.bottomnavigation.BottomNavigationView>(R.id.bottom_navigation)
+            bottomNav.selectedItemId = R.id.nav_riwayat
+        }
+        // Tampilkan loading, sembunyikan layout data
         binding.pbLoading.visibility = View.VISIBLE
         // Panggil fungsi untuk mengambil data dari Laravel
         loadDashboardData()
     }
-
     private fun loadDashboardData() {
-        // GANTI IP SESUAI DENGAN IP WIFI LAPTOP
-        val url = "http://192.168.0.3:8000/api/dashboard"
+        // Gunakan Base URL dari ApiConfig
+        val url = com.example.apotek_astria.network.ApiConfig.URL_DASHBOARD
 
         val request = JsonObjectRequest(Request.Method.GET, url, null,
             { response ->
@@ -53,12 +58,12 @@ class BerandaFragment : Fragment() {
                     val transaksiTerbaruArray = data.getJSONArray("transaksi_terbaru")
                     val peringatanObatArray = data.getJSONArray("peringatan_obat")
 
-                    // 2. Format Angka ke Rupiah (Rp 1.000.000)
+                    // 2. Format Angka ke Rupiah
                     val formatRupiah = NumberFormat.getNumberInstance(Locale("in", "ID"))
                     binding.tvTotalPenjualan.text = "Rp ${formatRupiah.format(totalPenjualan)}"
                     binding.tvJumlahTransaksi.text = "$jumlahTransaksi transaksi hari ini"
 
-                    // 3. Tampilkan Peringatan Stok (Jika Ada)
+                    // 3. Tampil Peringatan Stok (Jika Ada)
                     if (peringatanObatArray.length() > 0) {
                         binding.layoutPeringatanStok.visibility = View.VISIBLE
                         binding.tvPeringatanStok.text = "${peringatanObatArray.length()} obat hampir habis (stok <= 10)"
@@ -72,10 +77,7 @@ class BerandaFragment : Fragment() {
                     if (transaksiTerbaruArray.length() > 0) {
                         for (i in 0 until transaksiTerbaruArray.length()) {
                             val trx = transaksiTerbaruArray.getJSONObject(i)
-
-                            // Gunakan layout inflater untuk menempelkan 'item_transaksi_terbaru.xml'
                             val itemView = layoutInflater.inflate(R.layout.item_transaksi_terbaru, binding.layoutListTransaksi, false)
-
                             val tvKode = itemView.findViewById<TextView>(R.id.tv_kode_trx)
                             val tvWaktuKasir = itemView.findViewById<TextView>(R.id.tv_waktu_kasir)
                             val tvTotal = itemView.findViewById<TextView>(R.id.tv_total_harga)
@@ -88,10 +90,8 @@ class BerandaFragment : Fragment() {
                             // Mengolah tanggal & nama kasir
                             val rawDate = trx.getString("created_at") // Contoh: 2026-10-12T07:30:00.000000Z
                             val jamTrx = formatWaktu(rawDate)
-
                             val userObj = trx.optJSONObject("user")
                             val namaKasir = userObj?.optString("nama", "Kasir") ?: "Kasir"
-
                             tvWaktuKasir.text = "$jamTrx / $namaKasir"
 
                             // Tambahkan itemView ke dalam container
@@ -106,10 +106,8 @@ class BerandaFragment : Fragment() {
                         }
                         binding.layoutListTransaksi.addView(emptyText)
                     }
-
                     // Sembunyikan loading
                     binding.pbLoading.visibility = View.GONE
-
                 }
             },
             { error ->
@@ -117,11 +115,9 @@ class BerandaFragment : Fragment() {
                 Toast.makeText(requireContext(), "Gagal memuat dashboard", Toast.LENGTH_SHORT).show()
             }
         )
-
         // Tambahkan antrian Request ke Volley
         Volley.newRequestQueue(requireContext()).add(request)
     }
-
     // Fungsi kecil untuk mengubah "2026-10-12T07:30:00.000000Z" menjadi "07:30"
     private fun formatWaktu(waktuRaw: String): String {
         return try {
@@ -134,7 +130,6 @@ class BerandaFragment : Fragment() {
             "00:00"
         }
     }
-
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null

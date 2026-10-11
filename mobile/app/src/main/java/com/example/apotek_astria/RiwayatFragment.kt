@@ -25,8 +25,8 @@ class RiwayatFragment : Fragment() {
     private val transaksiList = mutableListOf<TransaksiModel>()
     private lateinit var adapter: RiwayatAdapter
 
-    // Gunakan IP Laptop Anda untuk pengetesan lokal
-    private val baseUrl = "http://192.168.0.3:8000/api/riwayat"
+    // Gunakan Base URL dari ApiConfig
+    private val baseUrl = com.example.apotek_astria.network.ApiConfig.URL_RIWAYAT
 
     override fun onCreateView(
         inflater: LayoutInflater,
