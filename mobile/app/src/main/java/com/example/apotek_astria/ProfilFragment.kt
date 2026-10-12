@@ -11,13 +11,15 @@ import androidx.fragment.app.Fragment
 import com.android.volley.Request
 import com.android.volley.toolbox.Volley
 import com.example.apotek_astria.databinding.FragmentProfilBinding
+import com.example.apotek_astria.network.ApiConfig
+import com.example.apotek_astria.network.ApiRequest
 import org.json.JSONObject
 
 class ProfilFragment : Fragment() {
 
     private var _binding: FragmentProfilBinding? = null
     private val binding get() = _binding!!
-    private val url = "${ApiConfig.BASE_URL}/profil"
+    private val url = ApiConfig.URL_PROFIL
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?

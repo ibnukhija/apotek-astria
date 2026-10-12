@@ -14,6 +14,8 @@ import androidx.fragment.app.Fragment
 import com.android.volley.Request
 import com.android.volley.toolbox.Volley
 import com.example.apotek_astria.databinding.FragmentStokBinding
+import com.example.apotek_astria.network.ApiConfig
+import com.example.apotek_astria.network.ApiRequest
 import org.json.JSONObject
 import java.text.NumberFormat
 import java.util.Locale
@@ -75,7 +77,7 @@ class StokFragment : Fragment() {
     private fun muatObat() {
         binding.progressBar.visibility = View.VISIBLE
 
-        val request = ApiRequest(Request.Method.GET, "${ApiConfig.BASE_URL}/stok", null,
+        val request = ApiRequest(Request.Method.GET, ApiConfig.URL_STOK, null,
             { response -> if (_binding != null) olahResponse(response) },
             { error ->
                 if (_binding != null) binding.progressBar.visibility = View.GONE

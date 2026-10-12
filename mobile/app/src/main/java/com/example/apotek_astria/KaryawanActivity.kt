@@ -12,6 +12,8 @@ import com.android.volley.Request
 import com.android.volley.toolbox.Volley
 import com.example.apotek_astria.databinding.ActivityKaryawanBinding
 import com.example.apotek_astria.databinding.DialogKaryawanBinding
+import com.example.apotek_astria.network.ApiConfig
+import com.example.apotek_astria.network.ApiRequest
 import org.json.JSONObject
 
 class KaryawanActivity : AppCompatActivity() {
@@ -19,7 +21,7 @@ class KaryawanActivity : AppCompatActivity() {
     private lateinit var binding: ActivityKaryawanBinding
     private val daftar = mutableListOf<KaryawanModel>()
     private lateinit var adapter: KaryawanAdapter
-    private val baseUrl = "${ApiConfig.BASE_URL}/karyawan"
+    private val baseUrl = ApiConfig.URL_KARYAWAN
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
