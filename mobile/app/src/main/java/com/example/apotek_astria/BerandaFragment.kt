@@ -29,7 +29,6 @@ class BerandaFragment : Fragment() {
         return binding.root
     }
 
-    //
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         
@@ -46,10 +45,9 @@ class BerandaFragment : Fragment() {
     private fun loadDashboardData() {
         // Gunakan Base URL dari ApiConfig
         val url = com.example.apotek_astria.network.ApiConfig.URL_DASHBOARD
-
         val request = JsonObjectRequest(Request.Method.GET, url, null,
             { response ->
-                // PENGAMAN: Batalkan proses jika pengguna sudah pindah tab/layar
+                // Pengaman membatalkan proses jika pengguna sudah pindah tab/halaman
                 if (!isAdded || _binding == null) return@JsonObjectRequest
 
                 if (response.optBoolean("success", false)) {
@@ -75,8 +73,7 @@ class BerandaFragment : Fragment() {
                     }
 
                     // 4. Muat Transaksi Terbaru ke Layout (Secara Dinamis)
-                    binding.layoutListTransaksi.removeAllViews() // Bersihkan list
-
+                    binding.layoutListTransaksi.removeAllViews() // Membersihkan list
                     if (transaksiTerbaruArray.length() > 0) {
                         for (i in 0 until transaksiTerbaruArray.length()) {
                             val trx = transaksiTerbaruArray.getJSONObject(i)
@@ -91,7 +88,7 @@ class BerandaFragment : Fragment() {
                             tvTotal.text = "Rp ${formatRupiah.format(totalTrx)}"
 
                             // Mengolah tanggal & nama kasir
-                            val rawDate = trx.getString("created_at") // Contoh: 2026-10-12T07:30:00.000000Z
+                            val rawDate = trx.getString("created_at")
                             val jamTrx = formatWaktu(rawDate)
                             val userObj = trx.optJSONObject("user")
                             val namaKasir = userObj?.optString("nama", "Kasir") ?: "Kasir"
@@ -114,7 +111,7 @@ class BerandaFragment : Fragment() {
                 }
             },
             { error ->
-                // PENGAMAN: Batalkan proses jika pengguna sudah pindah tab/layar
+                // Pengaman membatalkan proses jika pengguna sudah pindah tab/layar
                 if (!isAdded || _binding == null) return@JsonObjectRequest
 
                 binding.pbLoading.visibility = View.GONE
@@ -124,11 +121,11 @@ class BerandaFragment : Fragment() {
         // Tambahkan antrian Request ke Volley
         Volley.newRequestQueue(requireContext()).add(request)
     }
-    // Fungsi kecil untuk mengubah "2026-10-12T07:30:00.000000Z" menjadi "07:30"
+    // Fungsi kecil untuk mengubah "07:30:00" menjadi "07:30"
     private fun formatWaktu(waktuRaw: String): String {
         return try {
             val parser = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSSSS'Z'", Locale.getDefault())
-            parser.timeZone = java.util.TimeZone.getTimeZone("UTC") // Laravel biasanya pakai UTC
+            parser.timeZone = java.util.TimeZone.getTimeZone("UTC")
             val date = parser.parse(waktuRaw)
             val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
             formatter.format(date ?: "")

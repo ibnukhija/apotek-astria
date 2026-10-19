@@ -7,7 +7,7 @@ import org.json.JSONObject
 
 object ApiConfig {
     // Ganti IP Sesuai dengan Laptop
-    const val BASE_URL = "http://192.168.0.3:8000/api"
+    const val BASE_URL = "http://10.125.116.161:8000/api"
 
     // Daftar endpoint API yang Anda perlukan
     const val URL_LOGIN = "$BASE_URL/login-mobile"

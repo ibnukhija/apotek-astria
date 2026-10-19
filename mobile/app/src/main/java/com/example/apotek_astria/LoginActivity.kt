@@ -20,8 +20,6 @@ class LoginActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        // Inisialisasi View Binding
         binding = ActivityLoginBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
@@ -32,7 +30,7 @@ class LoginActivity : AppCompatActivity() {
             finish()
         }
 
-        // Logika Checkbox Tampilkan Password (langsung pakai binding.namaId)
+        // Logika Checkbox Tampilkan Password pakai binding.namaId
         binding.cbShowPassword.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
                 binding.etPassword.transformationMethod = HideReturnsTransformationMethod.getInstance()
