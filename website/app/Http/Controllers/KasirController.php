@@ -107,9 +107,27 @@ class KasirController extends Controller
             $query->whereDate('created_at', $request->tanggal);
         }
 
-        $transaksis = $query->paginate(10);
+        if ($request->filled('q')) {
+            $q = $request->q;
+            $query->where(function ($w) use ($q) {
+                $w->where('no_transaksi', 'like', "%{$q}%")
+                  ->orWhereHas('user', function ($u) use ($q) {
+                      $u->where('nama', 'like', "%{$q}%");
+                  });
+            });
+        }
 
-        return view('kasir.riwayat', compact('transaksis'));
+        $ringkasan = [
+            'total_transaksi' => (clone $query)->count(),
+            'total_omset'     => (clone $query)->sum('total_harga'),
+            'total_item'      => (int) DB::table('detail_transaksi')
+                ->whereIn('transaksi_id', (clone $query)->reorder()->select('id'))
+                ->sum('qty'),
+        ];
+
+        $transaksis = $query->paginate(20)->withQueryString();
+
+        return view('kasir.riwayat', compact('transaksis', 'ringkasan'));
     }
 
     public function cetakStruk($id)

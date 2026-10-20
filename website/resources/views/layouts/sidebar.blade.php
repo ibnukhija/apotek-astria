@@ -10,10 +10,7 @@
     <!-- Link Navigasi -->
     <!-- Logika sederhana: Beri warna Soft Teal jika route sedang aktif -->
     <a href="{{ route('kasir.index') }}" class="block p-3 mb-2 rounded-lg {{ request()->routeIs('kasir.index') ? 'font-bold bg-[#E8F4F2] text-soft-teal' : 'font-medium text-gray-text hover:bg-off-white' }} transition">Kasir</a>
-    <a href="{{ route('kasir.riwayat') }}" 
-       class="flex items-center gap-3 px-4 py-3 mb-2 rounded-lg text-sm font-semibold transition {{ request()->routeIs('kasir.riwayat') ? 'bg-[#E8F4F2] text-soft-teal' : 'text-gray-text hover:bg-off-white' }}">
-        Riwayat Transaksi
-    </a>
+    <a href="{{ route('kasir.riwayat') }}" class="block p-3 mb-2 rounded-lg {{ request()->routeIs('kasir.riwayat') ? 'font-bold bg-[#E8F4F2] text-soft-teal' : 'font-medium text-gray-text hover:bg-off-white' }} transition">Riwayat Transaksi</a>
     <a href="{{ route('obat.index') }}" class="block p-3 mb-2 rounded-lg {{ request()->routeIs('obat.*') ? 'font-bold bg-[#E8F4F2] text-soft-teal' : 'font-medium text-gray-text hover:bg-off-white' }} transition">Kelola Produk</a>
     <a href="{{ route('kategori.index') }}" class="block p-3 mb-2 rounded-lg {{ request()->routeIs('kategori.*') ? 'font-bold bg-[#E8F4F2] text-soft-teal' : 'font-medium text-gray-text hover:bg-off-white' }} transition">Kelola Kategori</a>
 

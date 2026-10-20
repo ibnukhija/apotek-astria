@@ -162,6 +162,263 @@ class TransaksiSeeder extends Seeder
                 ],
                 'nominal_bayar' => 30000,
             ],
+            [
+                'waktu' => Carbon::today()->addHours(9)->addMinutes(0),
+                'items' => [
+                    ['nama' => 'Oskadon', 'qty' => 3],
+                    ['nama' => 'Promag',  'qty' => 1],
+                ],
+                'nominal_bayar' => 30000,
+            ],
+            [
+                'waktu' => Carbon::today()->addHours(11)->addMinutes(20),
+                'items' => [
+                    ['nama' => 'Ibuprofen 400mg', 'qty' => 2],
+                    ['nama' => 'Betadine 15ml',   'qty' => 1],
+                ],
+                'nominal_bayar' => 60000,
+            ],
+            [
+                'waktu' => Carbon::today()->addHours(14)->addMinutes(10),
+                'items' => [
+                    ['nama' => 'OBH Combi Dewasa',  'qty' => 1],
+                    ['nama' => 'Panadol Extra',     'qty' => 2],
+                    ['nama' => 'Vitamin C IPI',     'qty' => 1],
+                ],
+                'nominal_bayar' => 70000,
+            ],
+            [
+                'waktu' => Carbon::today()->addHours(17)->addMinutes(30),
+                'items' => [
+                    ['nama' => 'Amoxicillin 500mg', 'qty' => 2],
+                    ['nama' => 'Paracetamol 500mg', 'qty' => 1],
+                ],
+                'nominal_bayar' => 50000,
+            ],
+            [
+                'waktu' => Carbon::today()->addHours(20)->addMinutes(15),
+                'items' => [
+                    ['nama' => 'Decolgen',      'qty' => 3],
+                    ['nama' => 'Bodrex',        'qty' => 2],
+                    ['nama' => 'Insto Regular', 'qty' => 1],
+                ],
+                'nominal_bayar' => 50000,
+            ],
+
+            // --- KEMARIN (+5) ---
+            [
+                'waktu' => Carbon::yesterday()->addHours(8)->addMinutes(30),
+                'items' => [
+                    ['nama' => 'Antasida DOEN',   'qty' => 2],
+                    ['nama' => 'Cetirizine 10mg', 'qty' => 1],
+                ],
+                'nominal_bayar' => 30000,
+            ],
+            [
+                'waktu' => Carbon::yesterday()->addHours(11)->addMinutes(0),
+                'items' => [
+                    ['nama' => 'Paracetamol 500mg', 'qty' => 3],
+                    ['nama' => 'Vitamin C IPI',     'qty' => 2],
+                ],
+                'nominal_bayar' => 60000,
+            ],
+            [
+                'waktu' => Carbon::yesterday()->addHours(13)->addMinutes(15),
+                'items' => [
+                    ['nama' => 'Bodrex',        'qty' => 2],
+                    ['nama' => 'Insto Regular', 'qty' => 1],
+                ],
+                'nominal_bayar' => 40000,
+            ],
+            [
+                'waktu' => Carbon::yesterday()->addHours(16)->addMinutes(45),
+                'items' => [
+                    ['nama' => 'Amoxicillin 500mg', 'qty' => 1],
+                    ['nama' => 'Ibuprofen 400mg',   'qty' => 1],
+                    ['nama' => 'Decolgen',          'qty' => 2],
+                ],
+                'nominal_bayar' => 50000,
+            ],
+            [
+                'waktu' => Carbon::yesterday()->addHours(20)->addMinutes(0),
+                'items' => [
+                    ['nama' => 'OBH Combi Dewasa', 'qty' => 2],
+                    ['nama' => 'Panadol Extra',    'qty' => 1],
+                ],
+                'nominal_bayar' => 70000,
+            ],
+
+            // --- 2 HARI LALU (+4) ---
+            [
+                'waktu' => Carbon::today()->subDays(2)->addHours(9)->addMinutes(15),
+                'items' => [
+                    ['nama' => 'Promag',        'qty' => 2],
+                    ['nama' => 'Antasida DOEN', 'qty' => 2],
+                ],
+                'nominal_bayar' => 35000,
+            ],
+            [
+                'waktu' => Carbon::today()->subDays(2)->addHours(12)->addMinutes(45),
+                'items' => [
+                    ['nama' => 'Betadine 15ml', 'qty' => 1],
+                    ['nama' => 'Oskadon',       'qty' => 2],
+                ],
+                'nominal_bayar' => 30000,
+            ],
+            [
+                'waktu' => Carbon::today()->subDays(2)->addHours(15)->addMinutes(30),
+                'items' => [
+                    ['nama' => 'Cetirizine 10mg',   'qty' => 2],
+                    ['nama' => 'Amoxicillin 500mg', 'qty' => 1],
+                ],
+                'nominal_bayar' => 45000,
+            ],
+            [
+                'waktu' => Carbon::today()->subDays(2)->addHours(18)->addMinutes(20),
+                'items' => [
+                    ['nama' => 'Ibuprofen 400mg', 'qty' => 1],
+                    ['nama' => 'Decolgen',        'qty' => 2],
+                ],
+                'nominal_bayar' => 35000,
+            ],
+
+            // --- 3 HARI LALU (+4) ---
+            [
+                'waktu' => Carbon::today()->subDays(3)->addHours(8)->addMinutes(45),
+                'items' => [
+                    ['nama' => 'Vitamin C IPI',     'qty' => 2],
+                    ['nama' => 'Paracetamol 500mg', 'qty' => 2],
+                ],
+                'nominal_bayar' => 45000,
+            ],
+            [
+                'waktu' => Carbon::today()->subDays(3)->addHours(11)->addMinutes(30),
+                'items' => [
+                    ['nama' => 'OBH Combi Dewasa', 'qty' => 1],
+                    ['nama' => 'Bodrex',           'qty' => 2],
+                ],
+                'nominal_bayar' => 40000,
+            ],
+            [
+                'waktu' => Carbon::today()->subDays(3)->addHours(14)->addMinutes(0),
+                'items' => [
+                    ['nama' => 'Insto Regular', 'qty' => 2],
+                    ['nama' => 'Panadol Extra', 'qty' => 1],
+                ],
+                'nominal_bayar' => 55000,
+            ],
+            [
+                'waktu' => Carbon::today()->subDays(3)->addHours(17)->addMinutes(15),
+                'items' => [
+                    ['nama' => 'Cetirizine 10mg', 'qty' => 1],
+                    ['nama' => 'Promag',          'qty' => 2],
+                ],
+                'nominal_bayar' => 35000,
+            ],
+
+            // --- 4 HARI LALU (+4) ---
+            [
+                'waktu' => Carbon::today()->subDays(4)->addHours(9)->addMinutes(30),
+                'items' => [
+                    ['nama' => 'Paracetamol 500mg', 'qty' => 2],
+                    ['nama' => 'Decolgen',          'qty' => 2],
+                ],
+                'nominal_bayar' => 35000,
+            ],
+            [
+                'waktu' => Carbon::today()->subDays(4)->addHours(12)->addMinutes(0),
+                'items' => [
+                    ['nama' => 'Amoxicillin 500mg', 'qty' => 2],
+                    ['nama' => 'Vitamin C IPI',     'qty' => 1],
+                ],
+                'nominal_bayar' => 50000,
+            ],
+            [
+                'waktu' => Carbon::today()->subDays(4)->addHours(15)->addMinutes(10),
+                'items' => [
+                    ['nama' => 'Betadine 15ml',   'qty' => 1],
+                    ['nama' => 'Ibuprofen 400mg', 'qty' => 1],
+                ],
+                'nominal_bayar' => 40000,
+            ],
+            [
+                'waktu' => Carbon::today()->subDays(4)->addHours(18)->addMinutes(40),
+                'items' => [
+                    ['nama' => 'Antasida DOEN', 'qty' => 3],
+                    ['nama' => 'Bodrex',        'qty' => 1],
+                ],
+                'nominal_bayar' => 30000,
+            ],
+
+            // --- 5 HARI LALU (+3) ---
+            [
+                'waktu' => Carbon::today()->subDays(5)->addHours(10)->addMinutes(15),
+                'items' => [
+                    ['nama' => 'Panadol Extra', 'qty' => 2],
+                    ['nama' => 'Oskadon',       'qty' => 2],
+                ],
+                'nominal_bayar' => 35000,
+            ],
+            [
+                'waktu' => Carbon::today()->subDays(5)->addHours(14)->addMinutes(45),
+                'items' => [
+                    ['nama' => 'OBH Combi Dewasa',  'qty' => 1],
+                    ['nama' => 'Amoxicillin 500mg', 'qty' => 1],
+                ],
+                'nominal_bayar' => 45000,
+            ],
+            [
+                'waktu' => Carbon::today()->subDays(5)->addHours(19)->addMinutes(0),
+                'items' => [
+                    ['nama' => 'Cetirizine 10mg', 'qty' => 2],
+                    ['nama' => 'Vitamin C IPI',   'qty' => 1],
+                ],
+                'nominal_bayar' => 40000,
+            ],
+
+            // --- 6 HARI LALU (+3) ---
+            [
+                'waktu' => Carbon::today()->subDays(6)->addHours(9)->addMinutes(0),
+                'items' => [
+                    ['nama' => 'Paracetamol 500mg', 'qty' => 2],
+                    ['nama' => 'Promag',            'qty' => 2],
+                ],
+                'nominal_bayar' => 40000,
+            ],
+            [
+                'waktu' => Carbon::today()->subDays(6)->addHours(13)->addMinutes(30),
+                'items' => [
+                    ['nama' => 'Insto Regular', 'qty' => 1],
+                    ['nama' => 'Decolgen',      'qty' => 2],
+                ],
+                'nominal_bayar' => 35000,
+            ],
+            [
+                'waktu' => Carbon::today()->subDays(6)->addHours(16)->addMinutes(50),
+                'items' => [
+                    ['nama' => 'Ibuprofen 400mg', 'qty' => 2],
+                    ['nama' => 'Betadine 15ml',   'qty' => 1],
+                ],
+                'nominal_bayar' => 55000,
+            ],
+
+            // --- 7 HARI LALU (+2) ---
+            [
+                'waktu' => Carbon::today()->subDays(7)->addHours(11)->addMinutes(10),
+                'items' => [
+                    ['nama' => 'Antasida DOEN',   'qty' => 2],
+                    ['nama' => 'Cetirizine 10mg', 'qty' => 1],
+                ],
+                'nominal_bayar' => 30000,
+            ],
+            [
+                'waktu' => Carbon::today()->subDays(7)->addHours(15)->addMinutes(20),
+                'items' => [
+                    ['nama' => 'Bodrex',        'qty' => 3],
+                    ['nama' => 'Vitamin C IPI', 'qty' => 2],
+                ],
+                'nominal_bayar' => 40000,
+            ],
         ];
 
         foreach ($transaksiList as $index => $trxData) {

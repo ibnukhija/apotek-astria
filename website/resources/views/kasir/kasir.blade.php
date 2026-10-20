@@ -100,10 +100,13 @@
 
         <!-- Input Uang Diterima & Kembalian -->
         <div class="mt-4 mb-4">
-            <label class="block text-xs font-semibold text-gray-text mb-1 uppercase">Uang Diterima (Rp)</label>
-            <input type="number" id="uang_diterima" min="0" placeholder="0"
+            <div class="flex justify-between items-center mb-1">
+                <label class="block text-xs font-semibold text-gray-text uppercase">Uang Diterima (Rp)</label>
+                <button type="button" onclick="setUangPas()" class="text-xs text-soft-teal hover:underline font-semibold cursor-pointer">Uang Pas</button>
+            </div>
+            <input type="text" inputmode="numeric" id="uang_diterima" placeholder="0" autocomplete="off"
                 class="w-full p-2.5 border border-border-color rounded-lg text-sm font-semibold outline-none focus:border-soft-teal"
-                oninput="hitungKembalian()">
+                oninput="formatUangDiterima(this)">
 
             <div class="flex justify-between items-center mt-2 text-sm">
                 <span class="text-gray-text">Kembalian:</span>
@@ -190,8 +193,42 @@ const keranjang = {};   // { id: { id, nama, harga, stok, qty } }
 const rupiah = (n) => 'Rp' + Math.round(n).toLocaleString('id-ID');
 let totalBelanja = 0; // Sesuaikan dengan variabel total belanja keranjang Anda
 
+function getUangDiterima() {
+    const el = document.getElementById('uang_diterima');
+    if (!el) return 0;
+    const bersih = el.value.replace(/\D/g, '');
+    return parseInt(bersih, 10) || 0;
+}
+
+function formatUangDiterima(el) {
+    const cursorPosition = el.selectionStart;
+    const oldLength = el.value.length;
+    
+    // Ambil hanya angka
+    const bersih = el.value.replace(/\D/g, '');
+    if (bersih) {
+        el.value = Number(bersih).toLocaleString('id-ID');
+    } else {
+        el.value = '';
+    }
+    
+    // Sesuaikan posisi kursor
+    const newLength = el.value.length;
+    const newCursor = Math.max(0, cursorPosition + (newLength - oldLength));
+    el.setSelectionRange(newCursor, newCursor);
+    
+    hitungKembalian();
+}
+
+function setUangPas() {
+    if (totalBelanja <= 0) return;
+    const el = document.getElementById('uang_diterima');
+    el.value = Number(totalBelanja).toLocaleString('id-ID');
+    hitungKembalian();
+}
+
 function hitungKembalian() {
-    const inputUang = parseFloat(document.getElementById('uang_diterima').value) || 0;
+    const inputUang = getUangDiterima();
     const kembalian = inputUang - totalBelanja;
     const kembalianEl = document.getElementById('kembalian_teks');
     const btnBayar = document.getElementById('btn_bayar'); // id tombol bayar
@@ -291,7 +328,7 @@ btnBayar.addEventListener('click', async () => {
     const items = Object.values(keranjang).map(i => ({ obat_id: i.id, jumlah: i.qty }));
     if (!items.length) { alert('Keranjang masih kosong.'); return; }
 
-    const inputUang = parseFloat(document.getElementById('uang_diterima').value) || 0;
+    const inputUang = getUangDiterima();
     if (inputUang < totalBelanja) {
         alert('Nominal uang yang diterima kurang dari total belanja.');
         return;
