@@ -28,7 +28,7 @@
                     <ImageView
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
-                        android:src="@drawable/logo_nobg"/>
+                        android:src="@drawable/logo_ular_nobg"/>
                 </androidx.cardview.widget.CardView>
 
                 <TextView

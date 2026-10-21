@@ -1,7 +1,7 @@
 <div class="w-[250px] bg-pure-white border-r border-border-color p-5 flex flex-col shrink-0">
     <div class="flex items-center gap-2.5 mb-10 font-bold text-soft-teal text-lg">
         <div class="p-1.5 rounded-md text-white">
-            <img src="{{ asset('img/logo-128.png') }}" alt="Logo" class="w-11 h-11">
+            <img src="{{ asset('img/logo-ular-nobg.png') }}" alt="Logo" class="w-11 h-11">
         </div>
         <div>Astria Farma<br><span class="text-[11px] text-gray-text font-normal">Apotek Astria 2</span></div>
     </div>

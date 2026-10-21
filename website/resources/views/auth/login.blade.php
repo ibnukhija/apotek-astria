@@ -41,7 +41,7 @@
         <!-- Panel Kiri -->
         <div class="w-2/5 bg-soft-teal flex flex-col items-center justify-center p-10 border-r border-soft-teal text-white">
             <div class="bg-pure-white text-soft-teal p-4 rounded-xl mb-6 text-5xl shadow-sm">
-                <img src="{{ asset('img/logo-256.png') }}" alt="Logo" class="w-24 h-24">
+                <img src="{{ asset('img/logo-ular-nobg.png') }}" alt="Logo" class="w-24 h-24">
             </div>
             <h1 class="text-3xl font-bold text-center mb-3">Apotek Astria 2 Farma</h1>
             <p class="text-center opacity-90 text-sm leading-relaxed max-w-xs">
