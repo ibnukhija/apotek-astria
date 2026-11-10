@@ -72,11 +72,18 @@
         android:textColor="#757575"
         android:visibility="gone" />
 
-    <ListView
-        android:id="@+id/lvStok"
+    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+        android:id="@+id/swipeRefreshLayout"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"
-        android:divider="@null"
-        android:dividerHeight="0dp" />
+        android:layout_weight="1">
+
+        <ListView
+            android:id="@+id/lvStok"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:divider="@null"
+            android:dividerHeight="0dp" />
+
+    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 </LinearLayout>

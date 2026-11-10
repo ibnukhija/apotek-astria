@@ -23,11 +23,11 @@
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
         <activity
-            android:name=".KaryawanActivity"
+            android:name=".ui.karyawan.KaryawanActivity"
             android:exported="false" />
         <!-- LoginActivity diatur sebagai halaman pertama yang terbuka -->
         <activity
-            android:name=".LoginActivity"
+            android:name=".ui.login.LoginActivity"
             android:exported="true"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>

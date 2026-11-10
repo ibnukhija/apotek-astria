@@ -1,4 +1,4 @@
-package com.example.apotek_astria
+package com.example.apotek_astria.ui.stok
 
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -13,9 +13,11 @@ import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import com.android.volley.Request
 import com.android.volley.toolbox.Volley
+import com.example.apotek_astria.R
 import com.example.apotek_astria.databinding.FragmentStokBinding
 import com.example.apotek_astria.network.ApiConfig
 import com.example.apotek_astria.network.ApiRequest
+import com.example.apotek_astria.model.ObatModel
 import org.json.JSONObject
 import java.text.NumberFormat
 import java.util.Locale
@@ -71,6 +73,11 @@ class StokFragment : Fragment() {
         binding.actvCari.threshold = 1
         binding.actvCari.doAfterTextChanged { terapkanFilter() }
 
+        // Setup SwipeRefreshLayout
+        binding.swipeRefreshLayout.setOnRefreshListener {
+            muatObat()
+        }
+
         muatObat()
     }
 
@@ -80,7 +87,10 @@ class StokFragment : Fragment() {
         val request = ApiRequest(Request.Method.GET, ApiConfig.URL_STOK, null,
             { response -> if (_binding != null) olahResponse(response) },
             { error ->
-                if (_binding != null) binding.progressBar.visibility = View.GONE
+                if (_binding != null) {
+                    binding.progressBar.visibility = View.GONE
+                    binding.swipeRefreshLayout.isRefreshing = false
+                }
                 toast(ApiConfig.pesanError(error))
             }
         )
@@ -89,6 +99,7 @@ class StokFragment : Fragment() {
 
     private fun olahResponse(response: JSONObject) {
         binding.progressBar.visibility = View.GONE
+        binding.swipeRefreshLayout.isRefreshing = false
         if (!response.optBoolean("success", false)) return
 
         semuaObat.clear()

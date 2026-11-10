@@ -1,4 +1,4 @@
-package com.example.apotek_astria
+package com.example.apotek_astria.ui.profil
 
 import android.content.Context
 import android.content.Intent
@@ -14,6 +14,7 @@ import com.android.volley.toolbox.Volley
 import com.example.apotek_astria.databinding.FragmentProfilBinding
 import com.example.apotek_astria.network.ApiConfig
 import com.example.apotek_astria.network.ApiRequest
+import com.example.apotek_astria.ui.karyawan.KaryawanActivity
 import org.json.JSONObject
 
 class ProfilFragment : Fragment() {

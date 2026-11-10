@@ -1,4 +1,4 @@
-package com.example.apotek_astria
+package com.example.apotek_astria.ui.karyawan
 
 import android.os.Bundle
 import android.view.ContextMenu
@@ -10,10 +10,12 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.android.volley.Request
 import com.android.volley.toolbox.Volley
+import com.example.apotek_astria.R
 import com.example.apotek_astria.databinding.ActivityKaryawanBinding
 import com.example.apotek_astria.databinding.DialogKaryawanBinding
 import com.example.apotek_astria.network.ApiConfig
 import com.example.apotek_astria.network.ApiRequest
+import com.example.apotek_astria.model.KaryawanModel
 import org.json.JSONObject
 
 class KaryawanActivity : AppCompatActivity() {

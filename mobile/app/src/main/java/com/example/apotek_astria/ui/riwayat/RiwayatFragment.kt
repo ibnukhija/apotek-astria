@@ -1,4 +1,4 @@
-package com.example.apotek_astria
+package com.example.apotek_astria.ui.riwayat
 
 import android.app.AlertDialog
 import android.app.DatePickerDialog
@@ -12,6 +12,10 @@ import com.android.volley.Request
 import com.android.volley.toolbox.JsonObjectRequest
 import com.android.volley.toolbox.Volley
 import com.example.apotek_astria.databinding.FragmentRiwayatBinding
+import com.example.apotek_astria.network.ApiConfig
+import com.example.apotek_astria.network.ApiRequest
+import com.example.apotek_astria.model.DetailObat
+import com.example.apotek_astria.model.TransaksiModel
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -70,6 +74,17 @@ class RiwayatFragment : Fragment() {
             tampilkanDetailTransaksi(transaksi)
         }
 
+        // Setup SwipeRefreshLayout
+        binding.swipeRefreshLayout.setOnRefreshListener {
+            val tglMulai = binding.etTanggalMulai.text.toString().trim()
+            val tglSelesai = binding.etTanggalSelesai.text.toString().trim()
+            if (tglMulai.isNotEmpty() && tglSelesai.isNotEmpty()) {
+                loadRiwayatTransaksi("$baseUrl?tanggal_mulai=$tglMulai&tanggal_selesai=$tglSelesai")
+            } else {
+                loadRiwayatTransaksi(baseUrl)
+            }
+        }
+
         // Muat data awal saat Fragment dibuka
         loadRiwayatTransaksi(baseUrl)
     }
@@ -121,6 +136,7 @@ class RiwayatFragment : Fragment() {
                 if (!isAdded || _binding == null) return@JsonObjectRequest
 
                 binding.progressBar.visibility = View.GONE
+                binding.swipeRefreshLayout.isRefreshing = false
                 transaksiList.clear()
 
                 if (response.optBoolean("success", false)) {
@@ -180,6 +196,7 @@ class RiwayatFragment : Fragment() {
                 if (!isAdded || _binding == null) return@JsonObjectRequest
 
                 binding.progressBar.visibility = View.GONE
+                binding.swipeRefreshLayout.isRefreshing = false
                 Toast.makeText(context, "Gagal memuat riwayat transaksi", Toast.LENGTH_SHORT).show()
             }
         )

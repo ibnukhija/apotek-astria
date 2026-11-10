@@ -1,4 +1,4 @@
-package com.example.apotek_astria
+package com.example.apotek_astria.ui.beranda
 
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -32,12 +32,18 @@ class BerandaFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         
+        // Setup SwipeRefreshLayout
+        binding.swipeRefreshLayout.setOnRefreshListener {
+            loadDashboardData()
+        }
+
         // Direct ke halaman Riwayat saat klik Lihat Semua
         binding.tvLihatSemua.setOnClickListener {
             val bottomNav = requireActivity().findViewById<com.google.android.material.bottomnavigation.BottomNavigationView>(R.id.bottom_navigation)
             bottomNav.selectedItemId = R.id.nav_riwayat
         }
-        // Tampilkan loading, sembunyikan layout data
+        
+        // Tampilkan loading pertama kali (saat belum ada data)
         binding.pbLoading.visibility = View.VISIBLE
         // Panggil fungsi untuk mengambil data dari Laravel
         loadDashboardData()
@@ -108,6 +114,7 @@ class BerandaFragment : Fragment() {
                     }
                     // Sembunyikan loading
                     binding.pbLoading.visibility = View.GONE
+                    binding.swipeRefreshLayout.isRefreshing = false
                 }
             },
             { error ->
@@ -115,6 +122,7 @@ class BerandaFragment : Fragment() {
                 if (!isAdded || _binding == null) return@JsonObjectRequest
 
                 binding.pbLoading.visibility = View.GONE
+                binding.swipeRefreshLayout.isRefreshing = false
                 Toast.makeText(context, "Gagal memuat dashboard", Toast.LENGTH_SHORT).show()
             }
         )

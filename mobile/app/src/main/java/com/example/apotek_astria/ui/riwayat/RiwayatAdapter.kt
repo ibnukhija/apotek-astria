@@ -1,4 +1,4 @@
-package com.example.apotek_astria
+package com.example.apotek_astria.ui.riwayat
 
 import android.content.Context
 import android.view.LayoutInflater
@@ -6,6 +6,8 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.TextView
+import com.example.apotek_astria.R
+import com.example.apotek_astria.model.TransaksiModel
 import java.text.NumberFormat
 import java.util.Locale
 

@@ -36,6 +36,9 @@ android {
 }
 
 dependencies {
+    // Swipe Refresh Layout
+    implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.2.0")
+    
     //
     implementation("com.android.volley:volley:1.2.1")
 

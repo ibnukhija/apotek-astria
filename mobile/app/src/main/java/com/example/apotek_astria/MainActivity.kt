@@ -8,6 +8,11 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.example.apotek_astria.ui.login.LoginActivity
+import com.example.apotek_astria.ui.beranda.BerandaFragment
+import com.example.apotek_astria.ui.riwayat.RiwayatFragment
+import com.example.apotek_astria.ui.stok.StokFragment
+import com.example.apotek_astria.ui.profil.ProfilFragment
 
 class MainActivity : AppCompatActivity() {
     private lateinit var tvHeaderTitle: TextView
