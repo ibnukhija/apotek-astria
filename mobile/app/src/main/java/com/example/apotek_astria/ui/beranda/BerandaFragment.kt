@@ -43,8 +43,9 @@ class BerandaFragment : Fragment() {
             bottomNav.selectedItemId = R.id.nav_riwayat
         }
         
-        // Tampilkan loading pertama kali (saat belum ada data)
-        binding.pbLoading.visibility = View.VISIBLE
+        // Aktifkan animasi swipe refresh saat pertama kali dimuat
+        binding.swipeRefreshLayout.isRefreshing = true
+        
         // Panggil fungsi untuk mengambil data dari Laravel
         loadDashboardData()
     }
@@ -113,7 +114,6 @@ class BerandaFragment : Fragment() {
                         binding.layoutListTransaksi.addView(emptyText)
                     }
                     // Sembunyikan loading
-                    binding.pbLoading.visibility = View.GONE
                     binding.swipeRefreshLayout.isRefreshing = false
                 }
             },
@@ -121,7 +121,6 @@ class BerandaFragment : Fragment() {
                 // Pengaman membatalkan proses jika pengguna sudah pindah tab/layar
                 if (!isAdded || _binding == null) return@JsonObjectRequest
 
-                binding.pbLoading.visibility = View.GONE
                 binding.swipeRefreshLayout.isRefreshing = false
                 Toast.makeText(context, "Gagal memuat dashboard", Toast.LENGTH_SHORT).show()
             }

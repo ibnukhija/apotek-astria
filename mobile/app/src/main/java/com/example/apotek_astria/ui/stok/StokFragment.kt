@@ -82,13 +82,12 @@ class StokFragment : Fragment() {
     }
 
     private fun muatObat() {
-        binding.progressBar.visibility = View.VISIBLE
+        binding.swipeRefreshLayout.isRefreshing = true
 
         val request = ApiRequest(Request.Method.GET, ApiConfig.URL_STOK, null,
             { response -> if (_binding != null) olahResponse(response) },
             { error ->
                 if (_binding != null) {
-                    binding.progressBar.visibility = View.GONE
                     binding.swipeRefreshLayout.isRefreshing = false
                 }
                 toast(ApiConfig.pesanError(error))
@@ -98,7 +97,6 @@ class StokFragment : Fragment() {
     }
 
     private fun olahResponse(response: JSONObject) {
-        binding.progressBar.visibility = View.GONE
         binding.swipeRefreshLayout.isRefreshing = false
         if (!response.optBoolean("success", false)) return
 

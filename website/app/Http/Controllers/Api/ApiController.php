@@ -90,11 +90,13 @@ class ApiController extends Controller
             ]);
         }
 
-        $riwayat = $query->get();
+        $riwayat = $query->paginate(100);
 
         return response()->json([
             'success' => true,
-            'data' => $riwayat
+            'data' => $riwayat->items(),
+            'current_page' => $riwayat->currentPage(),
+            'last_page' => $riwayat->lastPage()
         ]);
     }
 

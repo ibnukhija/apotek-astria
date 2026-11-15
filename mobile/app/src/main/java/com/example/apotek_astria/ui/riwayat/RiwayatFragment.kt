@@ -16,6 +16,12 @@ import com.example.apotek_astria.network.ApiConfig
 import com.example.apotek_astria.network.ApiRequest
 import com.example.apotek_astria.model.DetailObat
 import com.example.apotek_astria.model.TransaksiModel
+// Import coroutines
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -28,6 +34,10 @@ class RiwayatFragment : Fragment() {
 
     private val transaksiList = mutableListOf<TransaksiModel>()
     private lateinit var adapter: RiwayatAdapter
+    
+    // Variabel Pagination
+    private var currentPage = 1
+    private var lastPage = 1
 
     // Gunakan Base URL dari ApiConfig
     private val baseUrl = com.example.apotek_astria.network.ApiConfig.URL_RIWAYAT
@@ -56,7 +66,8 @@ class RiwayatFragment : Fragment() {
             val tglSelesai = binding.etTanggalSelesai.text.toString().trim()
 
             if (tglMulai.isNotEmpty() && tglSelesai.isNotEmpty()) {
-                loadRiwayatTransaksi("$baseUrl?tanggal_mulai=$tglMulai&tanggal_selesai=$tglSelesai")
+                currentPage = 1 // Kembali ke halaman 1 setiap filter baru
+                muatDataSesuaiFilter()
             } else {
                 Toast.makeText(requireContext(), "Pilih kedua rentang tanggal", Toast.LENGTH_SHORT).show()
             }
@@ -65,7 +76,8 @@ class RiwayatFragment : Fragment() {
         binding.btnReset.setOnClickListener {
             binding.etTanggalMulai.setText("")
             binding.etTanggalSelesai.setText("")
-            loadRiwayatTransaksi(baseUrl)
+            currentPage = 1
+            muatDataSesuaiFilter()
         }
 
         // Klik salah satu baris di ListView -> Tampilkan Dialog Rincian Transaksi
@@ -76,17 +88,38 @@ class RiwayatFragment : Fragment() {
 
         // Setup SwipeRefreshLayout
         binding.swipeRefreshLayout.setOnRefreshListener {
-            val tglMulai = binding.etTanggalMulai.text.toString().trim()
-            val tglSelesai = binding.etTanggalSelesai.text.toString().trim()
-            if (tglMulai.isNotEmpty() && tglSelesai.isNotEmpty()) {
-                loadRiwayatTransaksi("$baseUrl?tanggal_mulai=$tglMulai&tanggal_selesai=$tglSelesai")
-            } else {
-                loadRiwayatTransaksi(baseUrl)
+            currentPage = 1 // Kembali ke halaman pertama saat refresh
+            muatDataSesuaiFilter()
+        }
+        
+        // Tombol Pagination
+        binding.btnPrevPage.setOnClickListener {
+            if (currentPage > 1) {
+                currentPage--
+                muatDataSesuaiFilter()
+            }
+        }
+        
+        binding.btnNextPage.setOnClickListener {
+            if (currentPage < lastPage) {
+                currentPage++
+                muatDataSesuaiFilter()
             }
         }
 
         // Muat data awal saat Fragment dibuka
-        loadRiwayatTransaksi(baseUrl)
+        muatDataSesuaiFilter()
+    }
+    
+    private fun muatDataSesuaiFilter() {
+        val tglMulai = binding.etTanggalMulai.text.toString().trim()
+        val tglSelesai = binding.etTanggalSelesai.text.toString().trim()
+        
+        var targetUrl = "$baseUrl?page=$currentPage"
+        if (tglMulai.isNotEmpty() && tglSelesai.isNotEmpty()) {
+            targetUrl += "&tanggal_mulai=$tglMulai&tanggal_selesai=$tglSelesai"
+        }
+        loadRiwayatTransaksi(targetUrl)
     }
 
     private fun setupDatePicker() {
@@ -126,76 +159,99 @@ class RiwayatFragment : Fragment() {
     }
 
     private fun loadRiwayatTransaksi(url: String) {
-        binding.progressBar.visibility = View.VISIBLE
+        // Menampilkan loading dari SwipeRefresh
+        binding.swipeRefreshLayout.isRefreshing = true
         binding.tvEmpty.visibility = View.GONE
 
         val request = JsonObjectRequest(
             Request.Method.GET, url, null,
             { response ->
-                // PENGAMAN: Batalkan proses jika pengguna sudah pindah tab/layar
+                // Membatalkan proses jika pengguna sudah pindah tab/layar
                 if (!isAdded || _binding == null) return@JsonObjectRequest
 
-                binding.progressBar.visibility = View.GONE
+                // Matikan loading dari SwipeRefresh
                 binding.swipeRefreshLayout.isRefreshing = false
-                transaksiList.clear()
-
+                
                 if (response.optBoolean("success", false)) {
                     val dataArray = response.optJSONArray("data")
-                    if (dataArray != null && dataArray.length() > 0) {
-                        for (i in 0 until dataArray.length()) {
-                            val obj = dataArray.getJSONObject(i)
-                            val userObj = obj.optJSONObject("user")
-                            val kasir = userObj?.optString("nama") ?: "Kasir"
+                    
+                    // Ambil informasi Pagination dari Laravel
+                    currentPage = response.optInt("current_page", 1)
+                    lastPage = response.optInt("last_page", 1)
+                    
+                    // Update UI Pagination
+                    binding.tvPageInfo.text = "Halaman $currentPage dari $lastPage"
+                    binding.layoutPagination.visibility = if (lastPage > 1) View.VISIBLE else View.GONE
+                    binding.btnPrevPage.isEnabled = currentPage > 1
+                    binding.btnNextPage.isEnabled = currentPage < lastPage
+                    
+                    // COROUTINE untuk memproses ribuan data secara bersamaan
+                    viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Default) {
+                        val temporaryList = mutableListOf<TransaksiModel>()
+                        
+                        if (dataArray != null && dataArray.length() > 0) {
+                            for (i in 0 until dataArray.length()) {
+                                val obj = dataArray.getJSONObject(i)
+                                val userObj = obj.optJSONObject("user")
+                                val kasir = userObj?.optString("nama") ?: "Kasir"
 
-                            val detailsArray = obj.optJSONArray("details")
-                            val detailList = mutableListOf<DetailObat>()
+                                val detailsArray = obj.optJSONArray("details")
+                                val detailList = mutableListOf<DetailObat>()
 
-                            if (detailsArray != null) {
-                                for (j in 0 until detailsArray.length()) {
-                                    val d = detailsArray.getJSONObject(j)
-                                    val obatObj = d.optJSONObject("obat")
-                                    val namaObat = obatObj?.optString("nama_obat") ?: "Obat"
-                                    detailList.add(
-                                        DetailObat(
-                                            namaObat = namaObat,
-                                            qty = d.optInt("qty", 1),
-                                            hargaSatuan = d.optInt("harga_satuan", 0),
-                                            subtotal = d.optInt("subtotal", 0)
+                                if (detailsArray != null) {
+                                    for (j in 0 until detailsArray.length()) {
+                                        val d = detailsArray.getJSONObject(j)
+                                        val obatObj = d.optJSONObject("obat")
+                                        val namaObat = obatObj?.optString("nama_obat") ?: "Obat"
+                                        detailList.add(
+                                            DetailObat(
+                                                namaObat = namaObat,
+                                                qty = d.optInt("qty", 1),
+                                                hargaSatuan = d.optInt("harga_satuan", 0),
+                                                subtotal = d.optInt("subtotal", 0)
+                                            )
                                         )
-                                    )
+                                    }
                                 }
-                            }
 
-                            // Format waktu created_at
-                            val rawWaktu = obj.optString("created_at")
-                            val formatWaktu = if (rawWaktu.length >= 16) {
-                                rawWaktu.substring(0, 10) + " " + rawWaktu.substring(11, 16)
-                            } else rawWaktu
+                                val rawWaktu = obj.optString("created_at")
+                                val formatWaktu = if (rawWaktu.length >= 16) {
+                                    rawWaktu.substring(0, 10) + " " + rawWaktu.substring(11, 16)
+                                } else rawWaktu
 
-                            transaksiList.add(
-                                TransaksiModel(
-                                    id = obj.optInt("id"),
-                                    noTransaksi = obj.optString("no_transaksi"),
-                                    waktu = formatWaktu,
-                                    namaKasir = kasir,
-                                    totalHarga = obj.optInt("total_harga", 0),
-                                    totalBayar = obj.optInt("total_bayar", 0),
-                                    kembalian = obj.optInt("kembalian", 0),
-                                    details = detailList
+                                temporaryList.add(
+                                    TransaksiModel(
+                                        id = obj.optInt("id"),
+                                        noTransaksi = obj.optString("no_transaksi"),
+                                        waktu = formatWaktu,
+                                        namaKasir = kasir,
+                                        totalHarga = obj.optInt("total_harga", 0),
+                                        totalBayar = obj.optInt("total_bayar", 0),
+                                        kembalian = obj.optInt("kembalian", 0),
+                                        details = detailList
+                                    )
                                 )
-                            )
+                            }
+                        }
+
+                        // Kembali ke thread utama untuk memperbarui UI
+                        withContext(Dispatchers.Main) {
+                            transaksiList.clear()
+                            transaksiList.addAll(temporaryList)
+                            adapter.notifyDataSetChanged()
+                            binding.tvEmpty.visibility = if (transaksiList.isEmpty()) View.VISIBLE else View.GONE
                         }
                     }
+                } else {
+                    transaksiList.clear()
+                    adapter.notifyDataSetChanged()
+                    binding.tvEmpty.visibility = View.VISIBLE
                 }
-
-                adapter.notifyDataSetChanged()
-                binding.tvEmpty.visibility = if (transaksiList.isEmpty()) View.VISIBLE else View.GONE
             },
             { error ->
                 // PENGAMAN: Batalkan proses jika pengguna sudah pindah tab/layar
                 if (!isAdded || _binding == null) return@JsonObjectRequest
 
-                binding.progressBar.visibility = View.GONE
                 binding.swipeRefreshLayout.isRefreshing = false
                 Toast.makeText(context, "Gagal memuat riwayat transaksi", Toast.LENGTH_SHORT).show()
             }
@@ -211,7 +267,7 @@ class RiwayatFragment : Fragment() {
 
         val sb = StringBuilder()
         sb.append("Waktu: ${trx.waktu}\n")
-        sb.append("Kasir: ${trx.namaKasir}\n\n")
+        sb.append("Kasir  : ${trx.namaKasir}\n\n")
         sb.append("Daftar Obat Dibeli:\n")
         sb.append("--------------------------------\n")
 
@@ -222,7 +278,7 @@ class RiwayatFragment : Fragment() {
 
         sb.append("--------------------------------\n")
         sb.append("Total Belanja : ${rupiah.format(trx.totalHarga)}\n")
-        sb.append("Total Bayar   : ${rupiah.format(trx.totalBayar)}\n")
+        sb.append("Total Bayar    : ${rupiah.format(trx.totalBayar)}\n")
         sb.append("Kembalian     : ${rupiah.format(trx.kembalian)}\n")
 
         AlertDialog.Builder(requireContext())

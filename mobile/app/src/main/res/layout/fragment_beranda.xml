@@ -176,16 +176,6 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
-                <!-- Karena ini halaman dashboard, kita bisa menampilkan "Loading"
-                     atau "Data Kosong" secara dinamis di Kotlin nanti. -->
-                <ProgressBar
-                    android:id="@+id/pb_loading"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center"
-                    android:layout_marginTop="20dp"
-                    android:theme="@style/Widget.AppCompat.ProgressBar" />
-
                 <!-- Item transaksi akan dimuat secara dinamis oleh Kotlin di sini -->
             </LinearLayout>
 
