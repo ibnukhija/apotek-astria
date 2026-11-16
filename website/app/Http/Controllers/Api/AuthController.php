@@ -18,21 +18,28 @@ class AuthController extends Controller
 
         $user = User::where('username', $request->username)->first();
 
-        // Memastikan username ada, password cocok, dan rolenya adalah "owner"
-        if ($user && Hash::check($request->password, $user->password) && $user->role === 'owner') {
+        // Memastikan username ada, password cocok, rolenya "owner", dan akun masih aktif
+        if (!$user || !Hash::check($request->password, $user->password) || $user->role !== 'owner') {
             return response()->json([
-                'success' => true,
-                'message' => 'Login Berhasil',
-                'data' => [
-                    'id'   => $user->id,
-                    'nama' => $user->nama,
-                ]
-            ]);
+                'success' => false,
+                'message' => 'Username/Password salah atau bukan Owner',
+            ], 200);
+        }
+
+        if ($user->status !== 'aktif') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Akun owner sedang dinonaktifkan',
+            ], 200);
         }
 
         return response()->json([
-            'success' => false, 
-            'message' => 'Username/Password salah atau bukan Owner'
-        ], 200);
+            'success' => true,
+            'message' => 'Login Berhasil',
+            'data' => [
+                'id'   => $user->id,
+                'nama' => $user->nama,
+            ],
+        ]);
     }
 }

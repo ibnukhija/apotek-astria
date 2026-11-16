@@ -19,11 +19,15 @@ class ApiController extends Controller
         $totalPenjualanHariIni = Transaksi::whereDate('created_at', $hariIni)->sum('total_harga');
         $transaksiHariIni = Transaksi::whereDate('created_at', $hariIni)->count();
         
-        // Obat yang stoknya kurang dari atau sama dengan 10 (menipis)
-        $obatMenipis = Obat::where('stok', '<', 10)->where('status', 'tersedia')->get();
+        // Obat tersedia yang stoknya di bawah batas hampir habis (< 10)
+        $obatMenipis = Obat::where('stok', '<', Obat::BATAS_HAMPIR_HABIS)
+            ->where('status', 'tersedia')
+            ->orderBy('stok')
+            ->orderBy('nama_obat')
+            ->get();
 
         // 5 transaksi terbaru
-        $transaksiTerbaru = Transaksi::with('user')->latest()->limit(5)->get();
+        $transaksiTerbaru = Transaksi::with('user')->latest()->orderByDesc('id')->limit(5)->get();
 
         return response()->json([
             'success' => true,
@@ -42,12 +46,15 @@ class ApiController extends Controller
         $query = Obat::with('kategori');
 
         if ($request->filled('search')) {
-            $query->where('nama_obat', 'like', '%' . $request->search . '%')
-                  ->orWhere('kode_obat', 'like', '%' . $request->search . '%');
+            $kata = trim($request->search);
+            $query->where(function ($q) use ($kata) {
+                $q->where('nama_obat', 'like', "%{$kata}%")
+                  ->orWhere('kode_obat', 'like', "%{$kata}%");
+            });
         }
 
-        $obats = $query->get()->map(function ($obat) {
-            $obat->status_stok = $obat->stok <= 10 ? 'Hampir habis' : 'Cukup';
+        $obats = $query->orderBy('nama_obat')->get()->map(function ($obat) {
+            $obat->status_stok = Obat::infoStok((int) $obat->stok)['label'];
             return $obat;
         });
 
@@ -60,43 +67,63 @@ class ApiController extends Controller
     // Penyesuaian harga jual dan status ketersediaan obat dari Mobile
     public function updateObatCepat(Request $request, $id)
     {
-        $request->validate([
-            'harga_jual' => 'required|numeric',
+        $data = $request->validate([
+            'harga_jual' => 'required|integer|min:0',
             'status'     => 'required|in:tersedia,tidak'
         ]);
 
         $obat = Obat::findOrFail($id);
-        $obat->update([
-            'harga_jual' => $request->harga_jual,
-            'status'     => $request->status
-        ]);
+        $hargaJual = (int) $data['harga_jual'];
+
+        $payload = [
+            'harga_jual' => $hargaJual,
+            'status'     => $data['status'],
+        ];
+
+        // Sinkronkan margin ke nominal agar tetap konsisten dengan hitungan harga di web
+        if ($hargaJual !== (int) $obat->harga_jual) {
+            $payload['tipe_margin'] = 'nominal';
+            $payload['margin']      = max(0, $hargaJual - (int) $obat->harga_beli);
+        }
+
+        $obat->update($payload);
 
         return response()->json([
             'success' => true,
             'message' => 'Data obat berhasil diperbarui',
-            'data'    => $obat
+            'data'    => $obat->fresh(),
         ]);
     }
 
     // 3. Untuk RiwayatFragment (Laporan Transaksi Kasir)
     public function riwayat(Request $request)
     {
-        $query = Transaksi::with(['user', 'details.obat'])->latest();
+        $request->validate([
+            'tanggal_mulai'   => 'nullable|date',
+            'tanggal_selesai' => 'nullable|date' . ($request->filled('tanggal_mulai') ? '|after_or_equal:tanggal_mulai' : ''),
+        ]);
+
+        $query = Transaksi::with(['user', 'details.obat'])->latest()->orderByDesc('id');
 
         if ($request->filled('tanggal_mulai') && $request->filled('tanggal_selesai')) {
             $query->whereBetween('created_at', [
                 Carbon::parse($request->tanggal_mulai)->startOfDay(),
-                Carbon::parse($request->tanggal_selesai)->endOfDay()
+                Carbon::parse($request->tanggal_selesai)->endOfDay(),
             ]);
+        } elseif ($request->filled('tanggal_mulai')) {
+            $query->where('created_at', '>=', Carbon::parse($request->tanggal_mulai)->startOfDay());
+        } elseif ($request->filled('tanggal_selesai')) {
+            $query->where('created_at', '<=', Carbon::parse($request->tanggal_selesai)->endOfDay());
         }
 
         $riwayat = $query->paginate(100);
 
         return response()->json([
-            'success' => true,
-            'data' => $riwayat->items(),
+            'success'      => true,
+            'data'         => $riwayat->items(),
             'current_page' => $riwayat->currentPage(),
-            'last_page' => $riwayat->lastPage()
+            'last_page'    => $riwayat->lastPage(),
+            'total'        => $riwayat->total(),
         ]);
     }
 
