@@ -8,6 +8,7 @@ use App\Models\Transaksi;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class ApiMobileTest extends TestCase
@@ -33,8 +34,105 @@ class ApiMobileTest extends TestCase
         ], $ubah));
     }
 
+    private function loginSebagaiOwner(array $ubah = []): User
+    {
+        $owner = User::create(array_merge([
+            'nama'     => 'Owner Apotek',
+            'username' => 'owner_' . uniqid(),
+            'password' => Hash::make('rahasia123'),
+            'role'     => 'owner',
+            'status'   => 'aktif',
+        ], $ubah));
+
+        Sanctum::actingAs($owner);
+
+        return $owner;
+    }
+
+    public function test_endpoint_owner_menolak_akses_tanpa_token(): void
+    {
+        $this->getJson('/api/dashboard')->assertStatus(401);
+        $this->get('/api/dashboard')->assertStatus(401)->assertJson(['message' => 'Unauthenticated.']);
+        $this->getJson('/api/stok')->assertStatus(401);
+        $this->putJson('/api/obat/1', ['harga_jual' => 1000, 'status' => 'tersedia'])->assertStatus(401);
+        $this->getJson('/api/riwayat')->assertStatus(401);
+        $this->getJson('/api/profil')->assertStatus(401);
+        $this->putJson('/api/profil', ['nama_apotek' => 'Tes', 'alamat' => 'Jl. Tes'])->assertStatus(401);
+        $this->getJson('/api/karyawan')->assertStatus(401);
+        $this->postJson('/api/karyawan', [])->assertStatus(401);
+        $this->postJson('/api/logout-mobile')->assertStatus(401);
+    }
+
+    public function test_endpoint_owner_menolak_role_non_owner_dan_owner_nonaktif(): void
+    {
+        $karyawan = User::create([
+            'nama'     => 'Kasir',
+            'username' => 'kasir_tok',
+            'password' => Hash::make('rahasia123'),
+            'role'     => 'karyawan',
+            'status'   => 'aktif',
+        ]);
+        Sanctum::actingAs($karyawan);
+        $this->getJson('/api/dashboard')->assertStatus(403)->assertJson(['success' => false]);
+
+        $ownerNonaktif = User::create([
+            'nama'     => 'Owner Nonaktif',
+            'username' => 'owner_off',
+            'password' => Hash::make('rahasia123'),
+            'role'     => 'owner',
+            'status'   => 'nonaktif',
+        ]);
+        Sanctum::actingAs($ownerNonaktif);
+        $this->getJson('/api/dashboard')->assertStatus(403)->assertJson(['success' => false]);
+    }
+
+    public function test_login_mobile_menerbitkan_token_sanctum_dan_logout_mencabut_token(): void
+    {
+        $owner = User::create([
+            'nama'     => 'Owner Utama',
+            'username' => 'owner_utama',
+            'password' => Hash::make('rahasia123'),
+            'role'     => 'owner',
+            'status'   => 'aktif',
+        ]);
+
+        $login = $this->postJson('/api/login-mobile', [
+            'username' => 'owner_utama',
+            'password' => 'rahasia123',
+        ])->assertOk()->assertJsonStructure([
+            'success',
+            'message',
+            'data' => ['id', 'nama', 'token'],
+        ]);
+
+        $token = $login->json('data.token');
+        $this->assertNotEmpty($token);
+        $this->assertDatabaseCount('personal_access_tokens', 1);
+
+        $this->withToken($token)
+            ->getJson('/api/dashboard')
+            ->assertOk()
+            ->assertJson(['success' => true]);
+
+        $this->withToken($token)
+            ->postJson('/api/logout-mobile')
+            ->assertOk()
+            ->assertJson(['success' => true]);
+
+        $this->assertDatabaseCount('personal_access_tokens', 0);
+
+        // Reset guard cache dalam proses test yang sama agar verifikasi ulang token ke DB
+        $this->app['auth']->forgetGuards();
+
+        $this->withToken($token)
+            ->getJson('/api/dashboard')
+            ->assertStatus(401);
+    }
+
     public function test_dashboard_dan_stok_memakai_batas_stok_yang_konsisten(): void
     {
+        $this->loginSebagaiOwner();
+
         $this->buatObat(['kode_obat' => 'OBT-001', 'nama_obat' => 'Zink Tablet', 'stok' => 9, 'status' => 'tersedia']);
         $this->buatObat(['kode_obat' => 'OBT-002', 'nama_obat' => 'Amoxicillin', 'stok' => 10, 'status' => 'tersedia']);
         $this->buatObat(['kode_obat' => 'OBT-003', 'nama_obat' => 'Cetirizine', 'stok' => 24, 'status' => 'tersedia']);
@@ -59,6 +157,8 @@ class ApiMobileTest extends TestCase
 
     public function test_stok_mendukung_pencarian_nama_dan_kode_obat(): void
     {
+        $this->loginSebagaiOwner();
+
         $this->buatObat(['kode_obat' => 'OBT-101', 'nama_obat' => 'Paracetamol']);
         $this->buatObat(['kode_obat' => 'OBT-202', 'nama_obat' => 'Ibuprofen']);
 
@@ -123,6 +223,8 @@ class ApiMobileTest extends TestCase
 
     public function test_update_obat_cepat_validasi_dan_sinkronisasi_margin(): void
     {
+        $this->loginSebagaiOwner();
+
         $obat = $this->buatObat([
             'harga_beli'  => 8000,
             'margin'      => 50,
@@ -162,6 +264,8 @@ class ApiMobileTest extends TestCase
 
     public function test_riwayat_memvalidasi_tanggal_dan_mengembalikan_total(): void
     {
+        $this->loginSebagaiOwner();
+
         $kasir = User::create([
             'nama'     => 'Kasir 1',
             'username' => 'kasir1',
@@ -206,6 +310,8 @@ class ApiMobileTest extends TestCase
 
     public function test_tambah_karyawan_mengisi_status_aktif_secara_eksplisit(): void
     {
+        $this->loginSebagaiOwner();
+
         $this->postJson('/api/karyawan', [
             'nama'     => 'Budi Kasir',
             'username' => 'budi_kasir',

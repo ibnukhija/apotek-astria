@@ -143,6 +143,7 @@ class ProfilFragment : Fragment() {
 
     private fun muatProfil() {
         val request = ApiRequest(
+            requireContext(),
             Request.Method.GET,
             url,
             null,
@@ -166,7 +167,9 @@ class ProfilFragment : Fragment() {
                 }
             },
             { error ->
-                toast(ApiConfig.pesanError(error))
+                if (!ApiConfig.tanganiAuthError(context, error)) {
+                    toast(ApiConfig.pesanError(error))
+                }
             }
         )
 
@@ -201,6 +204,7 @@ class ProfilFragment : Fragment() {
             .put("longitude", lng ?: JSONObject.NULL)
 
         val request = ApiRequest(
+            requireContext(),
             Request.Method.PUT,
             url,
             body,
@@ -216,7 +220,9 @@ class ProfilFragment : Fragment() {
                 }
             },
             { error ->
-                toast(ApiConfig.pesanError(error))
+                if (!ApiConfig.tanganiAuthError(context, error)) {
+                    toast(ApiConfig.pesanError(error))
+                }
             }
         )
 

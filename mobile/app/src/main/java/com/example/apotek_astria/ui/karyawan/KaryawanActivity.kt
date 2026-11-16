@@ -67,7 +67,7 @@ class KaryawanActivity : AppCompatActivity() {
     // ===== Ambil data =====
     private fun muatData() {
         binding.progressBar.visibility = View.VISIBLE
-        val request = ApiRequest(Request.Method.GET, baseUrl, null,
+        val request = ApiRequest(this, Request.Method.GET, baseUrl, null,
             { response ->
                 binding.progressBar.visibility = View.GONE
                 daftar.clear()
@@ -90,7 +90,9 @@ class KaryawanActivity : AppCompatActivity() {
             },
             { error ->
                 binding.progressBar.visibility = View.GONE
-                toast(ApiConfig.pesanError(error))
+                if (!ApiConfig.tanganiAuthError(this, error)) {
+                    toast(ApiConfig.pesanError(error))
+                }
             }
         )
         Volley.newRequestQueue(this).add(request)
@@ -131,13 +133,17 @@ class KaryawanActivity : AppCompatActivity() {
             val method = if (k == null) Request.Method.POST else Request.Method.PUT
             val url = if (k == null) baseUrl else "$baseUrl/${k.id}"
 
-            val request = ApiRequest(method, url, body,
+            val request = ApiRequest(this, method, url, body,
                 { response ->
                     toast(response.optString("message", "Berhasil"))
                     dialog.dismiss()
                     muatData()
                 },
-                { error -> toast(ApiConfig.pesanError(error)) }   // dialog tetap terbuka
+                { error ->
+                    if (!ApiConfig.tanganiAuthError(this, error)) {
+                        toast(ApiConfig.pesanError(error))
+                    }
+                }   // dialog tetap terbuka
             )
             Volley.newRequestQueue(this).add(request)
         }
@@ -150,12 +156,16 @@ class KaryawanActivity : AppCompatActivity() {
             .setTitle("Konfirmasi")
             .setMessage("Yakin ingin $aksi akun ${k.nama}?")
             .setPositiveButton("Ya") { _, _ ->
-                val request = ApiRequest(Request.Method.PUT, "$baseUrl/${k.id}/status", null,
+                val request = ApiRequest(this, Request.Method.PUT, "$baseUrl/${k.id}/status", null,
                     { response ->
                         toast(response.optString("message", "Status diubah"))
                         muatData()
                     },
-                    { error -> toast(ApiConfig.pesanError(error)) }
+                    { error ->
+                        if (!ApiConfig.tanganiAuthError(this, error)) {
+                            toast(ApiConfig.pesanError(error))
+                        }
+                    }
                 )
                 Volley.newRequestQueue(this).add(request)
             }

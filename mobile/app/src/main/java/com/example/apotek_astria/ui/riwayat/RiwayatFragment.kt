@@ -9,7 +9,6 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import com.android.volley.Request
-import com.android.volley.toolbox.JsonObjectRequest
 import com.android.volley.toolbox.Volley
 import com.example.apotek_astria.databinding.FragmentRiwayatBinding
 import com.example.apotek_astria.network.ApiConfig
@@ -161,11 +160,12 @@ class RiwayatFragment : Fragment() {
         binding.swipeRefreshLayout.isRefreshing = true
         binding.tvEmpty.visibility = View.GONE
 
-        val request = JsonObjectRequest(
+        val request = ApiRequest(
+            requireContext(),
             Request.Method.GET, url, null,
             { response ->
                 // Membatalkan proses jika pengguna sudah pindah tab/layar
-                if (!isAdded || _binding == null) return@JsonObjectRequest
+                if (!isAdded || _binding == null) return@ApiRequest
 
                 // Matikan loading dari SwipeRefresh
                 binding.swipeRefreshLayout.isRefreshing = false
@@ -248,10 +248,12 @@ class RiwayatFragment : Fragment() {
             },
             { error ->
                 // PENGAMAN: Batalkan proses jika pengguna sudah pindah tab/layar
-                if (!isAdded || _binding == null) return@JsonObjectRequest
+                if (!isAdded || _binding == null) return@ApiRequest
 
                 binding.swipeRefreshLayout.isRefreshing = false
-                Toast.makeText(context, "Gagal memuat riwayat transaksi", Toast.LENGTH_SHORT).show()
+                if (!ApiConfig.tanganiAuthError(context, error)) {
+                    Toast.makeText(context, ApiConfig.pesanError(error), Toast.LENGTH_SHORT).show()
+                }
             }
         )
 

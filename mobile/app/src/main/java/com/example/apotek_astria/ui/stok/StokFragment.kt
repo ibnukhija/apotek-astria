@@ -84,13 +84,15 @@ class StokFragment : Fragment() {
     private fun muatObat() {
         binding.swipeRefreshLayout.isRefreshing = true
 
-        val request = ApiRequest(Request.Method.GET, ApiConfig.URL_STOK, null,
+        val request = ApiRequest(requireContext(), Request.Method.GET, ApiConfig.URL_STOK, null,
             { response -> if (_binding != null) olahResponse(response) },
             { error ->
                 if (_binding != null) {
                     binding.swipeRefreshLayout.isRefreshing = false
                 }
-                toast(ApiConfig.pesanError(error))
+                if (!ApiConfig.tanganiAuthError(context, error)) {
+                    toast(ApiConfig.pesanError(error))
+                }
             }
         )
         Volley.newRequestQueue(requireContext()).add(request)

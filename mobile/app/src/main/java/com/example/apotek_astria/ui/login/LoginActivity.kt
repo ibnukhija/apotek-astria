@@ -1,6 +1,5 @@
 package com.example.apotek_astria.ui.login
 
-import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.text.method.HideReturnsTransformationMethod
@@ -8,10 +7,11 @@ import android.text.method.PasswordTransformationMethod
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.android.volley.Request
-import com.android.volley.toolbox.JsonObjectRequest
 import com.android.volley.toolbox.Volley
 import com.example.apotek_astria.MainActivity
 import com.example.apotek_astria.databinding.ActivityLoginBinding
+import com.example.apotek_astria.network.ApiConfig
+import com.example.apotek_astria.network.ApiRequest
 import org.json.JSONObject
 
 class LoginActivity : AppCompatActivity() {
@@ -24,11 +24,15 @@ class LoginActivity : AppCompatActivity() {
         binding = ActivityLoginBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Cek Sesi Login di SharedPreferences
-        val sharedPref = getSharedPreferences("SesiApotek", Context.MODE_PRIVATE)
-        if (sharedPref.getBoolean("IS_LOGGED_IN", false)) {
+        // Cek Sesi Login & Token Sanctum di SharedPreferences
+        val sharedPref = ApiConfig.sesiPref(this)
+        val token = sharedPref.getString(ApiConfig.KEY_TOKEN, null)
+        if (sharedPref.getBoolean(ApiConfig.KEY_LOGGED_IN, false) && !token.isNullOrBlank()) {
             startActivity(Intent(this, MainActivity::class.java))
             finish()
+            return
+        } else if (sharedPref.getBoolean(ApiConfig.KEY_LOGGED_IN, false)) {
+            ApiConfig.hapusSesi(this)
         }
 
         // Logika Checkbox Tampilkan Password pakai binding.namaId
@@ -55,36 +59,40 @@ class LoginActivity : AppCompatActivity() {
     }
 
     private fun prosesLogin(user: String, pass: String) {
-        val url = com.example.apotek_astria.network.ApiConfig.URL_LOGIN
+        val url = ApiConfig.URL_LOGIN
 
         val jsonBody = JSONObject()
         jsonBody.put("username", user)
         jsonBody.put("password", pass)
 
-        val request = JsonObjectRequest(Request.Method.POST, url, jsonBody,
+        val request = ApiRequest(this, Request.Method.POST, url, jsonBody,
             { response ->
                 if (response.optBoolean("success", false)) {
                     val data = response.getJSONObject("data")
-
-                    // Simpan sesi
-                    getSharedPreferences("SesiApotek", Context.MODE_PRIVATE).edit().apply {
-                        putBoolean("IS_LOGGED_IN", true)
-                        putInt("USER_ID", data.getInt("id"))
-                        putString("USER_NAMA", data.getString("nama"))
-                        apply()
+                    val token = data.optString("token", "")
+                    if (token.isBlank()) {
+                        Toast.makeText(this, "Token login tidak ditemukan", Toast.LENGTH_SHORT).show()
+                        return@ApiRequest
                     }
+
+                    // Simpan sesi + token Sanctum
+                    ApiConfig.simpanSesi(
+                        context = this,
+                        userId = data.getInt("id"),
+                        nama = data.getString("nama"),
+                        token = token
+                    )
 
                     Toast.makeText(this, "Selamat datang, ${data.getString("nama")}", Toast.LENGTH_SHORT).show()
                     startActivity(Intent(this, MainActivity::class.java))
                     finish()
                 } else {
-                    Toast.makeText(this, response.getString("message"), Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, response.optString("message", "Login gagal"), Toast.LENGTH_SHORT).show()
                 }
             },
             { error ->
-                // Mengecek apakah koneksi ke server berhasil atau tidak
                 android.util.Log.e("API_ERROR", "Gagal menghubungi server: ${error.message}", error)
-                Toast.makeText(this, "Koneksi ke Laravel Gagal", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, ApiConfig.pesanError(error), Toast.LENGTH_SHORT).show()
             }
         )
         Volley.newRequestQueue(this).add(request)

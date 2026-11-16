@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthController extends Controller
 {
@@ -33,13 +34,29 @@ class AuthController extends Controller
             ], 200);
         }
 
+        $token = $user->createToken('mobile-owner')->plainTextToken;
+
         return response()->json([
             'success' => true,
             'message' => 'Login Berhasil',
             'data' => [
-                'id'   => $user->id,
-                'nama' => $user->nama,
+                'id'    => $user->id,
+                'nama'  => $user->nama,
+                'token' => $token,
             ],
+        ]);
+    }
+
+    public function logoutMobile(Request $request)
+    {
+        $token = $request->user()?->currentAccessToken();
+        if ($token instanceof PersonalAccessToken) {
+            $token->delete();
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Logout berhasil',
         ]);
     }
 }

@@ -8,10 +8,11 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import com.android.volley.Request
-import com.android.volley.toolbox.JsonObjectRequest
 import com.android.volley.toolbox.Volley
 import com.example.apotek_astria.R
 import com.example.apotek_astria.databinding.FragmentBerandaBinding
+import com.example.apotek_astria.network.ApiConfig
+import com.example.apotek_astria.network.ApiRequest
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -51,11 +52,11 @@ class BerandaFragment : Fragment() {
     }
     private fun loadDashboardData() {
         // Gunakan Base URL dari ApiConfig
-        val url = com.example.apotek_astria.network.ApiConfig.URL_DASHBOARD
-        val request = JsonObjectRequest(Request.Method.GET, url, null,
+        val url = ApiConfig.URL_DASHBOARD
+        val request = ApiRequest(requireContext(), Request.Method.GET, url, null,
             { response ->
                 // Pengaman membatalkan proses jika pengguna sudah pindah tab/halaman
-                if (!isAdded || _binding == null) return@JsonObjectRequest
+                if (!isAdded || _binding == null) return@ApiRequest
 
                 if (response.optBoolean("success", false)) {
                     val data = response.getJSONObject("data")
@@ -119,10 +120,12 @@ class BerandaFragment : Fragment() {
             },
             { error ->
                 // Pengaman membatalkan proses jika pengguna sudah pindah tab/layar
-                if (!isAdded || _binding == null) return@JsonObjectRequest
+                if (!isAdded || _binding == null) return@ApiRequest
 
                 binding.swipeRefreshLayout.isRefreshing = false
-                Toast.makeText(context, "Gagal memuat dashboard", Toast.LENGTH_SHORT).show()
+                if (!ApiConfig.tanganiAuthError(context, error)) {
+                    Toast.makeText(context, ApiConfig.pesanError(error), Toast.LENGTH_SHORT).show()
+                }
             }
         )
         // Tambahkan antrian Request ke Volley
