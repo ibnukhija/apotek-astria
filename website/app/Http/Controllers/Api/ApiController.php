@@ -12,13 +12,33 @@ use Illuminate\Http\Request;
 class ApiController extends Controller
 {
     // 1. Untuk BerandaFragment (Dashboard Owner)
-    public function dashboard()
+    public function dashboard(Request $request)
     {
+        $request->validate([
+            'periode' => 'nullable|in:harian,mingguan,bulanan',
+        ]);
+
+        $periode = $request->input('periode', 'harian');
         $hariIni = Carbon::today();
 
-        $totalPenjualanHariIni = Transaksi::whereDate('created_at', $hariIni)->sum('total_harga');
-        $transaksiHariIni = Transaksi::whereDate('created_at', $hariIni)->count();
-        
+        $transaksiQuery = Transaksi::query();
+        if ($periode === 'mingguan') {
+            $transaksiQuery->whereBetween('created_at', [
+                $hariIni->copy()->startOfWeek(),
+                $hariIni->copy()->endOfDay(),
+            ]);
+        } elseif ($periode === 'bulanan') {
+            $transaksiQuery->whereBetween('created_at', [
+                $hariIni->copy()->startOfMonth(),
+                $hariIni->copy()->endOfDay(),
+            ]);
+        } else {
+            $transaksiQuery->whereDate('created_at', $hariIni);
+        }
+
+        $totalPenjualan = $transaksiQuery->sum('total_harga');
+        $jumlahTransaksi = $transaksiQuery->count();
+
         // Obat tersedia yang stoknya di bawah batas hampir habis (< 10)
         $obatMenipis = Obat::where('stok', '<', Obat::BATAS_HAMPIR_HABIS)
             ->where('status', 'tersedia')
@@ -26,16 +46,31 @@ class ApiController extends Controller
             ->orderBy('nama_obat')
             ->get();
 
+        // Obat tersedia yang sudah kadaluarsa atau hampir kadaluarsa (<= 30 hari)
+        $batasKadaluarsa = $hariIni->copy()->addDays(Obat::BATAS_HAMPIR_KADALUARSA);
+        $obatKadaluarsa = Obat::whereNotNull('tgl_kadaluarsa')
+            ->whereDate('tgl_kadaluarsa', '<=', $batasKadaluarsa)
+            ->where('status', 'tersedia')
+            ->orderBy('tgl_kadaluarsa')
+            ->orderBy('nama_obat')
+            ->get()
+            ->map(function ($obat) {
+                $obat->status_kadaluarsa = Obat::infoKadaluarsa($obat->tgl_kadaluarsa)['label'];
+                return $obat;
+            });
+
         // 5 transaksi terbaru
         $transaksiTerbaru = Transaksi::with('user')->latest()->orderByDesc('id')->limit(5)->get();
 
         return response()->json([
             'success' => true,
             'data' => [
-                'total_penjualan' => (int) $totalPenjualanHariIni,
-                'jumlah_transaksi' => $transaksiHariIni,
-                'peringatan_obat' => $obatMenipis,
-                'transaksi_terbaru' => $transaksiTerbaru
+                'periode'               => $periode,
+                'total_penjualan'       => (int) $totalPenjualan,
+                'jumlah_transaksi'      => $jumlahTransaksi,
+                'peringatan_obat'       => $obatMenipis,
+                'peringatan_kadaluarsa' => $obatKadaluarsa,
+                'transaksi_terbaru'     => $transaksiTerbaru,
             ]
         ]);
     }
@@ -55,6 +90,7 @@ class ApiController extends Controller
 
         $obats = $query->orderBy('nama_obat')->get()->map(function ($obat) {
             $obat->status_stok = Obat::infoStok((int) $obat->stok)['label'];
+            $obat->status_kadaluarsa = Obat::infoKadaluarsa($obat->tgl_kadaluarsa)['label'];
             return $obat;
         });
 

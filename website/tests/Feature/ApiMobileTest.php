@@ -6,6 +6,7 @@ use App\Models\Kategori;
 use App\Models\Obat;
 use App\Models\Transaksi;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Laravel\Sanctum\Sanctum;
@@ -323,5 +324,107 @@ class ApiMobileTest extends TestCase
             'role'     => 'karyawan',
             'status'   => 'aktif',
         ]);
+    }
+
+    public function test_dashboard_dan_stok_menyertakan_peringatan_dan_status_kadaluarsa(): void
+    {
+        $this->loginSebagaiOwner();
+
+        $this->buatObat([
+            'kode_obat'      => 'OBT-EXP1',
+            'nama_obat'      => 'Obat Kadaluarsa',
+            'tgl_kadaluarsa' => now()->subDays(3)->format('Y-m-d'),
+            'status'         => 'tersedia',
+        ]);
+        $this->buatObat([
+            'kode_obat'      => 'OBT-EXP2',
+            'nama_obat'      => 'Obat Hampir Kadaluarsa',
+            'tgl_kadaluarsa' => now()->addDays(15)->format('Y-m-d'),
+            'status'         => 'tersedia',
+        ]);
+        $this->buatObat([
+            'kode_obat'      => 'OBT-AMAN',
+            'nama_obat'      => 'Obat Aman',
+            'tgl_kadaluarsa' => now()->addDays(90)->format('Y-m-d'),
+            'status'         => 'tersedia',
+        ]);
+        $this->buatObat([
+            'kode_obat'      => 'OBT-OFF',
+            'nama_obat'      => 'Obat Nonaktif Kadaluarsa',
+            'tgl_kadaluarsa' => now()->subDays(1)->format('Y-m-d'),
+            'status'         => 'tidak',
+        ]);
+
+        $dashboard = $this->getJson('/api/dashboard')->assertOk()->json('data');
+        $kodesKadaluarsa = collect($dashboard['peringatan_kadaluarsa'])->pluck('status_kadaluarsa', 'kode_obat')->all();
+
+        $this->assertCount(2, $kodesKadaluarsa);
+        $this->assertSame('Kadaluarsa', $kodesKadaluarsa['OBT-EXP1']);
+        $this->assertSame('Hampir kadaluarsa', $kodesKadaluarsa['OBT-EXP2']);
+        $this->assertArrayNotHasKey('OBT-AMAN', $kodesKadaluarsa);
+        $this->assertArrayNotHasKey('OBT-OFF', $kodesKadaluarsa);
+
+        $stokData = $this->getJson('/api/stok')->assertOk()->json('data');
+        $statusStokKadaluarsa = collect($stokData)->pluck('status_kadaluarsa', 'kode_obat')->all();
+
+        $this->assertSame('Kadaluarsa', $statusStokKadaluarsa['OBT-EXP1']);
+        $this->assertSame('Hampir kadaluarsa', $statusStokKadaluarsa['OBT-EXP2']);
+        $this->assertSame('Aman', $statusStokKadaluarsa['OBT-AMAN']);
+    }
+
+    public function test_dashboard_mendukung_filter_periode_harian_mingguan_bulanan(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-11-18 10:00:00'));
+
+        try {
+            $this->loginSebagaiOwner();
+
+            $kasir = User::create([
+                'nama'     => 'Kasir',
+                'username' => 'kasir_periode',
+                'password' => Hash::make('rahasia123'),
+                'role'     => 'karyawan',
+                'status'   => 'aktif',
+            ]);
+
+            $buatTrx = function (string $kode, int $total, string $waktu) use ($kasir): void {
+                $t = Transaksi::create([
+                    'no_transaksi' => $kode,
+                    'user_id'      => $kasir->id,
+                    'total_harga'  => $total,
+                    'total_bayar'  => $total,
+                    'kembalian'    => 0,
+                ]);
+                $t->forceFill(['created_at' => $waktu])->save();
+            };
+
+            $buatTrx('TRX-HARI', 10000, '2026-11-18 08:30:00');
+            $buatTrx('TRX-MINGGU', 25000, '2026-11-16 14:00:00');
+            $buatTrx('TRX-BULAN', 40000, '2026-11-05 12:00:00');
+            $buatTrx('TRX-LALU', 99000, '2026-10-25 12:00:00');
+
+            $this->getJson('/api/dashboard?periode=harian')
+                ->assertOk()
+                ->assertJsonPath('data.periode', 'harian')
+                ->assertJsonPath('data.total_penjualan', 10000)
+                ->assertJsonPath('data.jumlah_transaksi', 1);
+
+            $this->getJson('/api/dashboard?periode=mingguan')
+                ->assertOk()
+                ->assertJsonPath('data.periode', 'mingguan')
+                ->assertJsonPath('data.total_penjualan', 35000)
+                ->assertJsonPath('data.jumlah_transaksi', 2);
+
+            $this->getJson('/api/dashboard?periode=bulanan')
+                ->assertOk()
+                ->assertJsonPath('data.periode', 'bulanan')
+                ->assertJsonPath('data.total_penjualan', 75000)
+                ->assertJsonPath('data.jumlah_transaksi', 3);
+
+            $this->getJson('/api/dashboard?periode=tahunan')
+                ->assertStatus(422);
+        } finally {
+            Carbon::setTestNow();
+        }
     }
 }

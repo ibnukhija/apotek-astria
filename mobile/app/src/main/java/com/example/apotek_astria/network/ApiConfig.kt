@@ -8,6 +8,9 @@ import com.android.volley.VolleyError
 import com.android.volley.toolbox.JsonObjectRequest
 import com.example.apotek_astria.ui.login.LoginActivity
 import org.json.JSONObject
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.TimeZone
 
 object ApiConfig {
     // Ganti IP Sesuai dengan Laptop
@@ -67,6 +70,51 @@ object ApiConfig {
         }
         appContext.startActivity(intent)
         return true
+    }
+
+    // Konversi timestamp ISO UTC Laravel (atau yyyy-MM-dd HH:mm:ss) ke zona waktu perangkat
+    fun formatWaktuIso(waktuRaw: String, outPattern: String = "dd/MM/yyyy HH:mm"): String {
+        if (waktuRaw.isBlank()) return "-"
+        val polaUtc = listOf(
+            "yyyy-MM-dd'T'HH:mm:ss.SSSSSS'Z'",
+            "yyyy-MM-dd'T'HH:mm:ss'Z'"
+        )
+        val localeId = Locale.forLanguageTag("id-ID")
+        for (pola in polaUtc) {
+            try {
+                val parser = SimpleDateFormat(pola, Locale.US).apply {
+                    timeZone = TimeZone.getTimeZone("UTC")
+                }
+                val date = parser.parse(waktuRaw)
+                if (date != null) {
+                    return SimpleDateFormat(outPattern, localeId).format(date)
+                }
+            } catch (_: Exception) {
+            }
+        }
+        try {
+            val parserLokal = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
+            val date = parserLokal.parse(waktuRaw)
+            if (date != null) {
+                return SimpleDateFormat(outPattern, localeId).format(date)
+            }
+        } catch (_: Exception) {
+        }
+        return waktuRaw
+    }
+
+    // Format tanggal yyyy-MM-dd menjadi dd/MM/yyyy
+    fun formatTanggal(tanggalRaw: String, outPattern: String = "dd/MM/yyyy"): String {
+        if (tanggalRaw.isBlank() || tanggalRaw == "null") return ""
+        val bagianTanggal = tanggalRaw.take(10)
+        return try {
+            val date = SimpleDateFormat("yyyy-MM-dd", Locale.US).parse(bagianTanggal)
+            if (date != null) {
+                SimpleDateFormat(outPattern, Locale.forLanguageTag("id-ID")).format(date)
+            } else bagianTanggal
+        } catch (_: Exception) {
+            bagianTanggal
+        }
     }
 
     // Ambil pesan validasi Laravel (422) supaya bisa ditampilkan ke user

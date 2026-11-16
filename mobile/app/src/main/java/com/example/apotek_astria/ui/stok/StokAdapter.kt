@@ -10,6 +10,7 @@ import android.widget.ArrayAdapter
 import android.widget.TextView
 import com.example.apotek_astria.R
 import com.example.apotek_astria.model.ObatModel
+import com.example.apotek_astria.network.ApiConfig
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -30,6 +31,18 @@ class StokAdapter(
 
         val tidakTersedia = if (item.status != "tersedia") " • Tidak tersedia" else ""
         view.findViewById<TextView>(R.id.tvHarga).text = "Rp ${rupiah.format(item.hargaJual)}$tidakTersedia"
+
+        // Tanggal & status kadaluarsa mengikuti hitungan server
+        val tvKadaluarsa = view.findViewById<TextView>(R.id.tvKadaluarsa)
+        val tglTampil = ApiConfig.formatTanggal(item.tglKadaluarsa)
+        val statusKad = item.statusKadaluarsa.ifBlank { "Belum diatur" }
+        tvKadaluarsa.text = if (tglTampil.isNotBlank()) "Exp: $tglTampil • $statusKad" else "Exp: $statusKad"
+        val warnaKad = when (statusKad.lowercase(Locale.ROOT)) {
+            "kadaluarsa" -> "#D32F2F"
+            "hampir kadaluarsa" -> "#D97706"
+            else -> "#757575"
+        }
+        tvKadaluarsa.setTextColor(Color.parseColor(warnaKad))
 
         // Label dan warna status stok mengikuti hitungan server (sama dengan web)
         val tvStok = view.findViewById<TextView>(R.id.tvStok)

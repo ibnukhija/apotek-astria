@@ -213,9 +213,7 @@ class RiwayatFragment : Fragment() {
                                 }
 
                                 val rawWaktu = obj.optString("created_at")
-                                val formatWaktu = if (rawWaktu.length >= 16) {
-                                    rawWaktu.substring(0, 10) + " " + rawWaktu.substring(11, 16)
-                                } else rawWaktu
+                                val formatWaktu = ApiConfig.formatWaktuIso(rawWaktu, "dd/MM/yyyy HH:mm")
 
                                 temporaryList.add(
                                     TransaksiModel(

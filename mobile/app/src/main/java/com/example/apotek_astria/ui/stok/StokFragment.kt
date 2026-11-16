@@ -107,6 +107,7 @@ class StokFragment : Fragment() {
         if (arr != null) {
             for (i in 0 until arr.length()) {
                 val o = arr.getJSONObject(i)
+                val rawExp = if (o.isNull("tgl_kadaluarsa")) "" else o.optString("tgl_kadaluarsa", "")
                 semuaObat.add(
                     ObatModel(
                         id = o.optInt("id"),
@@ -120,7 +121,9 @@ class StokFragment : Fragment() {
                         hargaJual = o.optInt("harga_jual", 0),
                         stok = o.optInt("stok", 0),
                         status = o.optString("status", "tersedia"),
-                        statusStok = o.optString("status_stok", "Cukup")
+                        statusStok = o.optString("status_stok", "Cukup"),
+                        tglKadaluarsa = rawExp,
+                        statusKadaluarsa = o.optString("status_kadaluarsa", "Belum diatur")
                     )
                 )
             }
@@ -150,12 +153,18 @@ class StokFragment : Fragment() {
         tampilObat.clear()
         tampilObat.addAll(semuaObat.filter {
             (kategori == semuaKategori || it.kategori == kategori) &&
-                    it.namaObat.contains(kata, ignoreCase = true)
+                    (it.namaObat.contains(kata, ignoreCase = true) ||
+                            it.kodeObat.contains(kata, ignoreCase = true))
         })
         adapter.notifyDataSetChanged()
 
         val hampirHabis = tampilObat.count { it.statusStok.equals("Hampir habis", ignoreCase = true) }
-        binding.tvRingkasan.text = "${tampilObat.size} obat • $hampirHabis hampir habis"
+        val perhatianExp = tampilObat.count {
+            it.statusKadaluarsa.equals("Kadaluarsa", ignoreCase = true) ||
+                    it.statusKadaluarsa.equals("Hampir kadaluarsa", ignoreCase = true)
+        }
+        val infoExp = if (perhatianExp > 0) " • $perhatianExp kadaluarsa/hampir" else ""
+        binding.tvRingkasan.text = "${tampilObat.size} obat • $hampirHabis hampir habis$infoExp"
         binding.tvEmpty.visibility = if (tampilObat.isEmpty()) View.VISIBLE else View.GONE
     }
 
@@ -173,12 +182,17 @@ class StokFragment : Fragment() {
     }
 
     private fun tampilkanDetail(obat: ObatModel) {
-        val pesan = "Kode     : ${obat.kodeObat}\n" +
-                "Kategori : ${obat.kategori}\n" +
-                "Satuan   : ${obat.satuan}\n" +
-                "Stok     : ${obat.stok} (${obat.statusStok})\n" +
-                "Status   : ${if (obat.status == "tersedia") "Tersedia" else "Tidak tersedia"}\n" +
-                "Harga    : Rp ${rupiah.format(obat.hargaJual)}"
+        val tglExp = ApiConfig.formatTanggal(obat.tglKadaluarsa)
+        val statusExp = obat.statusKadaluarsa.ifBlank { "Belum diatur" }
+        val infoExp = if (tglExp.isNotBlank()) "$tglExp ($statusExp)" else statusExp
+
+        val pesan = "Kode       : ${obat.kodeObat}\n" +
+                "Kategori   : ${obat.kategori}\n" +
+                "Satuan     : ${obat.satuan}\n" +
+                "Stok       : ${obat.stok} (${obat.statusStok})\n" +
+                "Kadaluarsa : $infoExp\n" +
+                "Status     : ${if (obat.status == "tersedia") "Tersedia" else "Tidak tersedia"}\n" +
+                "Harga      : Rp ${rupiah.format(obat.hargaJual)}"
         AlertDialog.Builder(requireContext())
             .setTitle(obat.namaObat)
             .setMessage(pesan)

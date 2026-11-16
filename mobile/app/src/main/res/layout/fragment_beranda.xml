@@ -125,7 +125,7 @@
                 android:orientation="horizontal"
                 android:padding="12dp"
                 android:gravity="center_vertical"
-                android:layout_marginBottom="24dp"
+                android:layout_marginBottom="10dp"
                 android:visibility="gone">
 
                 <ImageView
@@ -144,10 +144,39 @@
                     android:textSize="13sp" />
             </LinearLayout>
 
+            <!-- Kotak Peringatan Kadaluarsa (Soft Red) -->
+            <LinearLayout
+                android:id="@+id/layout_peringatan_kadaluarsa"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_peringatan_kadaluarsa"
+                android:orientation="horizontal"
+                android:padding="12dp"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="10dp"
+                android:visibility="gone">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@android:drawable/ic_dialog_alert"
+                    app:tint="#DC2626"/>
+
+                <TextView
+                    android:id="@+id/tv_peringatan_kadaluarsa"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:text="0 obat kadaluarsa / hampir kadaluarsa"
+                    android:textColor="#991B1B"
+                    android:textSize="13sp" />
+            </LinearLayout>
+
             <!-- Judul Bagian Transaksi Terbaru -->
             <RelativeLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
                 android:layout_marginBottom="16dp">
 
                 <TextView
