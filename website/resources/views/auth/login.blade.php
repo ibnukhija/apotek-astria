@@ -9,6 +9,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
+            darkMode: 'class',
             theme: {
                 extend: {
                     colors: {
@@ -37,21 +38,21 @@
 </head>
 
 <body class="bg-off-white text-dark-slate font-sans m-0">
-    <div class="h-screen flex bg-off-white">
+    <div class="min-h-screen flex flex-col lg:flex-row bg-off-white">
         <!-- Panel Kiri -->
-        <div class="w-2/5 bg-soft-teal flex flex-col items-center justify-center p-10 border-r border-soft-teal text-white">
-            <div class="bg-pure-white text-soft-teal p-4 rounded-xl mb-6 text-5xl shadow-sm">
-                <img src="{{ asset('img/logo-ular-nobg.png') }}" alt="Logo" class="w-24 h-24">
+        <div class="w-full lg:w-2/5 bg-soft-teal flex flex-col items-center justify-center p-6 sm:p-8 lg:p-10 border-b lg:border-b-0 lg:border-r border-soft-teal text-white">
+            <div class="bg-pure-white text-soft-teal p-3 lg:p-4 rounded-xl mb-4 lg:mb-6 shadow-sm">
+                <img src="{{ asset('img/logo-ular-nobg.png') }}" alt="Logo" class="w-16 h-16 lg:w-24 lg:h-24">
             </div>
-            <h1 class="text-3xl font-bold text-center mb-3">Apotek Astria 2 Farma</h1>
-            <p class="text-center opacity-90 text-sm leading-relaxed max-w-xs">
+            <h1 class="text-2xl lg:text-3xl font-bold text-center mb-2 lg:mb-3">Apotek Astria 2 Farma</h1>
+            <p class="text-center opacity-90 text-xs sm:text-sm leading-relaxed max-w-xs">
                 Kelola transaksi, stok obat, dan data produk dalam satu ruang kerja yang sederhana untuk seluruh tim Astria.
             </p>
         </div>
 
         <!-- Panel Kanan (Form Login) -->
-        <div class="w-3/5 flex items-center justify-center">
-            <div class="bg-pure-white p-10 rounded-xl w-full max-w-md shadow-sm border border-border-color">
+        <div class="w-full lg:w-3/5 flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-10">
+            <div class="bg-pure-white p-6 sm:p-8 lg:p-10 rounded-xl w-full max-w-md shadow-sm border border-border-color">
                 <h2 class="mt-0 text-2xl font-bold mb-2">Selamat datang</h2>
                 <p class="text-gray-text text-sm mb-6">Masuk menggunakan akun karyawan untuk memulai shift Anda.</p>
 

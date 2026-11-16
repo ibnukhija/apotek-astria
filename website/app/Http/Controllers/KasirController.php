@@ -9,6 +9,7 @@ use App\Models\DetailTransaksi;
 use App\Models\ProfilApotek;
 use App\Models\User;
 use App\Services\StokService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -103,8 +104,14 @@ class KasirController extends Controller
     {
         $query = Transaksi::with(['user', 'details.obat'])->latest();
 
+        $tanggal = null;
         if ($request->filled('tanggal')) {
-            $query->whereDate('created_at', $request->tanggal);
+            try {
+                $tanggal = Carbon::parse($request->tanggal);
+                $query->whereDate('created_at', $tanggal);
+            } catch (\Throwable) {
+                $tanggal = null;
+            }
         }
 
         if ($request->filled('q')) {
@@ -117,12 +124,29 @@ class KasirController extends Controller
             });
         }
 
+        $omsetQuery = clone $query;
+        if (! $tanggal) {
+            $omsetQuery->whereDate('created_at', Carbon::today());
+        }
+
+        $tglLabel = $tanggal?->format('d/m/Y');
+        $adaPencarian = $request->filled('q');
+
         $ringkasan = [
             'total_transaksi' => (clone $query)->count(),
-            'total_omset'     => (clone $query)->sum('total_harga'),
+            'label_transaksi' => $tglLabel
+                ? "Total Transaksi ({$tglLabel})"
+                : ($adaPencarian ? 'Total Transaksi (Hasil Pencarian)' : 'Total Transaksi Keseluruhan'),
+            'total_omset'     => $omsetQuery->sum('total_harga'),
+            'label_omset'     => $tglLabel
+                ? "Penjualan ({$tglLabel})"
+                : 'Penjualan Hari Ini',
             'total_item'      => (int) DB::table('detail_transaksi')
                 ->whereIn('transaksi_id', (clone $query)->reorder()->select('id'))
                 ->sum('qty'),
+            'label_item'      => $tglLabel
+                ? "Produk Terjual ({$tglLabel})"
+                : ($adaPencarian ? 'Produk Terjual (Hasil Pencarian)' : 'Produk Terjual Keseluruhan'),
         ];
 
         $transaksis = $query->paginate(20)->withQueryString();

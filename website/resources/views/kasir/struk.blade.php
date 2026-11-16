@@ -2,11 +2,14 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Struk Transaksi - {{ $transaksi->no_transaksi }}</title>
     <style>
         body {
             font-family: 'Courier New', Courier, monospace;
             width: 300px;
+            max-width: 100%;
+            box-sizing: border-box;
             margin: 0 auto;
             padding: 10px;
             font-size: 12px;

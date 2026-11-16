@@ -5,19 +5,19 @@
 @section('content')
 
 {{-- ================= JUDUL HALAMAN ================= --}}
-<div class="flex justify-between items-center mb-5 shrink-0">
+<div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4 shrink-0">
     <div>
-        <h2 class="m-0 text-2xl font-bold">Kelola Data Produk</h2>
-        <span class="text-gray-text text-sm">Pantau stok, kategori, dan harga obat</span>
+        <h2 class="m-0 text-xl lg:text-2xl font-bold">Kelola Data Produk</h2>
+        <span class="text-gray-text text-xs sm:text-sm">Pantau stok, kategori, dan harga obat</span>
     </div>
 
-    <div class="flex items-center gap-4">
-        <span class="text-gray-text text-sm font-medium">
+    <div class="flex items-center justify-between sm:justify-end gap-3">
+        <span class="text-gray-text text-xs sm:text-sm font-medium">
             {{ \Carbon\Carbon::now()->locale('id')->translatedFormat('d F Y') }}
         </span>
 
         <button type="button" onclick="bukaModal('add')"
-            class="bg-soft-teal text-white px-5 py-2.5 border-none rounded-lg font-bold shadow-sm cursor-pointer hover:opacity-90 transition">
+            class="bg-soft-teal text-white px-4 py-2 border-none rounded-lg text-sm font-bold shadow-sm cursor-pointer hover:opacity-90 transition whitespace-nowrap">
             + Tambah Produk
         </button>
     </div>
@@ -25,13 +25,15 @@
 
 {{-- ================= NOTIFIKASI ================= --}}
 @if (session('success'))
-    <div class="bg-[#E8F4F2] text-soft-teal p-4 rounded-lg mb-5 font-semibold border border-soft-teal shrink-0">
-        {{ session('success') }}
+    <div role="alert" class="flash-alert transition-opacity duration-300 bg-[#E8F4F2] text-soft-teal py-2.5 px-4 rounded-lg mb-4 text-sm font-semibold border border-soft-teal shrink-0 flex items-center justify-between gap-3">
+        <span>{{ session('success') }}</span>
+        <button type="button" onclick="tutupAlert(this.closest('.flash-alert'))" aria-label="Tutup notifikasi"
+            class="text-soft-teal/70 hover:text-soft-teal text-lg font-bold leading-none px-1">&times;</button>
     </div>
 @endif
 
 @if ($errors->any())
-    <div class="bg-red-50 text-red-600 p-4 rounded-lg mb-5 border border-red-300 shrink-0">
+    <div class="bg-red-50 text-red-600 p-3 px-4 rounded-lg mb-4 text-sm border border-red-300 shrink-0">
         <ul class="list-disc pl-5 m-0">
             @foreach ($errors->all() as $error)
                 <li>{{ $error }}</li>
@@ -41,63 +43,63 @@
 @endif
 
 {{-- ================= KOTAK RINGKASAN ================= --}}
-<div class="grid grid-cols-4 gap-4 mb-5 shrink-0">
-    <div class="bg-pure-white border border-border-color rounded-xl p-4 flex items-center gap-4 shadow-sm">
-        <div class="w-12 h-12 rounded-xl bg-[#E8F4F2] flex items-center justify-center shrink-0">
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#2A9D8F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>
+<div class="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-4 shrink-0">
+    <div class="bg-pure-white border border-border-color rounded-xl p-3 flex items-center gap-3 shadow-sm">
+        <div class="w-10 h-10 rounded-lg bg-[#E8F4F2] flex items-center justify-center shrink-0">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2A9D8F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>
         </div>
-        <div>
-            <div class="text-sm text-gray-text">Total produk aktif</div>
-            <div><span class="text-3xl font-bold">{{ $ringkasan['total'] ?? 0 }}</span> <span class="text-sm text-gray-text">{{ $ringkasan['kategori'] ?? 0 }} kategori</span></div>
-        </div>
-    </div>
-
-    <div class="bg-pure-white border border-border-color rounded-xl p-4 flex items-center gap-4 shadow-sm">
-        <div class="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center shrink-0">
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#15803D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></svg>
-        </div>
-        <div>
-            <div class="text-sm text-gray-text">Stok cukup</div>
-            <div><span class="text-3xl font-bold">{{ $ringkasan['cukup'] ?? 0 }}</span> <span class="text-sm text-green-700">aman</span></div>
+        <div class="min-w-0">
+            <div class="text-xs text-gray-text truncate">Total produk aktif</div>
+            <div class="leading-tight"><span class="text-xl lg:text-2xl font-bold">{{ $ringkasan['total'] ?? 0 }}</span> <span class="text-xs text-gray-text whitespace-nowrap">{{ $ringkasan['kategori'] ?? 0 }} kategori</span></div>
         </div>
     </div>
 
-    <div class="bg-pure-white border border-border-color rounded-xl p-4 flex items-center gap-4 shadow-sm">
-        <div class="w-12 h-12 rounded-xl bg-yellow-100 flex items-center justify-center shrink-0">
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l10 18H2L12 3z"/><path d="M12 10v5M12 18v.5"/></svg>
+    <div class="bg-pure-white border border-border-color rounded-xl p-3 flex items-center gap-3 shadow-sm">
+        <div class="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center shrink-0">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#15803D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></svg>
         </div>
-        <div>
-            <div class="text-sm text-gray-text">Stok menipis</div>
-            <div><span class="text-3xl font-bold">{{ $ringkasan['menipis'] ?? 0 }}</span> <span class="text-sm text-yellow-700">perlu restok</span></div>
+        <div class="min-w-0">
+            <div class="text-xs text-gray-text truncate">Stok cukup</div>
+            <div class="leading-tight"><span class="text-xl lg:text-2xl font-bold">{{ $ringkasan['cukup'] ?? 0 }}</span> <span class="text-xs text-green-700">aman</span></div>
         </div>
     </div>
 
-    <div class="bg-pure-white border border-border-color rounded-xl p-4 flex items-center gap-4 shadow-sm">
-        <div class="w-12 h-12 rounded-xl bg-red-100 flex items-center justify-center shrink-0">
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#B91C1C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5v.5"/></svg>
+    <div class="bg-pure-white border border-border-color rounded-xl p-3 flex items-center gap-3 shadow-sm">
+        <div class="w-10 h-10 rounded-lg bg-yellow-100 flex items-center justify-center shrink-0">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l10 18H2L12 3z"/><path d="M12 10v5M12 18v.5"/></svg>
         </div>
-        <div>
-            <div class="text-sm text-gray-text">Hampir habis</div>
-            <div><span class="text-3xl font-bold">{{ $ringkasan['hampir_habis'] ?? 0 }}</span> <span class="text-sm text-red-700">segera restok</span></div>
+        <div class="min-w-0">
+            <div class="text-xs text-gray-text truncate">Stok menipis</div>
+            <div class="leading-tight"><span class="text-xl lg:text-2xl font-bold">{{ $ringkasan['menipis'] ?? 0 }}</span> <span class="text-xs text-yellow-700 whitespace-nowrap">perlu restok</span></div>
+        </div>
+    </div>
+
+    <div class="bg-pure-white border border-border-color rounded-xl p-3 flex items-center gap-3 shadow-sm">
+        <div class="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center shrink-0">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#B91C1C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5v.5"/></svg>
+        </div>
+        <div class="min-w-0">
+            <div class="text-xs text-gray-text truncate">Hampir habis</div>
+            <div class="leading-tight"><span class="text-xl lg:text-2xl font-bold">{{ $ringkasan['hampir_habis'] ?? 0 }}</span> <span class="text-xs text-red-700 whitespace-nowrap">segera restok</span></div>
         </div>
     </div>
 </div>
 
 {{-- ================= AREA KONTEN UTAMA (TABEL & SEARCH) ================= --}}
-<div class="flex-1 min-h-0 bg-pure-white border border-border-color rounded-xl flex flex-col overflow-hidden shadow-sm">
+<div class="lg:flex-1 lg:min-h-0 bg-pure-white border border-border-color rounded-xl flex flex-col overflow-hidden shadow-sm">
 
     {{-- Pencarian & Filter --}}
     <form method="GET" action="{{ route('obat.index') }}" id="filterForm"
-          class="flex gap-4 items-center p-4 border-b border-border-color bg-pure-white shrink-0">
+          class="flex flex-col sm:flex-row gap-2.5 sm:gap-3 items-stretch sm:items-center p-3 px-4 border-b border-border-color bg-pure-white shrink-0">
         <div class="flex-1 relative">
-            <span class="absolute left-3 top-2.5 text-gray-text">🔍</span>
+            <span class="absolute left-3 top-2 text-gray-text text-sm">🔍</span>
             <input type="text" name="q" id="searchProduct" value="{{ request('q') }}"
                 placeholder="Cari nama atau kode produk..." autocomplete="off"
-                class="w-full py-2.5 px-3 pl-9 border border-border-color rounded-lg text-sm outline-none focus:border-soft-teal">
+                class="w-full py-2 px-3 pl-9 border border-border-color rounded-lg text-sm outline-none focus:border-soft-teal">
         </div>
 
         <select name="kategori" id="filterKategori"
-            class="w-52 py-2.5 px-3 border border-border-color rounded-lg text-sm outline-none focus:border-soft-teal bg-pure-white cursor-pointer">
+            class="w-full sm:w-48 py-2 px-3 border border-border-color rounded-lg text-sm outline-none focus:border-soft-teal bg-pure-white cursor-pointer">
             <option value="">Semua kategori</option>
             @foreach ($kategoris as $kategori)
                 <option value="{{ $kategori->id }}" @selected(request('kategori') == $kategori->id)>
@@ -107,47 +109,64 @@
         </select>
     </form>
 
+    {{-- Keterangan Status Stok & Kadaluarsa --}}
+    <div class="px-4 py-2 bg-[#F8FAFC] border-b border-border-color shrink-0 flex flex-wrap items-center justify-between gap-x-5 gap-y-1.5 text-xs text-dark-slate">
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span class="font-bold text-gray-text uppercase text-[11px] tracking-wide">Info Stok:</span>
+            <span class="inline-flex items-center gap-1.5 font-medium"><span class="w-2 h-2 rounded-full bg-green-500"></span>Cukup (&ge; 25)</span>
+            <span class="inline-flex items-center gap-1.5 font-medium"><span class="w-2 h-2 rounded-full bg-yellow-500"></span>Menipis (10&ndash;24)</span>
+            <span class="inline-flex items-center gap-1.5 font-medium"><span class="w-2 h-2 rounded-full bg-red-500"></span>Hampir habis (&lt; 10)</span>
+        </div>
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span class="font-bold text-gray-text uppercase text-[11px] tracking-wide">Info Kadaluarsa:</span>
+            <span class="inline-flex items-center gap-1.5 font-medium"><span class="w-2 h-2 rounded-full bg-green-500"></span>Aman (&gt; 30 hari)</span>
+            <span class="inline-flex items-center gap-1.5 font-medium"><span class="w-2 h-2 rounded-full bg-yellow-500"></span>Hampir kadaluarsa (&le; 30 hari)</span>
+            <span class="inline-flex items-center gap-1.5 font-medium"><span class="w-2 h-2 rounded-full bg-red-500"></span>Kadaluarsa (lewat tanggal)</span>
+        </div>
+    </div>
+
     {{-- Tabel Produk (area yang diganti lewat AJAX) --}}
-    <div class="flex-1 overflow-y-auto transition-opacity" id="areaTabel">
+    <div class="flex-1 overflow-auto transition-opacity" id="areaTabel">
         <table class="w-full text-left border-collapse">
             <thead class="sticky top-0 bg-off-white z-10">
                 <tr>
                     @foreach (['KODE', 'NAMA PRODUK', 'KATEGORI', 'STOK', 'KADALUARSA', 'HARGA BELI', 'MARGIN', 'HARGA JUAL'] as $judul)
-                        <th class="p-3 px-5 text-xs text-gray-text font-bold uppercase border-b border-border-color">{{ $judul }}</th>
+                        <th class="py-2.5 px-3 text-[11px] text-gray-text font-bold uppercase border-b border-border-color whitespace-nowrap">{{ $judul }}</th>
                     @endforeach
-                    <th class="p-3 px-5 text-xs text-gray-text font-bold uppercase border-b border-border-color text-center">AKSI</th>
+                    <th class="py-2.5 px-3 text-[11px] text-gray-text font-bold uppercase border-b border-border-color text-center whitespace-nowrap">AKSI</th>
                 </tr>
             </thead>
 
             <tbody>
                 @forelse ($obats as $obat)
                     <tr class="border-b border-border-color hover:bg-off-white transition">
-                        <td class="p-4 px-5 text-gray-text text-sm">{{ $obat->kode_obat }}</td>
+                        <td class="py-2.5 px-3 text-gray-text text-xs sm:text-[13px] whitespace-nowrap font-mono">{{ $obat->kode_obat }}</td>
 
-                        <td class="p-4 px-5 text-sm">
-                            <strong>{{ $obat->nama_obat }}</strong>
+                        <td class="py-2.5 px-3 text-xs sm:text-[13px] min-w-[150px]">
+                            <strong class="text-dark-slate">{{ $obat->nama_obat }}</strong>
                             @if ($obat->status === 'tidak')
-                                <span class="ml-1 text-[10px] bg-gray-100 text-gray-text px-2 py-0.5 rounded-full font-semibold">Tidak tersedia</span>
+                                <span class="ml-1 text-[10px] bg-gray-100 text-gray-text px-1.5 py-0.5 rounded-full font-semibold whitespace-nowrap">Tidak tersedia</span>
                             @endif
-                            <br>
-                            <span class="text-xs text-gray-text">{{ $obat->satuan }}</span>
+                            <div class="text-[11px] text-gray-text">{{ $obat->satuan }}</div>
                         </td>
-                        <td class="p-4 px-5 text-sm">{{ $obat->kategori->nama_kategori ?? '-' }}</td>
+                        <td class="py-2.5 px-3 text-xs sm:text-[13px] whitespace-nowrap">{{ $obat->kategori->nama_kategori ?? '-' }}</td>
 
-                        <td class="p-4 px-5 text-sm font-semibold">
+                        <td class="py-2.5 px-3 text-xs font-semibold whitespace-nowrap">
                             @php($info = $obat->stok_info)
-                            <span class="{{ $info['kelas'] }} px-2.5 py-1 rounded-full text-xs">{{ $obat->stok }} ({{ $info['label'] }})</span>
+                            <span class="{{ $info['kelas'] }} inline-block px-2.5 py-0.5 rounded-full text-xs whitespace-nowrap">{{ $obat->stok }} ({{ $info['label'] }})</span>
                         </td>
-                        <td class="p-4 px-5 text-sm whitespace-nowrap">
+                        <td class="py-2.5 px-3 text-xs whitespace-nowrap">
                             @php($kadaluarsa = $obat->kadaluarsa_info)
-                            <div class="font-medium text-dark-slate mb-1">{{ $obat->tgl_kadaluarsa ? $obat->tgl_kadaluarsa->format('d/m/Y') : '-' }}</div>
-                            <span class="{{ $kadaluarsa['kelas'] }} px-2.5 py-0.5 rounded-full text-xs font-semibold">{{ $kadaluarsa['label'] }}</span>
+                            <div class="flex items-center gap-1.5">
+                                <span class="font-medium text-dark-slate">{{ $obat->tgl_kadaluarsa ? $obat->tgl_kadaluarsa->format('d/m/Y') : '-' }}</span>
+                                <span class="{{ $kadaluarsa['kelas'] }} px-2.5 py-0.5 rounded-full text-xs font-semibold">{{ $kadaluarsa['label'] }}</span>
+                            </div>
                         </td>
-                        <td class="p-4 px-5 text-sm">Rp{{ number_format($obat->harga_beli, 0, ',', '.') }}</td>
-                        <td class="p-4 px-5 text-sm">{{ $obat->margin_teks }}</td>
-                        <td class="p-4 px-5 text-sm font-bold text-soft-teal">Rp{{ number_format($obat->harga_jual, 0, ',', '.') }}</td>
+                        <td class="py-2.5 px-3 text-xs sm:text-[13px] whitespace-nowrap">Rp{{ number_format($obat->harga_beli, 0, ',', '.') }}</td>
+                        <td class="py-2.5 px-3 text-xs sm:text-[13px] whitespace-nowrap">{{ $obat->margin_teks }}</td>
+                        <td class="py-2.5 px-3 text-xs sm:text-[13px] font-bold text-soft-teal whitespace-nowrap">Rp{{ number_format($obat->harga_jual, 0, ',', '.') }}</td>
 
-                        <td class="p-4 px-5 text-sm text-center whitespace-nowrap">
+                        <td class="py-2.5 px-3 text-xs sm:text-[13px] text-center whitespace-nowrap">
                             <button type="button"
                                 data-obat="{{ json_encode([
                                     'id'             => $obat->id,
@@ -164,7 +183,7 @@
                                     'status'         => $obat->status,
                                 ]) }}"
                                 onclick="bukaModal('edit', JSON.parse(this.dataset.obat))"
-                                class="text-soft-teal font-semibold mr-3 hover:underline">
+                                class="text-soft-teal font-semibold mr-2.5 hover:underline">
                                 ✎ Edit
                             </button>
 
@@ -178,7 +197,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="9" class="p-10 text-center text-gray-text">
+                        <td colspan="9" class="p-10 text-center text-gray-text text-sm">
                             @if (request()->hasAny(['q', 'kategori']))
                                 Tidak ada produk yang cocok dengan pencarian.
                             @else
@@ -192,22 +211,19 @@
     </div>
 
     {{-- Keterangan & Pagination (area yang diganti lewat AJAX) --}}
-    <div id="areaFooter" class="p-4 px-5 border-t border-border-color bg-pure-white shrink-0 flex flex-wrap justify-between items-center gap-4">
-        <div class="text-sm text-gray-text font-medium">
+    <div id="areaFooter" class="py-2.5 px-4 border-t border-border-color bg-pure-white shrink-0 flex flex-col sm:flex-row justify-between items-center gap-2">
+        <div class="text-xs text-gray-text font-medium">
             Menampilkan {{ $obats->firstItem() ?? 0 }}-{{ $obats->lastItem() ?? 0 }} dari {{ $obats->total() }} produk
-            <span class="block text-xs font-normal mt-0.5">
-                Stok: Cukup (25+), Menipis (10-24), Hampir habis (&lt; 10) &bull; Kadaluarsa: Aman (&gt; 30 hari), Hampir kadaluarsa (&le; 30 hari), Kadaluarsa (lewat tanggal)
-            </span>
         </div>
-        <div class="pagination-custom">{{ $obats->links() }}</div>
+        <div class="pagination-custom shrink-0">{{ $obats->onEachSide(1)->links() }}</div>
     </div>
 </div>
 
 {{-- ================= MODAL TAMBAH / EDIT PRODUK ================= --}}
-<div id="productModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center backdrop-blur-sm">
-    <div class="bg-pure-white w-full max-w-xl rounded-xl p-8 shadow-xl max-h-[90vh] overflow-y-auto">
-        <h3 id="modalJudul" class="mt-0 text-xl font-bold mb-1">Tambah Data Produk</h3>
-        <p class="text-sm text-gray-text mb-6">Harga jual dihitung otomatis dari harga beli dan margin keuntungan.</p>
+<div id="productModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center backdrop-blur-sm p-4">
+    <div class="bg-pure-white w-full max-w-xl rounded-xl p-5 sm:p-7 shadow-xl max-h-[90vh] overflow-y-auto">
+        <h3 id="modalJudul" class="mt-0 text-lg sm:text-xl font-bold mb-1">Tambah Data Produk</h3>
+        <p class="text-xs sm:text-sm text-gray-text mb-5">Harga jual dihitung otomatis dari harga beli dan margin keuntungan.</p>
 
         <form id="productForm" action="{{ route('obat.store') }}" method="POST">
             @csrf
@@ -215,7 +231,7 @@
             <input type="hidden" name="_mode" id="formMode" value="add">
             <input type="hidden" name="_id" id="formId" value="">
 
-            <div class="grid grid-cols-2 gap-5 mb-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4 mb-5">
                 <div>
                     <label class="block mb-2 text-sm font-semibold">Kode Obat</label>
                     <input type="text" name="kode_obat" id="f_kode_obat" required placeholder="Otomatis"
@@ -326,13 +342,6 @@
         </form>
     </div>
 </div>
-
-{{-- ================= CSS ================= --}}
-<style>
-    /* Merapikan Pagination Tailwind Bawaan Laravel */
-    .pagination-custom nav div.hidden.sm\:flex-1 > div:first-child { display: none !important; }
-    .pagination-custom nav div.hidden.sm\:flex-1 > div:last-child { margin-left: auto; }
-</style>
 
 {{-- ================= JAVASCRIPT ================= --}}
 <script>

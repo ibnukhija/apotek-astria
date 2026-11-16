@@ -210,7 +210,9 @@ class KelolaProdukTest extends TestCase
 
         $this->get('/kasir')->assertOk()
             ->assertSee('Hampir kadaluarsa')
-            ->assertSee('Kadaluarsa');
+            ->assertSee('Kadaluarsa')
+            ->assertSee('data-kadaluarsa="1"', false)
+            ->assertSee('Peringatan Obat Kadaluarsa');
     }
 
     public function test_pencarian_dan_filter_kategori(): void

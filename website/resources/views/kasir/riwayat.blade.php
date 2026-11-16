@@ -5,24 +5,24 @@
 @section('content')
 
 {{-- ================= JUDUL HALAMAN ================= --}}
-<div class="flex justify-between items-center mb-5 shrink-0">
+<div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 mb-4 shrink-0">
     <div>
-        <h2 class="m-0 text-2xl font-bold">Riwayat Transaksi</h2>
-        <span class="text-gray-text text-sm">Histori dan arsip penjualan obat di kasir</span>
+        <h2 class="m-0 text-xl lg:text-2xl font-bold">Riwayat Transaksi</h2>
+        <span class="text-gray-text text-xs sm:text-sm">Histori dan arsip penjualan obat di kasir</span>
     </div>
 
     <div class="flex items-center gap-4">
-        <span class="text-gray-text text-sm font-medium">
+        <span class="text-gray-text text-xs sm:text-sm font-medium">
             {{ \Carbon\Carbon::now()->locale('id')->translatedFormat('d F Y') }}
         </span>
     </div>
 </div>
 
 {{-- ================= KOTAK RINGKASAN ================= --}}
-<div class="grid grid-cols-3 gap-4 mb-5 shrink-0">
-    <div class="bg-pure-white border border-border-color rounded-xl p-4 flex items-center gap-4 shadow-sm">
-        <div class="w-12 h-12 rounded-xl bg-[#E8F4F2] flex items-center justify-center shrink-0">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2A9D8F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4 shrink-0">
+    <div class="bg-pure-white border border-border-color rounded-xl p-3 flex items-center gap-3 shadow-sm">
+        <div class="w-10 h-10 rounded-lg bg-[#E8F4F2] flex items-center justify-center shrink-0">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2A9D8F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                 <polyline points="14 2 14 8 20 8"></polyline>
                 <line x1="16" y1="13" x2="8" y2="13"></line>
@@ -30,40 +30,40 @@
                 <polyline points="10 9 9 9 8 9"></polyline>
             </svg>
         </div>
-        <div>
-            <div class="text-xs text-gray-text font-medium">Total Transaksi</div>
-            <div class="text-2xl font-bold text-dark-slate">
+        <div class="min-w-0">
+            <div class="text-xs text-gray-text font-medium truncate">{{ $ringkasan['label_transaksi'] ?? 'Total Transaksi Keseluruhan' }}</div>
+            <div class="text-xl lg:text-2xl font-bold text-dark-slate leading-tight truncate">
                 {{ number_format($ringkasan['total_transaksi'] ?? $transaksis->total(), 0, ',', '.') }}
                 <span class="text-xs font-normal text-gray-text">transaksi</span>
             </div>
         </div>
     </div>
 
-    <div class="bg-pure-white border border-border-color rounded-xl p-4 flex items-center gap-4 shadow-sm">
-        <div class="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <div class="bg-pure-white border border-border-color rounded-xl p-3 flex items-center gap-3 shadow-sm">
+        <div class="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="12" y1="1" x2="12" y2="23"></line>
                 <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
             </svg>
         </div>
-        <div>
-            <div class="text-xs text-gray-text font-medium">Total Pendapatan</div>
-            <div class="text-2xl font-bold text-emerald-600">
+        <div class="min-w-0">
+            <div class="text-xs text-gray-text font-medium truncate">{{ $ringkasan['label_omset'] ?? 'Penjualan Hari Ini' }}</div>
+            <div class="text-xl lg:text-2xl font-bold text-emerald-600 leading-tight truncate">
                 Rp{{ number_format($ringkasan['total_omset'] ?? 0, 0, ',', '.') }}
             </div>
         </div>
     </div>
 
-    <div class="bg-pure-white border border-border-color rounded-xl p-4 flex items-center gap-4 shadow-sm">
-        <div class="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <div class="bg-pure-white border border-border-color rounded-xl p-3 flex items-center gap-3 shadow-sm">
+        <div class="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
                 <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
             </svg>
         </div>
-        <div>
-            <div class="text-xs text-gray-text font-medium">Produk Terjual</div>
-            <div class="text-2xl font-bold text-dark-slate">
+        <div class="min-w-0">
+            <div class="text-xs text-gray-text font-medium truncate">{{ $ringkasan['label_item'] ?? 'Produk Terjual Keseluruhan' }}</div>
+            <div class="text-xl lg:text-2xl font-bold text-dark-slate leading-tight truncate">
                 {{ number_format($ringkasan['total_item'] ?? 0, 0, ',', '.') }}
                 <span class="text-xs font-normal text-gray-text">item</span>
             </div>
@@ -72,34 +72,34 @@
 </div>
 
 {{-- ================= TABEL & KONTROL RIWAYAT ================= --}}
-<div class="flex-1 min-h-0 bg-pure-white border border-border-color rounded-xl flex flex-col overflow-hidden shadow-sm">
+<div class="lg:flex-1 lg:min-h-0 bg-pure-white border border-border-color rounded-xl flex flex-col overflow-hidden shadow-sm">
 
     {{-- Filter & Pencarian --}}
-    <form method="GET" action="{{ route('kasir.riwayat') }}" class="p-3.5 px-5 border-b border-border-color bg-pure-white shrink-0 flex flex-wrap items-center justify-between gap-3">
-        {{-- Kiri: Hanya Pencarian --}}
-        <div class="relative w-80">
-            <span class="absolute left-3 top-2.5 text-gray-text text-sm pointer-events-none">🔍</span>
+    <form method="GET" action="{{ route('kasir.riwayat') }}" class="p-3 px-4 border-b border-border-color bg-pure-white shrink-0 flex flex-col lg:flex-row lg:items-center justify-between gap-2.5">
+        {{-- Kiri: Pencarian --}}
+        <div class="relative w-full lg:w-72">
+            <span class="absolute left-3 top-2 text-gray-text text-sm pointer-events-none">🔍</span>
             <input type="text" name="q" value="{{ request('q') }}" placeholder="Cari No. Trx / Kasir..."
                 class="w-full py-2 px-3 pl-9 border border-border-color rounded-lg text-sm outline-none focus:border-soft-teal transition">
         </div>
 
         {{-- Kanan: Tanggal, Filter, dan Reset --}}
-        <div class="flex flex-wrap items-center gap-3">
-            <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
+            <div class="flex items-center gap-2 flex-1 sm:flex-initial">
                 <span class="text-xs font-semibold text-gray-text shrink-0">Tanggal:</span>
                 <input type="date" name="tanggal" value="{{ request('tanggal') }}" 
-                    class="p-2 border border-border-color rounded-lg text-sm outline-none focus:border-soft-teal cursor-pointer">
+                    class="w-full sm:w-auto py-1.5 px-2.5 border border-border-color rounded-lg text-sm outline-none focus:border-soft-teal cursor-pointer">
             </div>
 
-            <button type="submit" class="bg-soft-teal text-white px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 shadow-sm transition flex items-center gap-1.5">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <button type="submit" class="bg-soft-teal text-white px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold hover:opacity-90 shadow-sm transition flex items-center gap-1.5">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
                 </svg>
                 Filter
             </button>
 
             <a href="{{ route('kasir.riwayat') }}" 
-               class="bg-gray-100 hover:bg-gray-200 text-gray-700 border border-border-color px-3.5 py-2 rounded-lg text-sm font-semibold shadow-sm transition inline-flex items-center gap-1.5"
+               class="bg-gray-100 hover:bg-gray-200 text-gray-700 border border-border-color px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold shadow-sm transition inline-flex items-center gap-1.5"
                title="Reset filter dan pencarian">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
@@ -115,58 +115,56 @@
         <table class="w-full text-left border-collapse">
             <thead class="sticky top-0 bg-off-white z-10 border-b border-border-color shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
                 <tr>
-                    <th class="p-3.5 px-5 text-xs text-gray-text font-bold uppercase tracking-wider whitespace-nowrap">NO. TRANSAKSI</th>
-                    <th class="p-3.5 px-5 text-xs text-gray-text font-bold uppercase tracking-wider whitespace-nowrap">WAKTU</th>
-                    <th class="p-3.5 px-5 text-xs text-gray-text font-bold uppercase tracking-wider whitespace-nowrap">KASIR</th>
-                    <th class="p-3.5 px-5 text-xs text-gray-text font-bold uppercase tracking-wider">RINCIAN OBAT</th>
-                    <th class="p-3.5 px-5 text-xs text-gray-text font-bold uppercase tracking-wider whitespace-nowrap">TOTAL</th>
-                    <th class="p-3.5 px-5 text-xs text-gray-text font-bold uppercase tracking-wider whitespace-nowrap">PEMBAYARAN</th>
-                    <th class="p-3.5 px-5 text-xs text-gray-text font-bold uppercase tracking-wider text-center whitespace-nowrap">AKSI</th>
+                    <th class="py-2.5 px-3.5 text-[11px] text-gray-text font-bold uppercase tracking-wider whitespace-nowrap">NO. TRANSAKSI</th>
+                    <th class="py-2.5 px-3.5 text-[11px] text-gray-text font-bold uppercase tracking-wider whitespace-nowrap">WAKTU</th>
+                    <th class="py-2.5 px-3.5 text-[11px] text-gray-text font-bold uppercase tracking-wider whitespace-nowrap">KASIR</th>
+                    <th class="py-2.5 px-3.5 text-[11px] text-gray-text font-bold uppercase tracking-wider whitespace-nowrap">RINCIAN OBAT</th>
+                    <th class="py-2.5 px-3.5 text-[11px] text-gray-text font-bold uppercase tracking-wider whitespace-nowrap">TOTAL</th>
+                    <th class="py-2.5 px-3.5 text-[11px] text-gray-text font-bold uppercase tracking-wider whitespace-nowrap">PEMBAYARAN</th>
+                    <th class="py-2.5 px-3.5 text-[11px] text-gray-text font-bold uppercase tracking-wider text-center whitespace-nowrap">AKSI</th>
                 </tr>
             </thead>
             <tbody>
                 @forelse($transaksis as $trx)
                 <tr class="border-b border-border-color hover:bg-[#F8FBFA] transition">
-                    <td class="p-3.5 px-5 text-sm whitespace-nowrap">
-                        <span class="font-mono font-bold text-soft-teal bg-[#E8F4F2] px-2.5 py-1 rounded-md text-xs whitespace-nowrap inline-block">
+                    <td class="py-2.5 px-3.5 text-xs sm:text-[13px] whitespace-nowrap">
+                        <span class="font-mono font-bold text-soft-teal bg-[#E8F4F2] px-2 py-0.5 rounded-md text-xs whitespace-nowrap inline-block">
                             {{ $trx->no_transaksi }}
                         </span>
                     </td>
-                    <td class="p-3.5 px-5 text-sm whitespace-nowrap">
+                    <td class="py-2.5 px-3.5 text-xs sm:text-[13px] whitespace-nowrap">
                         <div class="font-medium text-dark-slate">{{ $trx->created_at->format('d/m/Y') }}</div>
-                        <div class="text-xs text-gray-text mt-0.5">{{ $trx->created_at->format('H:i') }} WIB</div>
+                        <div class="text-[11px] text-gray-text">{{ $trx->created_at->format('H:i') }} WIB</div>
                     </td>
-                    <td class="p-3.5 px-5 text-sm whitespace-nowrap">
+                    <td class="py-2.5 px-3.5 text-xs sm:text-[13px] whitespace-nowrap">
                         <div class="flex items-center gap-2">
-                            <div class="w-7 h-7 rounded-full bg-[#E8F4F2] text-soft-teal flex items-center justify-center font-bold text-xs uppercase shrink-0">
+                            <div class="w-6 h-6 rounded-full bg-[#E8F4F2] text-soft-teal flex items-center justify-center font-bold text-[11px] uppercase shrink-0">
                                 {{ substr($trx->user->nama ?? 'Kasir', 0, 1) }}
                             </div>
                             <span class="font-medium text-dark-slate">{{ $trx->user->nama ?? 'Kasir' }}</span>
                         </div>
                     </td>
-                    <td class="p-3.5 px-5 text-sm">
-                        <div class="font-semibold text-xs text-dark-slate mb-0.5">
-                            <span class="inline-block bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[11px] font-bold">
-                                {{ $trx->details->sum('qty') }} item
-                            </span>
-                        </div>
-                        <div class="text-xs text-gray-text max-w-xs truncate" title="{{ $trx->details->map(fn($d) => ($d->obat->nama_obat ?? 'Obat') . ' (' . $d->qty . ')')->join(', ') }}">
+                    <td class="py-2.5 px-3.5 text-xs sm:text-[13px] min-w-[180px]">
+                        <span class="inline-block bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded text-[11px] font-bold mb-0.5">
+                            {{ $trx->details->sum('qty') }} item
+                        </span>
+                        <div class="text-[11px] text-gray-text max-w-[240px] truncate" title="{{ $trx->details->map(fn($d) => ($d->obat->nama_obat ?? 'Obat') . ' (' . $d->qty . ')')->join(', ') }}">
                             {{ $trx->details->map(fn($d) => ($d->obat->nama_obat ?? 'Obat') . ' (' . $d->qty . ')')->join(', ') }}
                         </div>
                     </td>
-                    <td class="p-3.5 px-5 text-sm font-bold text-dark-slate whitespace-nowrap">
+                    <td class="py-2.5 px-3.5 text-xs sm:text-[13px] font-bold text-dark-slate whitespace-nowrap">
                         Rp{{ number_format($trx->total_harga, 0, ',', '.') }}
                     </td>
-                    <td class="p-3.5 px-5 text-sm whitespace-nowrap">
-                        <div class="text-xs">
+                    <td class="py-2.5 px-3.5 text-xs whitespace-nowrap">
+                        <div>
                             <span class="text-gray-text">Bayar:</span> 
                             <span class="font-semibold text-dark-slate">Rp{{ number_format($trx->total_bayar, 0, ',', '.') }}</span>
                         </div>
-                        <div class="text-xs text-soft-teal font-medium mt-0.5">
+                        <div class="text-[11px] text-soft-teal font-medium">
                             Kembali: Rp{{ number_format($trx->kembalian, 0, ',', '.') }}
                         </div>
                     </td>
-                    <td class="p-3.5 px-5 text-sm text-center whitespace-nowrap">
+                    <td class="py-2.5 px-3.5 text-xs sm:text-[13px] text-center whitespace-nowrap">
                         <div class="flex items-center justify-center gap-1.5">
                             <button type="button" 
                                 data-trx="{{ json_encode([
@@ -187,14 +185,14 @@
                                     ])
                                 ]) }}"
                                 onclick="bukaDetailModal(JSON.parse(this.dataset.trx))"
-                                class="px-2.5 py-1.5 border border-border-color bg-pure-white text-dark-slate hover:bg-off-white rounded-lg text-xs font-semibold transition"
+                                class="px-2.5 py-1 border border-border-color bg-pure-white text-dark-slate hover:bg-off-white rounded-lg text-xs font-semibold transition"
                                 title="Lihat Rincian Item">
                                 Detail
                             </button>
                             <a href="{{ route('kasir.struk', $trx->id) }}" target="_blank" 
-                               class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-soft-teal text-white rounded-lg text-xs font-semibold hover:opacity-90 shadow-sm transition"
+                               class="inline-flex items-center gap-1 px-2.5 py-1 bg-soft-teal text-white rounded-lg text-xs font-semibold hover:opacity-90 shadow-sm transition"
                                title="Cetak Struk Transaksi">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <polyline points="6 9 6 2 18 2 18 9"></polyline>
                                     <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
                                     <rect x="6" y="14" width="12" height="8"></rect>
@@ -243,15 +241,13 @@
     </div>
 
     {{-- Keterangan & Pagination (Tetap di Bawah) --}}
-    <div class="p-4 px-5 border-t border-border-color bg-pure-white shrink-0 flex flex-wrap justify-between items-center gap-4">
-        <div class="text-sm text-gray-text font-medium">
-            Menampilkan {{ $transaksis->firstItem() ?? 0 }}-{{ $transaksis->lastItem() ?? 0 }} dari {{ $transaksis->total() }} transaksi
-            <span class="block text-xs font-normal mt-0.5">
-                Maksimal 20 transaksi ditampilkan per halaman
-            </span>
+    <div class="py-2.5 px-4 border-t border-border-color bg-pure-white shrink-0 flex flex-col sm:flex-row justify-between items-center gap-2">
+        <div class="text-xs text-gray-text">
+            <span class="font-semibold text-dark-slate">Menampilkan {{ $transaksis->firstItem() ?? 0 }}-{{ $transaksis->lastItem() ?? 0 }} dari {{ $transaksis->total() }} transaksi</span>
+            <span class="hidden md:inline ml-2 text-[11px]">(Maks. 20/halaman)</span>
         </div>
-        <div class="pagination-custom">
-            {{ $transaksis->links() }}
+        <div class="pagination-custom shrink-0">
+            {{ $transaksis->onEachSide(1)->links() }}
         </div>
     </div>
 </div>
@@ -260,10 +256,10 @@
 <div id="detailModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center backdrop-blur-sm p-4">
     <div class="bg-pure-white w-full max-w-xl rounded-xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
         {{-- Header Modal --}}
-        <div class="p-5 border-b border-border-color flex justify-between items-center bg-off-white shrink-0">
+        <div class="p-4 sm:p-5 border-b border-border-color flex justify-between items-center bg-off-white shrink-0">
             <div>
-                <div class="flex items-center gap-2">
-                    <h3 class="m-0 text-lg font-bold text-dark-slate">Rincian Transaksi</h3>
+                <div class="flex flex-wrap items-center gap-2">
+                    <h3 class="m-0 text-base sm:text-lg font-bold text-dark-slate">Rincian Transaksi</h3>
                     <span id="mdlNoTrx" class="font-mono text-xs font-bold text-soft-teal bg-[#E8F4F2] px-2 py-0.5 rounded"></span>
                 </div>
                 <div class="text-xs text-gray-text mt-1">
@@ -274,8 +270,8 @@
         </div>
 
         {{-- Tabel Item Belanja yang Bisa Di-Scroll di dalam Modal --}}
-        <div class="flex-1 overflow-y-auto p-5">
-            <table class="w-full text-left border-collapse text-sm">
+        <div class="flex-1 overflow-auto p-4 sm:p-5">
+            <table class="w-full text-left border-collapse text-xs sm:text-sm">
                 <thead>
                     <tr class="border-b border-border-color text-xs text-gray-text font-bold uppercase">
                         <th class="pb-2">Obat / Produk</th>
@@ -325,13 +321,6 @@
         </div>
     </div>
 </div>
-
-{{-- ================= CSS ================= --}}
-<style>
-    /* Merapikan Pagination Tailwind Bawaan Laravel */
-    .pagination-custom nav div.hidden.sm\:flex-1 > div:first-child { display: none !important; }
-    .pagination-custom nav div.hidden.sm\:flex-1 > div:last-child { margin-left: auto; }
-</style>
 
 {{-- ================= JAVASCRIPT ================= --}}
 <script>
