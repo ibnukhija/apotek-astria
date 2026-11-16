@@ -57,7 +57,6 @@ class RiwayatFragment : Fragment() {
         adapter = RiwayatAdapter(requireContext(), transaksiList)
         binding.lvRiwayat.adapter = adapter
 
-        // Setup DatePickerDialog untuk Filter Tanggal
         setupDatePicker()
 
         // Tombol Filter & Reset
@@ -107,7 +106,6 @@ class RiwayatFragment : Fragment() {
             }
         }
 
-        // Muat data awal saat Fragment dibuka
         muatDataSesuaiFilter()
     }
     

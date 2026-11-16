@@ -112,7 +112,7 @@
         <table class="w-full text-left border-collapse">
             <thead class="sticky top-0 bg-off-white z-10">
                 <tr>
-                    @foreach (['KODE', 'NAMA PRODUK', 'KATEGORI', 'STOK', 'HARGA BELI', 'MARGIN', 'HARGA JUAL'] as $judul)
+                    @foreach (['KODE', 'NAMA PRODUK', 'KATEGORI', 'STOK', 'KADALUARSA', 'HARGA BELI', 'MARGIN', 'HARGA JUAL'] as $judul)
                         <th class="p-3 px-5 text-xs text-gray-text font-bold uppercase border-b border-border-color">{{ $judul }}</th>
                     @endforeach
                     <th class="p-3 px-5 text-xs text-gray-text font-bold uppercase border-b border-border-color text-center">AKSI</th>
@@ -138,6 +138,11 @@
                             @php($info = $obat->stok_info)
                             <span class="{{ $info['kelas'] }} px-2.5 py-1 rounded-full text-xs">{{ $obat->stok }} ({{ $info['label'] }})</span>
                         </td>
+                        <td class="p-4 px-5 text-sm whitespace-nowrap">
+                            @php($kadaluarsa = $obat->kadaluarsa_info)
+                            <div class="font-medium text-dark-slate mb-1">{{ $obat->tgl_kadaluarsa ? $obat->tgl_kadaluarsa->format('d/m/Y') : '-' }}</div>
+                            <span class="{{ $kadaluarsa['kelas'] }} px-2.5 py-0.5 rounded-full text-xs font-semibold">{{ $kadaluarsa['label'] }}</span>
+                        </td>
                         <td class="p-4 px-5 text-sm">Rp{{ number_format($obat->harga_beli, 0, ',', '.') }}</td>
                         <td class="p-4 px-5 text-sm">{{ $obat->margin_teks }}</td>
                         <td class="p-4 px-5 text-sm font-bold text-soft-teal">Rp{{ number_format($obat->harga_jual, 0, ',', '.') }}</td>
@@ -145,17 +150,18 @@
                         <td class="p-4 px-5 text-sm text-center whitespace-nowrap">
                             <button type="button"
                                 data-obat="{{ json_encode([
-                                    'id'          => $obat->id,
-                                    'kode_obat'   => $obat->kode_obat,
-                                    'nama_obat'   => $obat->nama_obat,
-                                    'kategori_id' => $obat->kategori_id,
-                                    'kategori'    => $obat->kategori->nama_kategori ?? '',
-                                    'satuan'      => $obat->satuan,
-                                    'harga_beli'  => $obat->harga_beli,
-                                    'margin'      => $obat->margin,
-                                    'tipe_margin' => $obat->tipe_margin,
-                                    'stok'        => $obat->stok,
-                                    'status'      => $obat->status,
+                                    'id'             => $obat->id,
+                                    'kode_obat'      => $obat->kode_obat,
+                                    'nama_obat'      => $obat->nama_obat,
+                                    'kategori_id'    => $obat->kategori_id,
+                                    'kategori'       => $obat->kategori->nama_kategori ?? '',
+                                    'satuan'         => $obat->satuan,
+                                    'harga_beli'     => $obat->harga_beli,
+                                    'margin'         => $obat->margin,
+                                    'tipe_margin'    => $obat->tipe_margin,
+                                    'stok'           => $obat->stok,
+                                    'tgl_kadaluarsa' => $obat->tgl_kadaluarsa?->format('Y-m-d'),
+                                    'status'         => $obat->status,
                                 ]) }}"
                                 onclick="bukaModal('edit', JSON.parse(this.dataset.obat))"
                                 class="text-soft-teal font-semibold mr-3 hover:underline">
@@ -172,7 +178,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="8" class="p-10 text-center text-gray-text">
+                        <td colspan="9" class="p-10 text-center text-gray-text">
                             @if (request()->hasAny(['q', 'kategori']))
                                 Tidak ada produk yang cocok dengan pencarian.
                             @else
@@ -190,7 +196,7 @@
         <div class="text-sm text-gray-text font-medium">
             Menampilkan {{ $obats->firstItem() ?? 0 }}-{{ $obats->lastItem() ?? 0 }} dari {{ $obats->total() }} produk
             <span class="block text-xs font-normal mt-0.5">
-                Keterangan stok: Cukup (25 ke atas), Menipis (10-24), Hampir habis (kurang dari 10)
+                Stok: Cukup (25+), Menipis (10-24), Hampir habis (&lt; 10) &bull; Kadaluarsa: Aman (&gt; 30 hari), Hampir kadaluarsa (&le; 30 hari), Kadaluarsa (lewat tanggal)
             </span>
         </div>
         <div class="pagination-custom">{{ $obats->links() }}</div>
@@ -288,6 +294,12 @@
                 <div>
                     <label class="block mb-2 text-sm font-semibold">Stok</label>
                     <input type="number" name="stok" id="f_stok" min="0" required
+                        class="w-full p-3 border border-border-color rounded-lg text-sm outline-none focus:border-soft-teal">
+                </div>
+
+                <div>
+                    <label class="block mb-2 text-sm font-semibold">Tanggal Kadaluarsa</label>
+                    <input type="date" name="tgl_kadaluarsa" id="f_tgl_kadaluarsa" required
                         class="w-full p-3 border border-border-color rounded-lg text-sm outline-none focus:border-soft-teal">
                 </div>
 
@@ -486,8 +498,9 @@ function isiForm(d) {
         ? String(Math.round(Number(m)))
         : String(Number(m)).replace('.', ','));
     formatMargin();
-    $('f_stok').value        = d.stok ?? '';
-    $('f_status').value      = d.status ?? 'tersedia';
+    $('f_stok').value           = d.stok ?? '';
+    $('f_tgl_kadaluarsa').value = d.tgl_kadaluarsa ?? '';
+    $('f_status').value         = d.status ?? 'tersedia';
     $('kategori_id_input').value = d.kategori_id ?? '';
     $('kategori_search').value   = d.kategori ?? '';
     hitungHargaJual();
@@ -594,6 +607,7 @@ function tambahKategoriBaru(nama) {
         margin: @json(old('margin')),
         tipe_margin: @json(old('tipe_margin')),
         stok: @json(old('stok')),
+        tgl_kadaluarsa: @json(old('tgl_kadaluarsa')),
         status: @json(old('status')),
     });
 @endif

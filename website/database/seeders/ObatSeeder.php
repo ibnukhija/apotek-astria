@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Kategori;
 use App\Models\Obat;
+use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 
 class ObatSeeder extends Seeder
@@ -393,7 +394,9 @@ class ObatSeeder extends Seeder
             ['Antimo Anak Sachet Strawberry','Pernapasan', 'Tablet',  2000,  60, 'nominal',  1000],
         ];
 
-        foreach ($produk as [$nama, $kategori, $satuan, $beli, $stok, $tipe, $margin]) {
+        $hariIni = Carbon::today();
+
+        foreach ($produk as $index => [$nama, $kategori, $satuan, $beli, $stok, $tipe, $margin]) {
             $kategoriModel = Kategori::firstOrCreate(['nama_kategori' => $kategori]);
 
             $obat = Obat::firstOrNew(['nama_obat' => $nama]);
@@ -403,15 +406,25 @@ class ObatSeeder extends Seeder
                 $obat->kode_obat = Obat::buatKode();
             }
 
+            // Distribusi tanggal kadaluarsa agar status Merah, Kuning (<= 30 hari), dan Hijau terlihat di tabel
+            if ($index % 60 === 12) {
+                $tglKadaluarsa = $hariIni->copy()->subDays(3 + ($index % 20));
+            } elseif ($index % 20 === 5) {
+                $tglKadaluarsa = $hariIni->copy()->addDays(5 + ($index % 24));
+            } else {
+                $tglKadaluarsa = $hariIni->copy()->addDays(90 + (($index * 29) % 640));
+            }
+
             $obat->fill([
-                'kategori_id' => $kategoriModel->id,
-                'satuan'      => $satuan,
-                'harga_beli'  => $beli,
-                'margin'      => $margin,
-                'tipe_margin' => $tipe,
-                'harga_jual'  => Obat::hitungHargaJual($beli, $margin, $tipe),
-                'stok'        => $stok,
-                'status'      => 'tersedia',
+                'kategori_id'    => $kategoriModel->id,
+                'satuan'         => $satuan,
+                'harga_beli'     => $beli,
+                'margin'         => $margin,
+                'tipe_margin'    => $tipe,
+                'harga_jual'     => Obat::hitungHargaJual($beli, $margin, $tipe),
+                'stok'           => $stok,
+                'tgl_kadaluarsa' => $tglKadaluarsa->toDateString(),
+                'status'         => 'tersedia',
             ])->save();
         }
     }

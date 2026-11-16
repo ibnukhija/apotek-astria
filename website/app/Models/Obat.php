@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -12,6 +14,9 @@ class Obat extends Model
 
     /** Stok mulai angka ini = "Cukup" (hijau). Di antaranya = "Menipis" (kuning). */
     public const BATAS_CUKUP = 25;
+
+    /** Sisa hari maksimal (inklusif) untuk status "Hampir kadaluarsa" (kuning). */
+    public const BATAS_HAMPIR_KADALUARSA = 30;
 
     // Awalan Kode Obat
     public const PREFIX_KODE = 'OBT';
@@ -25,7 +30,8 @@ class Obat extends Model
     protected function casts(): array
     {
         return [
-            'margin' => 'float',
+            'margin'         => 'float',
+            'tgl_kadaluarsa' => 'date:Y-m-d',
         ];
     }
 
@@ -83,6 +89,37 @@ class Obat extends Model
     public function getStokInfoAttribute(): array
     {
         return self::infoStok((int) $this->stok);
+    }
+
+    /**
+     * Label dan warna status tanggal kadaluarsa.
+     *   lewat hari ini => Kadaluarsa         (merah)
+     *   0 <= sisa <= 30 hari => Hampir kadaluarsa (kuning)
+     *   > 30 hari      => Aman               (hijau)
+     */
+    public static function infoKadaluarsa(CarbonInterface|string|null $tanggal): array
+    {
+        if (! $tanggal) {
+            return ['label' => 'Belum diatur', 'kelas' => 'bg-gray-100 text-gray-text'];
+        }
+
+        $tgl = Carbon::parse($tanggal)->startOfDay();
+        $sisaHari = Carbon::today()->diffInDays($tgl, false);
+
+        if ($sisaHari < 0) {
+            return ['label' => 'Kadaluarsa', 'kelas' => 'bg-red-100 text-red-700'];
+        }
+
+        if ($sisaHari <= self::BATAS_HAMPIR_KADALUARSA) {
+            return ['label' => 'Hampir kadaluarsa', 'kelas' => 'bg-yellow-100 text-yellow-700'];
+        }
+
+        return ['label' => 'Aman', 'kelas' => 'bg-green-100 text-green-700'];
+    }
+
+    public function getKadaluarsaInfoAttribute(): array
+    {
+        return self::infoKadaluarsa($this->tgl_kadaluarsa);
     }
 
     /** "50%" untuk margin persen, "Rp3.500" untuk margin nominal. */

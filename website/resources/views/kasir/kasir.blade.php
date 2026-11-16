@@ -51,10 +51,20 @@
                 <tbody>
                     @forelse ($obats as $obat)
                         @php($info = $obat->stok_info)
+                        @php($kadaluarsa = $obat->kadaluarsa_info)
                         <tr class="border-b border-border-color hover:bg-off-white transition">
                             <td class="p-4 px-5 text-sm">
-                                <strong>{{ $obat->nama_obat }}</strong><br>
-                                <span class="text-xs text-gray-text">{{ $obat->kode_obat }} / {{ $obat->satuan }}</span>
+                                <strong>{{ $obat->nama_obat }}</strong>
+                                @if ($kadaluarsa['label'] !== 'Aman')
+                                    <span class="{{ $kadaluarsa['kelas'] }} ml-1 px-2 py-0.5 rounded-full text-[10px] font-semibold">{{ $kadaluarsa['label'] }}</span>
+                                @endif
+                                <br>
+                                <span class="text-xs text-gray-text">
+                                    {{ $obat->kode_obat }} / {{ $obat->satuan }}
+                                    @if ($obat->tgl_kadaluarsa)
+                                        &bull; ED: {{ $obat->tgl_kadaluarsa->format('d/m/Y') }}
+                                    @endif
+                                </span>
                             </td>
                             <td class="p-4 px-5 text-sm">{{ $obat->kategori->nama_kategori ?? '-' }}</td>
                             <td class="p-4 px-5 text-sm font-semibold">
