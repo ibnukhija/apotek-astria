@@ -421,7 +421,83 @@ class ApiMobileTest extends TestCase
                 ->assertJsonPath('data.total_penjualan', 75000)
                 ->assertJsonPath('data.jumlah_transaksi', 3);
 
+            $this->getJson('/api/dashboard?periode=keseluruhan')
+                ->assertOk()
+                ->assertJsonPath('data.periode', 'keseluruhan')
+                ->assertJsonPath('data.periode_grafik', 'harian')
+                ->assertJsonPath('data.total_penjualan', 174000)
+                ->assertJsonPath('data.jumlah_transaksi', 4);
+
             $this->getJson('/api/dashboard?periode=tahunan')
+                ->assertStatus(422);
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
+
+    public function test_dashboard_mengembalikan_grafik_penjualan_harian_mingguan_bulanan(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-11-18 10:00:00'));
+
+        try {
+            $this->loginSebagaiOwner();
+
+            $kasir = User::create([
+                'nama'     => 'Kasir Grafik',
+                'username' => 'kasir_grafik',
+                'password' => Hash::make('rahasia123'),
+                'role'     => 'karyawan',
+                'status'   => 'aktif',
+            ]);
+
+            $buatTrx = function (string $kode, int $total, string $waktu) use ($kasir): void {
+                $t = Transaksi::create([
+                    'no_transaksi' => $kode,
+                    'user_id'      => $kasir->id,
+                    'total_harga'  => $total,
+                    'total_bayar'  => $total,
+                    'kembalian'    => 0,
+                ]);
+                $t->forceFill(['created_at' => $waktu])->save();
+            };
+
+            $buatTrx('TRX-G1', 15000, '2026-11-18 09:00:00');
+            $buatTrx('TRX-G2', 20000, '2026-11-16 14:00:00');
+            $buatTrx('TRX-G3', 50000, '2026-10-15 11:00:00');
+
+            // Harian: 7 hari terakhir (12/11 - 18/11)
+            $resHarian = $this->getJson('/api/dashboard?periode=harian&periode_grafik=harian')
+                ->assertOk()
+                ->assertJsonPath('data.periode_grafik', 'harian')
+                ->json('data.grafik_penjualan');
+            $this->assertCount(7, $resHarian);
+            $this->assertSame('18/11', $resHarian[6]['label']);
+            $this->assertSame(15000, $resHarian[6]['total']);
+            $this->assertSame(1, $resHarian[6]['jumlah_transaksi']);
+
+            // Mingguan: 6 minggu terakhir (minggu ini berisi 15000 + 20000 = 35000)
+            $resMingguan = $this->getJson('/api/dashboard?periode=harian&periode_grafik=mingguan')
+                ->assertOk()
+                ->assertJsonPath('data.periode', 'harian')
+                ->assertJsonPath('data.total_penjualan', 15000)
+                ->assertJsonPath('data.periode_grafik', 'mingguan')
+                ->json('data.grafik_penjualan');
+            $this->assertCount(6, $resMingguan);
+            $this->assertSame('16/11', $resMingguan[5]['label']);
+            $this->assertSame(35000, $resMingguan[5]['total']);
+            $this->assertSame(2, $resMingguan[5]['jumlah_transaksi']);
+
+            // Bulanan: 6 bulan terakhir (Jun - Nov)
+            $resBulanan = $this->getJson('/api/dashboard?periode_grafik=bulanan')
+                ->assertOk()
+                ->json('data.grafik_penjualan');
+            $this->assertCount(6, $resBulanan);
+            $this->assertSame('Okt', $resBulanan[4]['label']);
+            $this->assertSame(50000, $resBulanan[4]['total']);
+            $this->assertSame('Nov', $resBulanan[5]['label']);
+            $this->assertSame(35000, $resBulanan[5]['total']);
+
+            $this->getJson('/api/dashboard?periode_grafik=tidak_valid')
                 ->assertStatus(422);
         } finally {
             Carbon::setTestNow();

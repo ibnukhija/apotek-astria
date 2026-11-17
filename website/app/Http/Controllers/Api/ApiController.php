@@ -8,6 +8,7 @@ use App\Models\Transaksi;
 use App\Models\ProfilApotek;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ApiController extends Controller
 {
@@ -15,10 +16,13 @@ class ApiController extends Controller
     public function dashboard(Request $request)
     {
         $request->validate([
-            'periode' => 'nullable|in:harian,mingguan,bulanan',
+            'periode'        => 'nullable|in:harian,mingguan,bulanan,keseluruhan',
+            'periode_grafik' => 'nullable|in:harian,mingguan,bulanan',
         ]);
 
         $periode = $request->input('periode', 'harian');
+        $defaultGrafik = in_array($periode, ['harian', 'mingguan', 'bulanan'], true) ? $periode : 'harian';
+        $periodeGrafik = $request->input('periode_grafik', $defaultGrafik);
         $hariIni = Carbon::today();
 
         $transaksiQuery = Transaksi::query();
@@ -32,7 +36,7 @@ class ApiController extends Controller
                 $hariIni->copy()->startOfMonth(),
                 $hariIni->copy()->endOfDay(),
             ]);
-        } else {
+        } elseif ($periode === 'harian') {
             $transaksiQuery->whereDate('created_at', $hariIni);
         }
 
@@ -59,6 +63,8 @@ class ApiController extends Controller
                 return $obat;
             });
 
+        $grafikPenjualan = $this->hitungGrafikPenjualan($periodeGrafik, $hariIni);
+
         // 5 transaksi terbaru
         $transaksiTerbaru = Transaksi::with('user')->latest()->orderByDesc('id')->limit(5)->get();
 
@@ -66,13 +72,85 @@ class ApiController extends Controller
             'success' => true,
             'data' => [
                 'periode'               => $periode,
+                'periode_grafik'        => $periodeGrafik,
                 'total_penjualan'       => (int) $totalPenjualan,
                 'jumlah_transaksi'      => $jumlahTransaksi,
                 'peringatan_obat'       => $obatMenipis,
                 'peringatan_kadaluarsa' => $obatKadaluarsa,
+                'grafik_penjualan'      => $grafikPenjualan,
                 'transaksi_terbaru'     => $transaksiTerbaru,
             ]
         ]);
+    }
+
+    /**
+     * Susun titik grafik penjualan untuk rentang harian (7 hari), mingguan (6 minggu),
+     * atau bulanan (6 bulan) secara konsisten di MySQL maupun SQLite.
+     */
+    private function hitungGrafikPenjualan(string $periodeGrafik, Carbon $hariIni): array
+    {
+        $namaBulan = [
+            1 => 'Jan', 2 => 'Feb', 3 => 'Mar', 4 => 'Apr', 5 => 'Mei', 6 => 'Jun',
+            7 => 'Jul', 8 => 'Agu', 9 => 'Sep', 10 => 'Okt', 11 => 'Nov', 12 => 'Des',
+        ];
+
+        $buckets = [];
+        if ($periodeGrafik === 'mingguan') {
+            $awalRentang = $hariIni->copy()->startOfWeek()->subWeeks(5);
+            for ($i = 0; $i < 6; $i++) {
+                $awalMinggu = $awalRentang->copy()->addWeeks($i);
+                $akhirMinggu = $awalMinggu->copy()->endOfWeek();
+                $key = $awalMinggu->format('Y-m-d');
+                $buckets[$key] = [
+                    'label'            => $awalMinggu->format('d/m'),
+                    'keterangan'       => $awalMinggu->format('d/m') . ' - ' . $akhirMinggu->format('d/m/Y'),
+                    'total'            => 0,
+                    'jumlah_transaksi' => 0,
+                ];
+            }
+            $resolusiKey = fn (Carbon $tgl): string => $tgl->copy()->startOfWeek()->format('Y-m-d');
+        } elseif ($periodeGrafik === 'bulanan') {
+            $awalRentang = $hariIni->copy()->startOfMonth()->subMonths(5);
+            for ($i = 0; $i < 6; $i++) {
+                $bulan = $awalRentang->copy()->addMonths($i);
+                $key = $bulan->format('Y-m');
+                $singkatan = $namaBulan[(int) $bulan->month];
+                $buckets[$key] = [
+                    'label'            => $singkatan,
+                    'keterangan'       => $singkatan . ' ' . $bulan->format('Y'),
+                    'total'            => 0,
+                    'jumlah_transaksi' => 0,
+                ];
+            }
+            $resolusiKey = fn (Carbon $tgl): string => $tgl->format('Y-m');
+        } else {
+            $awalRentang = $hariIni->copy()->subDays(6)->startOfDay();
+            for ($i = 0; $i < 7; $i++) {
+                $tgl = $awalRentang->copy()->addDays($i);
+                $key = $tgl->format('Y-m-d');
+                $buckets[$key] = [
+                    'label'            => $tgl->format('d/m'),
+                    'keterangan'       => $tgl->format('d') . ' ' . $namaBulan[(int) $tgl->month] . ' ' . $tgl->format('Y'),
+                    'total'            => 0,
+                    'jumlah_transaksi' => 0,
+                ];
+            }
+            $resolusiKey = fn (Carbon $tgl): string => $tgl->format('Y-m-d');
+        }
+
+        $baris = DB::table('transaksi')
+            ->whereBetween('created_at', [$awalRentang, $hariIni->copy()->endOfDay()])
+            ->get(['created_at', 'total_harga']);
+
+        foreach ($baris as $trx) {
+            $key = $resolusiKey(Carbon::parse($trx->created_at));
+            if (isset($buckets[$key])) {
+                $buckets[$key]['total'] += (int) $trx->total_harga;
+                $buckets[$key]['jumlah_transaksi']++;
+            }
+        }
+
+        return array_values($buckets);
     }
 
     // 2. Untuk StokFragment (Monitoring & Penyesuaian Cepat)

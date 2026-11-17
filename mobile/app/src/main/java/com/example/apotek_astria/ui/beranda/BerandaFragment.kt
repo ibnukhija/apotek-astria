@@ -1,5 +1,7 @@
 package com.example.apotek_astria.ui.beranda
 
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -24,8 +26,10 @@ class BerandaFragment : Fragment() {
     private val binding get() = _binding!!
 
     private var periodeAktif = "harian"
+    private var periodeGrafik = "harian"
     private val daftarPeringatanStok = mutableListOf<String>()
     private val daftarPeringatanKadaluarsa = mutableListOf<String>()
+    private val formatRupiah by lazy { NumberFormat.getNumberInstance(Locale.forLanguageTag("id-ID")) }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -38,22 +42,42 @@ class BerandaFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Setup SwipeRefreshLayout
         binding.swipeRefreshLayout.setOnRefreshListener {
             loadDashboardData()
         }
 
-        // Pilih periode dashboard (Harian / Mingguan / Bulanan)
+        // Pilih periode kartu pendapatan (Harian / Mingguan / Bulanan)
         binding.tvFilterPeriode.setOnClickListener {
             tampilkanMenuPeriode(it)
         }
 
-        // Klik banner peringatan untuk melihat daftar obatnya
-        binding.layoutPeringatanStok.setOnClickListener {
-            tampilkanDaftarPeringatan("Obat Hampir Habis (Stok < 10)", daftarPeringatanStok)
+        // Klik 2 kotak ringkasan berjejer untuk menampilkan daftar obatnya
+        binding.cardStokMenipis.setOnClickListener {
+            tampilkanDaftarPeringatan(
+                "Obat Stok Menipis (Stok < 10)",
+                daftarPeringatanStok,
+                "Semua stok obat dalam batas aman (>= 10)."
+            )
         }
-        binding.layoutPeringatanKadaluarsa.setOnClickListener {
-            tampilkanDaftarPeringatan("Obat Kadaluarsa / Hampir Kadaluarsa", daftarPeringatanKadaluarsa)
+        binding.cardKadaluarsa.setOnClickListener {
+            tampilkanDaftarPeringatan(
+                "Obat Kadaluarsa / Mau Kadaluarsa",
+                daftarPeringatanKadaluarsa,
+                "Tidak ada obat yang kadaluarsa atau mendekati kadaluarsa (<= 30 hari)."
+            )
+        }
+
+        // Tab periode grafik penjualan
+        binding.tvGrafikHarian.setOnClickListener { pilihPeriodeGrafik("harian") }
+        binding.tvGrafikMingguan.setOnClickListener { pilihPeriodeGrafik("mingguan") }
+        binding.tvGrafikBulanan.setOnClickListener { pilihPeriodeGrafik("bulanan") }
+        perbaruiTampilanTabGrafik()
+
+        binding.grafikPenjualan.onBarSelected = { titik ->
+            if (_binding != null) {
+                binding.tvInfoGrafik.text =
+                    "${titik.keterangan}: Rp ${formatRupiah.format(titik.total)} (${titik.jumlahTransaksi} transaksi)"
+            }
         }
 
         // Direct ke halaman Riwayat saat klik Lihat Semua
@@ -62,11 +86,38 @@ class BerandaFragment : Fragment() {
             bottomNav.selectedItemId = R.id.nav_riwayat
         }
 
-        // Aktifkan animasi swipe refresh saat pertama kali dimuat
         binding.swipeRefreshLayout.isRefreshing = true
-
-        // Panggil fungsi untuk mengambil data dari Laravel
         loadDashboardData()
+    }
+
+    private fun pilihPeriodeGrafik(periodeBaru: String) {
+        if (periodeBaru == periodeGrafik) return
+        periodeGrafik = periodeBaru
+        perbaruiTampilanTabGrafik()
+        binding.swipeRefreshLayout.isRefreshing = true
+        loadDashboardData()
+    }
+
+    private fun perbaruiTampilanTabGrafik() {
+        val tabs = listOf(
+            binding.tvGrafikHarian to "harian",
+            binding.tvGrafikMingguan to "mingguan",
+            binding.tvGrafikBulanan to "bulanan"
+        )
+        val radius = 8f * resources.displayMetrics.density
+        for ((tab, nilai) in tabs) {
+            val aktif = nilai == periodeGrafik
+            if (aktif) {
+                tab.background = GradientDrawable().apply {
+                    setColor(Color.parseColor("#2A9D8F"))
+                    cornerRadius = radius
+                }
+                tab.setTextColor(Color.WHITE)
+            } else {
+                tab.background = null
+                tab.setTextColor(Color.parseColor("#475569"))
+            }
+        }
     }
 
     private fun tampilkanMenuPeriode(anchor: View) {
@@ -74,10 +125,12 @@ class BerandaFragment : Fragment() {
         popup.menu.add(0, 1, 0, "Harian")
         popup.menu.add(0, 2, 1, "Mingguan")
         popup.menu.add(0, 3, 2, "Bulanan")
+        popup.menu.add(0, 4, 3, "Keseluruhan")
         popup.setOnMenuItemClickListener { item ->
             val pilihan = when (item.itemId) {
                 2 -> "mingguan"
                 3 -> "bulanan"
+                4 -> "keseluruhan"
                 else -> "harian"
             }
             if (pilihan != periodeAktif) {
@@ -94,20 +147,22 @@ class BerandaFragment : Fragment() {
     private fun labelChipPeriode(periode: String): String = when (periode) {
         "mingguan" -> "Mingguan"
         "bulanan" -> "Bulanan"
+        "keseluruhan" -> "Keseluruhan"
         else -> "Harian"
     }
 
     private fun labelWaktuPeriode(periode: String): String = when (periode) {
         "mingguan" -> "minggu ini"
         "bulanan" -> "bulan ini"
+        "keseluruhan" -> "keseluruhan"
         else -> "hari ini"
     }
 
-    private fun tampilkanDaftarPeringatan(judul: String, daftar: List<String>) {
-        if (daftar.isEmpty()) return
+    private fun tampilkanDaftarPeringatan(judul: String, daftar: List<String>, pesanKosong: String) {
+        val pesan = if (daftar.isEmpty()) pesanKosong else daftar.joinToString("\n")
         AlertDialog.Builder(requireContext())
             .setTitle(judul)
-            .setMessage(daftar.joinToString("\n"))
+            .setMessage(pesan)
             .setPositiveButton("Lihat Stok") { _, _ ->
                 val bottomNav = requireActivity().findViewById<com.google.android.material.bottomnavigation.BottomNavigationView>(R.id.bottom_navigation)
                 bottomNav.selectedItemId = R.id.nav_stok
@@ -116,45 +171,68 @@ class BerandaFragment : Fragment() {
             .show()
     }
 
+    private fun perbaruiKartuRingkasan(
+        card: androidx.cardview.widget.CardView,
+        tvLabel: TextView,
+        tvJumlah: TextView,
+        tvSub: TextView,
+        jumlah: Int,
+        subTeks: String,
+        bgHex: String,
+        labelHex: String,
+        angkaHex: String
+    ) {
+        card.setCardBackgroundColor(Color.parseColor(bgHex))
+        tvLabel.setTextColor(Color.parseColor(labelHex))
+        tvJumlah.setTextColor(Color.parseColor(angkaHex))
+        tvSub.setTextColor(Color.parseColor(labelHex))
+        tvJumlah.text = jumlah.toString()
+        tvSub.text = subTeks
+    }
+
     private fun loadDashboardData() {
-        // Gunakan Base URL dari ApiConfig + filter periode
-        val url = "${ApiConfig.URL_DASHBOARD}?periode=$periodeAktif"
+        val url = "${ApiConfig.URL_DASHBOARD}?periode=$periodeAktif&periode_grafik=$periodeGrafik"
         val request = ApiRequest(requireContext(), Request.Method.GET, url, null,
             { response ->
-                // Pengaman membatalkan proses jika pengguna sudah pindah tab/halaman
                 if (!isAdded || _binding == null) return@ApiRequest
 
                 if (response.optBoolean("success", false)) {
                     val data = response.getJSONObject("data")
 
-                    // 1. Ekstrak Data
+                    // 1. Ringkasan Pendapatan
                     val periodeRespon = data.optString("periode", periodeAktif)
-                    val totalPenjualan = data.optInt("total_penjualan", 0)
+                    val totalPenjualan = data.optLong("total_penjualan", 0L)
                     val jumlahTransaksi = data.optInt("jumlah_transaksi", 0)
-                    val transaksiTerbaruArray = data.optJSONArray("transaksi_terbaru")
-                    val peringatanObatArray = data.optJSONArray("peringatan_obat")
-                    val peringatanKadaluarsaArray = data.optJSONArray("peringatan_kadaluarsa")
 
-                    // 2. Format Angka ke Rupiah & Periode
-                    val formatRupiah = NumberFormat.getNumberInstance(Locale.forLanguageTag("id-ID"))
                     binding.tvFilterPeriode.text = labelChipPeriode(periodeRespon)
                     binding.tvTotalPenjualan.text = "Rp ${formatRupiah.format(totalPenjualan)}"
                     binding.tvJumlahTransaksi.text = "$jumlahTransaksi transaksi ${labelWaktuPeriode(periodeRespon)}"
 
-                    // 3. Tampil Peringatan Stok (Jika Ada)
+                    // 2. Kotak Ringkasan Stok Menipis (< 10)
+                    val peringatanObatArray = data.optJSONArray("peringatan_obat")
                     daftarPeringatanStok.clear()
                     if (peringatanObatArray != null && peringatanObatArray.length() > 0) {
                         for (i in 0 until peringatanObatArray.length()) {
                             val o = peringatanObatArray.getJSONObject(i)
                             daftarPeringatanStok.add("• ${o.optString("nama_obat")} (stok: ${o.optInt("stok", 0)})")
                         }
-                        binding.layoutPeringatanStok.visibility = View.VISIBLE
-                        binding.tvPeringatanStok.text = "${peringatanObatArray.length()} obat hampir habis (stok < 10)"
+                        perbaruiKartuRingkasan(
+                            binding.cardStokMenipis, binding.tvLabelStokMenipis,
+                            binding.tvJumlahStokMenipis, binding.tvSubStokMenipis,
+                            daftarPeringatanStok.size, "Stok < 10 • Tap lihat",
+                            "#FEF3C7", "#92400E", "#B45309"
+                        )
                     } else {
-                        binding.layoutPeringatanStok.visibility = View.GONE
+                        perbaruiKartuRingkasan(
+                            binding.cardStokMenipis, binding.tvLabelStokMenipis,
+                            binding.tvJumlahStokMenipis, binding.tvSubStokMenipis,
+                            0, "Stok aman",
+                            "#F0FDF4", "#166534", "#15803D"
+                        )
                     }
 
-                    // 3b. Tampil Peringatan Kadaluarsa (Jika Ada)
+                    // 3. Kotak Ringkasan Mau Kadaluarsa
+                    val peringatanKadaluarsaArray = data.optJSONArray("peringatan_kadaluarsa")
                     daftarPeringatanKadaluarsa.clear()
                     if (peringatanKadaluarsaArray != null && peringatanKadaluarsaArray.length() > 0) {
                         var jumlahKadaluarsa = 0
@@ -172,17 +250,50 @@ class BerandaFragment : Fragment() {
                             }
                             daftarPeringatanKadaluarsa.add("• ${o.optString("nama_obat")} ($tglExp • $statusKad)")
                         }
-                        val bagian = mutableListOf<String>()
-                        if (jumlahKadaluarsa > 0) bagian.add("$jumlahKadaluarsa obat kadaluarsa")
-                        if (jumlahHampir > 0) bagian.add("$jumlahHampir hampir kadaluarsa")
-                        binding.layoutPeringatanKadaluarsa.visibility = View.VISIBLE
-                        binding.tvPeringatanKadaluarsa.text = bagian.joinToString(" • ")
+                        val subTeks = if (jumlahKadaluarsa > 0) {
+                            "$jumlahKadaluarsa lewat • $jumlahHampir < 30 hr"
+                        } else {
+                            "<= 30 hari • Tap lihat"
+                        }
+                        perbaruiKartuRingkasan(
+                            binding.cardKadaluarsa, binding.tvLabelKadaluarsa,
+                            binding.tvJumlahKadaluarsa, binding.tvSubKadaluarsa,
+                            daftarPeringatanKadaluarsa.size, subTeks,
+                            "#FEE2E2", "#991B1B", "#DC2626"
+                        )
                     } else {
-                        binding.layoutPeringatanKadaluarsa.visibility = View.GONE
+                        perbaruiKartuRingkasan(
+                            binding.cardKadaluarsa, binding.tvLabelKadaluarsa,
+                            binding.tvJumlahKadaluarsa, binding.tvSubKadaluarsa,
+                            0, "Tanggal aman",
+                            "#F0FDF4", "#166534", "#15803D"
+                        )
                     }
 
-                    // 4. Muat Transaksi Terbaru ke Layout (Secara Dinamis)
-                    binding.layoutListTransaksi.removeAllViews() // Membersihkan list
+                    // 4. Grafik Penjualan
+                    val grafikArray = data.optJSONArray("grafik_penjualan")
+                    val titikList = mutableListOf<TitikGrafik>()
+                    if (grafikArray != null) {
+                        for (i in 0 until grafikArray.length()) {
+                            val g = grafikArray.getJSONObject(i)
+                            titikList.add(
+                                TitikGrafik(
+                                    label = g.optString("label", ""),
+                                    keterangan = g.optString("keterangan", ""),
+                                    total = g.optLong("total", 0L),
+                                    jumlahTransaksi = g.optInt("jumlah_transaksi", 0)
+                                )
+                            )
+                        }
+                    }
+                    binding.grafikPenjualan.setData(titikList)
+                    if (titikList.none { it.total > 0L }) {
+                        binding.tvInfoGrafik.text = "Belum ada penjualan pada rentang ${labelChipPeriode(periodeGrafik).lowercase(Locale.ROOT)}"
+                    }
+
+                    // 5. Muat 5 Transaksi Terbaru
+                    val transaksiTerbaruArray = data.optJSONArray("transaksi_terbaru")
+                    binding.layoutListTransaksi.removeAllViews()
                     if (transaksiTerbaruArray != null && transaksiTerbaruArray.length() > 0) {
                         for (i in 0 until transaksiTerbaruArray.length()) {
                             val trx = transaksiTerbaruArray.getJSONObject(i)
@@ -191,23 +302,19 @@ class BerandaFragment : Fragment() {
                             val tvWaktuKasir = itemView.findViewById<TextView>(R.id.tv_waktu_kasir)
                             val tvTotal = itemView.findViewById<TextView>(R.id.tv_total_harga)
 
-                            // Ambil data detail JSON
                             tvKode.text = trx.getString("no_transaksi")
-                            val totalTrx = trx.getInt("total_harga")
+                            val totalTrx = trx.optLong("total_harga", 0L)
                             tvTotal.text = "Rp ${formatRupiah.format(totalTrx)}"
 
-                            // Mengolah tanggal & nama kasir ke waktu lokal
                             val rawDate = trx.getString("created_at")
                             val jamTrx = ApiConfig.formatWaktuIso(rawDate, "HH:mm")
                             val userObj = trx.optJSONObject("user")
                             val namaKasir = userObj?.optString("nama", "Kasir") ?: "Kasir"
                             tvWaktuKasir.text = "$jamTrx / $namaKasir"
 
-                            // Tambahkan itemView ke dalam container
                             binding.layoutListTransaksi.addView(itemView)
                         }
                     } else {
-                        // Jika belum ada transaksi
                         val emptyText = TextView(requireContext()).apply {
                             text = "Belum ada transaksi"
                             setPadding(0, 30, 0, 30)
@@ -215,12 +322,10 @@ class BerandaFragment : Fragment() {
                         }
                         binding.layoutListTransaksi.addView(emptyText)
                     }
-                    // Sembunyikan loading
-                    binding.swipeRefreshLayout.isRefreshing = false
                 }
+                binding.swipeRefreshLayout.isRefreshing = false
             },
             { error ->
-                // Pengaman membatalkan proses jika pengguna sudah pindah tab/layar
                 if (!isAdded || _binding == null) return@ApiRequest
 
                 binding.swipeRefreshLayout.isRefreshing = false
@@ -229,7 +334,6 @@ class BerandaFragment : Fragment() {
                 }
             }
         )
-        // Tambahkan antrian Request ke Volley
         Volley.newRequestQueue(requireContext()).add(request)
     }
 
