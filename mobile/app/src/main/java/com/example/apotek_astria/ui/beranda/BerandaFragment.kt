@@ -69,6 +69,9 @@ class BerandaFragment : Fragment() {
         binding.tvLihatStok.setOnClickListener {
             bukaTabNavigasi(R.id.nav_stok)
         }
+        binding.tvStatusTokoBeranda.setOnClickListener {
+            bukaTabNavigasi(R.id.nav_profil)
+        }
 
         // Banner pemberitahuan stok menipis & 2 kotak ringkasan stok
         val bukaDialogStokMenipis: (View) -> Unit = {
@@ -310,6 +313,30 @@ class BerandaFragment : Fragment() {
 
                 if (response.optBoolean("success", false)) {
                     val data = response.getJSONObject("data")
+
+                    // 0. Header: Nama & Status Toko (Buka / Tutup)
+                    val profilObj = data.optJSONObject("profil_apotek")
+                    if (profilObj != null) {
+                        binding.tvNamaApotekHeader.text = profilObj.optString("nama_apotek", "Apotek Astria 2 Farma")
+                        val isBuka = profilObj.optBoolean("is_buka", true)
+                        val tutupPaksa = profilObj.optBoolean("tutup_paksa", false)
+                        val keteranganStatus = profilObj.optString("keterangan_status", "")
+                        val jadwal = profilObj.optString("jadwal_ringkas", "Setiap hari • 07:30 - 21:00")
+
+                        binding.tvJadwalBeranda.text = if (tutupPaksa && keteranganStatus.isNotBlank()) {
+                            keteranganStatus
+                        } else {
+                            jadwal
+                        }
+                        binding.tvStatusTokoBeranda.text = if (isBuka) "BUKA" else "TUTUP"
+                        binding.tvStatusTokoBeranda.setTextColor(
+                            Color.parseColor(if (isBuka) "#166534" else "#991B1B")
+                        )
+                        binding.tvStatusTokoBeranda.background = GradientDrawable().apply {
+                            setColor(Color.parseColor(if (isBuka) "#DCFCE7" else "#FEE2E2"))
+                            cornerRadius = 14f * resources.displayMetrics.density
+                        }
+                    }
 
                     // 1. Bagian Penjualan: Ringkasan Total
                     val periodeRespon = data.optString("periode", periodeAktif)

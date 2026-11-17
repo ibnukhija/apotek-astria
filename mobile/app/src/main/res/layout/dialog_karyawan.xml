@@ -5,36 +5,63 @@
     android:orientation="vertical"
     android:padding="20dp">
 
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Nama Lengkap *"
+        android:textColor="#334155"
+        android:textSize="12sp"
+        android:textStyle="bold" />
+
     <EditText
         android:id="@+id/etNama"
         android:layout_width="match_parent"
         android:layout_height="44dp"
+        android:layout_marginTop="4dp"
         android:background="@drawable/bg_edittext"
-        android:hint="Nama lengkap"
-        android:inputType="textPersonName"
+        android:hint="Contoh: Rina Wijaya"
+        android:inputType="textPersonName|textCapWords"
         android:paddingStart="10dp"
         android:paddingEnd="10dp"
         android:textSize="14sp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="Username Login *"
+        android:textColor="#334155"
+        android:textSize="12sp"
+        android:textStyle="bold" />
 
     <EditText
         android:id="@+id/etUsername"
         android:layout_width="match_parent"
         android:layout_height="44dp"
-        android:layout_marginTop="10dp"
+        android:layout_marginTop="4dp"
         android:background="@drawable/bg_edittext"
-        android:hint="Username"
+        android:hint="Contoh: rina_kasir"
         android:inputType="text"
         android:paddingStart="10dp"
         android:paddingEnd="10dp"
         android:textSize="14sp" />
 
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="Password"
+        android:textColor="#334155"
+        android:textSize="12sp"
+        android:textStyle="bold" />
+
     <EditText
         android:id="@+id/etPassword"
         android:layout_width="match_parent"
         android:layout_height="44dp"
-        android:layout_marginTop="10dp"
+        android:layout_marginTop="4dp"
         android:background="@drawable/bg_edittext"
-        android:hint="Password (min. 6 karakter)"
+        android:hint="Minimal 6 karakter"
         android:inputType="textPassword"
         android:paddingStart="10dp"
         android:paddingEnd="10dp"

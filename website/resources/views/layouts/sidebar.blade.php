@@ -20,18 +20,25 @@
         <a href="{{ route('kasir.riwayat') }}" class="block px-3 py-2.5 rounded-lg text-sm {{ request()->routeIs('kasir.riwayat') ? 'font-bold bg-[#E8F4F2] text-soft-teal' : 'font-medium text-gray-text hover:bg-off-white' }} transition">Riwayat Transaksi</a>
         <a href="{{ route('obat.index') }}" class="block px-3 py-2.5 rounded-lg text-sm {{ request()->routeIs('obat.*') ? 'font-bold bg-[#E8F4F2] text-soft-teal' : 'font-medium text-gray-text hover:bg-off-white' }} transition">Kelola Produk</a>
         <a href="{{ route('kategori.index') }}" class="block px-3 py-2.5 rounded-lg text-sm {{ request()->routeIs('kategori.*') ? 'font-bold bg-[#E8F4F2] text-soft-teal' : 'font-medium text-gray-text hover:bg-off-white' }} transition">Kelola Kategori</a>
+        <a href="{{ route('profil.edit') }}" class="block px-3 py-2.5 rounded-lg text-sm {{ request()->routeIs('profil.*') ? 'font-bold bg-[#E8F4F2] text-soft-teal' : 'font-medium text-gray-text hover:bg-off-white' }} transition">Profil Saya</a>
     </nav>
 
+    @php($statusApotek = \App\Models\ProfilApotek::ambilAtauDefault()->statusSaatIni())
     <div class="mt-auto pt-4 border-t border-border-color flex flex-col gap-3">
-        <div class="flex items-center gap-2.5">
+        <div class="px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-between {{ $statusApotek['is_buka'] ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200' }}">
+            <span>Status Toko</span>
+            <span>{{ strtoupper($statusApotek['status_toko']) }}</span>
+        </div>
+
+        <a href="{{ route('profil.edit') }}" class="flex items-center gap-2.5 rounded-lg p-1 -m-1 hover:bg-off-white transition" title="Lihat & ubah profil saya">
             <div class="w-9 h-9 bg-[#E8F4F2] rounded-full flex items-center justify-center text-soft-teal font-bold text-sm uppercase shrink-0">
                 {{ Auth::check() ? substr(Auth::user()->nama, 0, 1) : 'U' }}
             </div>
             <div class="text-sm font-semibold leading-tight min-w-0 truncate">
                 {{ Auth::check() ? Auth::user()->nama : 'User' }}<br>
-                <span class="text-xs text-gray-text font-normal">Akun Karyawan</span>
+                <span class="text-xs text-gray-text font-normal">Profil Karyawan</span>
             </div>
-        </div>
+        </a>
 
         <!-- Tombol Logout -->
         <form method="POST" action="{{ route('logout') }}">

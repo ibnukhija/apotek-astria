@@ -5,6 +5,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ObatController;
 use App\Http\Controllers\KategoriController;
 use App\Http\Controllers\KasirController;
+use App\Http\Controllers\ProfilKaryawanController;
 
 Route::get('/', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
@@ -29,4 +30,8 @@ Route::middleware(['auth', 'cekrole:karyawan'])->group(function () {
     // Tambahan untuk riwayat & struk Sprint 2
     Route::get('/kasir/riwayat', [KasirController::class, 'riwayat'])->name('kasir.riwayat');
     Route::get('/kasir/struk/{id}', [KasirController::class, 'cetakStruk'])->name('kasir.struk');
+
+    // Profil akun karyawan
+    Route::get('/profil', [ProfilKaryawanController::class, 'edit'])->name('profil.edit');
+    Route::put('/profil', [ProfilKaryawanController::class, 'update'])->name('profil.update');
 });

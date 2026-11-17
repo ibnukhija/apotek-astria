@@ -835,4 +835,78 @@ class ApiMobileTest extends TestCase
             Carbon::setTestNow();
         }
     }
+
+    public function test_profil_apotek_mendukung_jam_hari_24jam_dan_tutup_paksa(): void
+    {
+        try {
+            $this->loginSebagaiOwner();
+
+            // Rabu 10:00 (dalam jam default setiap hari 07:30 - 21:00) -> Buka
+            Carbon::setTestNow(Carbon::parse('2026-11-18 10:00:00', 'Asia/Jakarta'));
+            $this->getJson('/api/profil')
+                ->assertOk()
+                ->assertJsonPath('data.jam_buka', '07:30')
+                ->assertJsonPath('data.jam_tutup', '21:00')
+                ->assertJsonPath('data.buka_24_jam', false)
+                ->assertJsonPath('data.tutup_paksa', false)
+                ->assertJsonPath('data.is_buka', true)
+                ->assertJsonPath('data.status_toko', 'Buka');
+
+            // Rabu 22:00 (di luar jam 07:30 - 21:00) -> Tutup
+            Carbon::setTestNow(Carbon::parse('2026-11-18 22:00:00', 'Asia/Jakarta'));
+            $this->getJson('/api/profil')
+                ->assertOk()
+                ->assertJsonPath('data.is_buka', false)
+                ->assertJsonPath('data.status_toko', 'Tutup')
+                ->assertJsonPath('data.kode_status', 'tutup_jam');
+
+            // Aktifkan 24 Jam -> pada pukul 22:00 tetap Buka
+            $this->putJson('/api/profil', [
+                'nama_apotek'      => 'Apotek Astria 2 Farma',
+                'alamat'           => 'Jl. Mastrip No.79A, Kediri',
+                'jam_buka'         => '07:30',
+                'jam_tutup'        => '21:00',
+                'buka_24_jam'      => true,
+                'hari_operasional' => ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'],
+                'tutup_paksa'      => false,
+            ])->assertOk()
+                ->assertJsonPath('data.is_buka', true)
+                ->assertJsonPath('data.status_toko', 'Buka')
+                ->assertJsonPath('data.kode_status', 'buka_24_jam');
+
+            // Aktifkan Tutup Paksa meskipun 24 jam -> status toko menjadi Tutup
+            $this->putJson('/api/profil', [
+                'nama_apotek'      => 'Apotek Astria 2 Farma',
+                'alamat'           => 'Jl. Mastrip No.79A, Kediri',
+                'buka_24_jam'      => true,
+                'hari_operasional' => ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'],
+                'tutup_paksa'      => true,
+                'alasan_tutup'     => 'Penjaga berhalangan hadir',
+            ])->assertOk()
+                ->assertJsonPath('data.is_buka', false)
+                ->assertJsonPath('data.status_toko', 'Tutup')
+                ->assertJsonPath('data.kode_status', 'tutup_paksa')
+                ->assertJsonPath('data.keterangan_status', 'Penjaga berhalangan hadir');
+
+            // Dashboard ikut menyertakan status toko terkini
+            $this->getJson('/api/dashboard')
+                ->assertOk()
+                ->assertJsonPath('data.profil_apotek.is_buka', false)
+                ->assertJsonPath('data.profil_apotek.status_toko', 'Tutup')
+                ->assertJsonPath('data.profil_apotek.tutup_paksa', true);
+
+            // Jika Tutup Paksa dimatikan dan Rabu tidak masuk hari operasional -> Libur operasional
+            $this->putJson('/api/profil', [
+                'nama_apotek'      => 'Apotek Astria 2 Farma',
+                'alamat'           => 'Jl. Mastrip No.79A, Kediri',
+                'buka_24_jam'      => false,
+                'hari_operasional' => ['Senin', 'Selasa', 'Kamis', 'Jumat', 'Sabtu'],
+                'tutup_paksa'      => false,
+            ])->assertOk()
+                ->assertJsonPath('data.is_buka', false)
+                ->assertJsonPath('data.kode_status', 'libur');
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
 }

@@ -4,11 +4,15 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.CheckBox
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.core.content.ContextCompat
@@ -22,6 +26,7 @@ import com.example.apotek_astria.databinding.FragmentProfilBinding
 import com.example.apotek_astria.network.ApiConfig
 import com.example.apotek_astria.network.ApiRequest
 import com.example.apotek_astria.ui.karyawan.KaryawanActivity
+import org.json.JSONArray
 import org.json.JSONObject
 
 class ProfilFragment : Fragment() {
@@ -63,6 +68,7 @@ class ProfilFragment : Fragment() {
 
         siapkanNavigasi()
         siapkanNotifikasi()
+        siapkanFormOperasional()
 
         binding.btnSimpan.setOnClickListener { simpanProfil() }
 
@@ -181,8 +187,72 @@ class ProfilFragment : Fragment() {
     }
 
     // ---------------------------------------------------------------
-    // Profil apotek (API)
+    // Profil apotek, jam operasional & status toko (API)
     // ---------------------------------------------------------------
+
+    private var jamBuka = "07:30"
+    private var jamTutup = "21:00"
+
+    private fun petaCheckboxHari(): List<Pair<CheckBox, String>> = listOf(
+        binding.cbHariSenin to "Senin",
+        binding.cbHariSelasa to "Selasa",
+        binding.cbHariRabu to "Rabu",
+        binding.cbHariKamis to "Kamis",
+        binding.cbHariJumat to "Jumat",
+        binding.cbHariSabtu to "Sabtu",
+        binding.cbHariMinggu to "Minggu"
+    )
+
+    private fun siapkanFormOperasional() {
+        binding.btnJamBuka.setOnClickListener {
+            pilihJamOperasional(jamBuka) { dipilih ->
+                jamBuka = dipilih
+                binding.btnJamBuka.text = dipilih
+            }
+        }
+        binding.btnJamTutup.setOnClickListener {
+            pilihJamOperasional(jamTutup) { dipilih ->
+                jamTutup = dipilih
+                binding.btnJamTutup.text = dipilih
+            }
+        }
+        binding.switchBuka24Jam.setOnCheckedChangeListener { _, isChecked ->
+            perbaruiTampilan24Jam(isChecked)
+        }
+        binding.switchTutupPaksa.setOnCheckedChangeListener { _, isChecked ->
+            binding.etAlasanTutup.visibility = if (isChecked) View.VISIBLE else View.GONE
+            if (isChecked) {
+                perbaruiBadgeStatusToko(binding.tvStatusTokoEdit, false, "TUTUP (Paksa)")
+            }
+        }
+    }
+
+    private fun perbaruiTampilan24Jam(is24Jam: Boolean) {
+        binding.btnJamBuka.isEnabled = !is24Jam
+        binding.btnJamTutup.isEnabled = !is24Jam
+        binding.btnJamBuka.alpha = if (is24Jam) 0.45f else 1f
+        binding.btnJamTutup.alpha = if (is24Jam) 0.45f else 1f
+    }
+
+    private fun pilihJamOperasional(awal: String, setelahPilih: (String) -> Unit) {
+        val (h, m) = awal.split(":").map { it.toIntOrNull() ?: 0 }
+        android.app.TimePickerDialog(
+            requireContext(),
+            { _, jam, menit ->
+                setelahPilih(String.format(java.util.Locale.US, "%02d:%02d", jam, menit))
+            },
+            h, m, true
+        ).show()
+    }
+
+    private fun perbaruiBadgeStatusToko(target: TextView, isBuka: Boolean, teksOverride: String? = null) {
+        target.text = teksOverride ?: if (isBuka) "BUKA" else "TUTUP"
+        target.setTextColor(Color.parseColor(if (isBuka) "#166534" else "#991B1B"))
+        target.background = GradientDrawable().apply {
+            setColor(Color.parseColor(if (isBuka) "#DCFCE7" else "#FEE2E2"))
+            cornerRadius = 14f * resources.displayMetrics.density
+        }
+    }
 
     private fun JSONObject.teks(key: String): String {
         return if (isNull(key)) "" else optString(key, "")
@@ -199,15 +269,56 @@ class ProfilFragment : Fragment() {
                     val data = response.optJSONObject("data")
 
                     if (data != null) {
+                        val namaApotek = data.teks("nama_apotek").ifBlank { "Apotek Astria 2 Farma" }
                         val alamat = data.teks("alamat")
 
-                        binding.etNamaApotek.setText(data.teks("nama_apotek"))
+                        binding.tvNamaApotekMenu.text = namaApotek
+                        binding.etNamaApotek.setText(namaApotek)
                         binding.etAlamat.setText(alamat)
                         binding.etLatitude.setText(data.teks("latitude"))
                         binding.etLongitude.setText(data.teks("longitude"))
 
                         binding.tvRingkasanAlamat.text =
                             if (alamat.isBlank()) "Alamat belum diisi" else alamat
+
+                        jamBuka = data.teks("jam_buka").ifBlank { "07:30" }
+                        jamTutup = data.teks("jam_tutup").ifBlank { "21:00" }
+                        val buka24Jam = data.optBoolean("buka_24_jam", false)
+                        val tutupPaksa = data.optBoolean("tutup_paksa", false)
+                        val alasanTutup = data.teks("alasan_tutup")
+                        val isBuka = data.optBoolean("is_buka", true)
+                        val jadwalRingkas = data.teks("jadwal_ringkas").ifBlank { "Setiap hari • $jamBuka - $jamTutup" }
+                        val ketStatus = data.teks("keterangan_status")
+
+                        binding.btnJamBuka.text = jamBuka
+                        binding.btnJamTutup.text = jamTutup
+                        binding.switchBuka24Jam.isChecked = buka24Jam
+                        perbaruiTampilan24Jam(buka24Jam)
+
+                        val hariArray = data.optJSONArray("hari_operasional")
+                        val hariSet = mutableSetOf<String>()
+                        if (hariArray != null) {
+                            for (i in 0 until hariArray.length()) {
+                                val h = hariArray.optString(i)
+                                if (h.isNotBlank()) hariSet.add(h)
+                            }
+                        }
+                        for ((cb, namaHari) in petaCheckboxHari()) {
+                            cb.isChecked = hariSet.isEmpty() || hariSet.contains(namaHari)
+                        }
+
+                        binding.switchTutupPaksa.isChecked = tutupPaksa
+                        binding.etAlasanTutup.setText(alasanTutup)
+                        binding.etAlasanTutup.visibility = if (tutupPaksa) View.VISIBLE else View.GONE
+
+                        binding.tvRingkasanJadwal.text = jadwalRingkas
+                        binding.tvKeteranganStatusMenu.text = ketStatus
+                        perbaruiBadgeStatusToko(binding.tvStatusTokoMenu, isBuka)
+                        perbaruiBadgeStatusToko(
+                            binding.tvStatusTokoEdit,
+                            isBuka,
+                            if (tutupPaksa) "TUTUP (Paksa)" else if (isBuka) "BUKA" else "TUTUP"
+                        )
                     } else {
                         toast("Data profil tidak ditemukan")
                     }
@@ -244,11 +355,29 @@ class ProfilFragment : Fragment() {
             return
         }
 
+        val hariDipilih = JSONArray()
+        for ((cb, namaHari) in petaCheckboxHari()) {
+            if (cb.isChecked) hariDipilih.put(namaHari)
+        }
+        if (hariDipilih.length() == 0) {
+            toast("Pilih minimal satu hari operasional")
+            return
+        }
+
+        val tutupPaksa = binding.switchTutupPaksa.isChecked
+        val alasanTutup = binding.etAlasanTutup.text.toString().trim()
+
         val body = JSONObject()
             .put("nama_apotek", nama)
             .put("alamat", alamat)
             .put("latitude", lat ?: JSONObject.NULL)
             .put("longitude", lng ?: JSONObject.NULL)
+            .put("jam_buka", jamBuka)
+            .put("jam_tutup", jamTutup)
+            .put("buka_24_jam", binding.switchBuka24Jam.isChecked)
+            .put("hari_operasional", hariDipilih)
+            .put("tutup_paksa", tutupPaksa)
+            .put("alasan_tutup", if (tutupPaksa && alasanTutup.isNotEmpty()) alasanTutup else JSONObject.NULL)
 
         val request = ApiRequest(
             requireContext(),

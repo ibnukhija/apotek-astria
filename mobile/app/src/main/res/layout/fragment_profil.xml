@@ -46,14 +46,35 @@
                     android:textColor="#757575"
                     android:textSize="12sp" />
 
-                <TextView
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
-                    android:text="Apotek Astria"
-                    android:textColor="#212121"
-                    android:textSize="17sp"
-                    android:textStyle="bold" />
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/tvNamaApotekMenu"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="8dp"
+                        android:layout_weight="1"
+                        android:text="Apotek Astria 2 Farma"
+                        android:textColor="#212121"
+                        android:textSize="17sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvStatusTokoMenu"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:paddingHorizontal="10dp"
+                        android:paddingVertical="4dp"
+                        android:text="BUKA"
+                        android:textColor="#166534"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
 
                 <TextView
                     android:id="@+id/tvRingkasanAlamat"
@@ -64,13 +85,32 @@
                     android:textColor="#757575"
                     android:textSize="13sp" />
 
+                <TextView
+                    android:id="@+id/tvRingkasanJadwal"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Setiap hari • 07:30 - 21:00"
+                    android:textColor="#1F7A6F"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvKeteranganStatusMenu"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="Jam operasional 07:30 - 21:00"
+                    android:textColor="#64748B"
+                    android:textSize="12sp" />
+
                 <Button
                     android:id="@+id/btnBukaEditProfil"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
                     android:backgroundTint="#2A9D8F"
-                    android:text="Edit Profil Apotek"
+                    android:text="Edit Profil &amp; Jam Operasional"
                     android:textColor="#FFFFFF" />
             </LinearLayout>
 
@@ -205,6 +245,254 @@
                 android:inputType="numberSigned|numberDecimal"
                 android:padding="12dp"
                 android:textSize="14sp" />
+
+            <!-- Jam & Hari Operasional -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:background="#FFFFFF"
+                android:elevation="1dp"
+                android:orientation="vertical"
+                android:padding="14dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Jam &amp; Hari Operasional"
+                    android:textColor="#1E293B"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <Switch
+                    android:id="@+id/switchBuka24Jam"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="Buka 24 Jam"
+                    android:textColor="#334155"
+                    android:textSize="13sp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:orientation="horizontal">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="6dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Jam Buka"
+                            android:textColor="#555555"
+                            android:textSize="12sp" />
+
+                        <Button
+                            android:id="@+id/btnJamBuka"
+                            android:layout_width="match_parent"
+                            android:layout_height="44dp"
+                            android:layout_marginTop="4dp"
+                            android:backgroundTint="#E0F2EF"
+                            android:text="07:30"
+                            android:textColor="#20796F"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="6dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Jam Tutup"
+                            android:textColor="#555555"
+                            android:textSize="12sp" />
+
+                        <Button
+                            android:id="@+id/btnJamTutup"
+                            android:layout_width="match_parent"
+                            android:layout_height="44dp"
+                            android:layout_marginTop="4dp"
+                            android:backgroundTint="#E0F2EF"
+                            android:text="21:00"
+                            android:textColor="#20796F"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="Hari Operasional"
+                    android:textColor="#555555"
+                    android:textSize="12sp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:orientation="horizontal">
+
+                    <CheckBox
+                        android:id="@+id/cbHariSenin"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:buttonTint="#2A9D8F"
+                        android:checked="true"
+                        android:text="Sen"
+                        android:textSize="12sp" />
+
+                    <CheckBox
+                        android:id="@+id/cbHariSelasa"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:buttonTint="#2A9D8F"
+                        android:checked="true"
+                        android:text="Sel"
+                        android:textSize="12sp" />
+
+                    <CheckBox
+                        android:id="@+id/cbHariRabu"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:buttonTint="#2A9D8F"
+                        android:checked="true"
+                        android:text="Rab"
+                        android:textSize="12sp" />
+
+                    <CheckBox
+                        android:id="@+id/cbHariKamis"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:buttonTint="#2A9D8F"
+                        android:checked="true"
+                        android:text="Kam"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <CheckBox
+                        android:id="@+id/cbHariJumat"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:buttonTint="#2A9D8F"
+                        android:checked="true"
+                        android:text="Jum"
+                        android:textSize="12sp" />
+
+                    <CheckBox
+                        android:id="@+id/cbHariSabtu"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:buttonTint="#2A9D8F"
+                        android:checked="true"
+                        android:text="Sab"
+                        android:textSize="12sp" />
+
+                    <CheckBox
+                        android:id="@+id/cbHariMinggu"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:buttonTint="#2A9D8F"
+                        android:checked="true"
+                        android:text="Min"
+                        android:textSize="12sp" />
+
+                    <Space
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Status Toko & Tutup Paksa -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="#FFFFFF"
+                android:elevation="1dp"
+                android:orientation="vertical"
+                android:padding="14dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Status Toko"
+                        android:textColor="#1E293B"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvStatusTokoEdit"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:paddingHorizontal="10dp"
+                        android:paddingVertical="3dp"
+                        android:text="BUKA"
+                        android:textColor="#166534"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <Switch
+                    android:id="@+id/switchTutupPaksa"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="Tutup Paksa Sementara"
+                    android:textColor="#991B1B"
+                    android:textSize="13sp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Aktifkan jika penjaga berhalangan hadir sehingga status toko ditutup meskipun masih dalam jam operasional."
+                    android:textColor="#64748B"
+                    android:textSize="11sp" />
+
+                <EditText
+                    android:id="@+id/etAlasanTutup"
+                    android:layout_width="match_parent"
+                    android:layout_height="44dp"
+                    android:layout_marginTop="10dp"
+                    android:background="@drawable/bg_edittext"
+                    android:hint="Alasan tutup (opsional), mis. Penjaga berhalangan"
+                    android:inputType="textCapSentences"
+                    android:paddingHorizontal="12dp"
+                    android:textSize="13sp"
+                    android:visibility="gone" />
+            </LinearLayout>
 
             <Button
                 android:id="@+id/btnSimpan"

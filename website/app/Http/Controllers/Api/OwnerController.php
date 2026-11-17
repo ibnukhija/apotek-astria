@@ -7,6 +7,7 @@ use App\Models\ProfilApotek;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 
 class OwnerController extends Controller
 {
@@ -14,20 +15,58 @@ class OwnerController extends Controller
     public function updateProfil(Request $request)
     {
         $v = $request->validate([
-            'nama_apotek' => 'required|string|max:255',
-            'alamat'      => 'required|string',
-            'latitude'    => 'nullable|numeric|between:-90,90',
-            'longitude'   => 'nullable|numeric|between:-180,180',
+            'nama_apotek'        => 'required|string|max:255',
+            'alamat'             => 'required|string',
+            'latitude'           => 'nullable|numeric|between:-90,90',
+            'longitude'          => 'nullable|numeric|between:-180,180',
+            'jam_buka'           => 'nullable|date_format:H:i',
+            'jam_tutup'          => 'nullable|date_format:H:i',
+            'buka_24_jam'        => 'nullable|boolean',
+            'hari_operasional'   => 'nullable|array|min:1',
+            'hari_operasional.*' => ['required', Rule::in(ProfilApotek::SEMUA_HARI)],
+            'tutup_paksa'        => 'nullable|boolean',
+            'alasan_tutup'       => 'nullable|string|max:255',
+        ], [
+            'hari_operasional.min' => 'Pilih minimal satu hari operasional.',
         ]);
 
         $profil = ProfilApotek::first();
+        $hariDefault = $profil?->hariAktif() ?? ProfilApotek::SEMUA_HARI;
+        $buka24Jam = array_key_exists('buka_24_jam', $v)
+            ? (bool) $v['buka_24_jam']
+            : (bool) ($profil?->buka_24_jam ?? false);
+        $tutupPaksa = array_key_exists('tutup_paksa', $v)
+            ? (bool) $v['tutup_paksa']
+            : (bool) ($profil?->tutup_paksa ?? false);
+
+        $hariOperasional = isset($v['hari_operasional'])
+            ? array_values(array_intersect(ProfilApotek::SEMUA_HARI, $v['hari_operasional']))
+            : $hariDefault;
+
+        $payload = [
+            'nama_apotek'      => $v['nama_apotek'],
+            'alamat'           => $v['alamat'],
+            'latitude'         => $v['latitude'] ?? null,
+            'longitude'        => $v['longitude'] ?? null,
+            'jam_buka'         => $v['jam_buka'] ?? ($profil?->jam_buka ?: ProfilApotek::DEFAULT_JAM_BUKA),
+            'jam_tutup'        => $v['jam_tutup'] ?? ($profil?->jam_tutup ?: ProfilApotek::DEFAULT_JAM_TUTUP),
+            'buka_24_jam'      => $buka24Jam,
+            'hari_operasional' => $hariOperasional,
+            'tutup_paksa'      => $tutupPaksa,
+            'alasan_tutup'     => $tutupPaksa ? trim((string) ($v['alasan_tutup'] ?? '')) ?: null : null,
+        ];
+
         if ($profil) {
-            $profil->update($v);
+            $profil->update($payload);
         } else {
-            ProfilApotek::create($v);
+            $profil = ProfilApotek::create($payload);
         }
 
-        return response()->json(['success' => true, 'message' => 'Profil apotek disimpan']);
+        return response()->json([
+            'success' => true,
+            'message' => 'Profil apotek disimpan',
+            'data'    => $profil->fresh()->terserialisasi(),
+        ]);
     }
 
     // ===== Poin D: akun karyawan =====

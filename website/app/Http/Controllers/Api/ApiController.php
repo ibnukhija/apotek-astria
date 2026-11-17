@@ -73,6 +73,7 @@ class ApiController extends Controller
                 'grafik_penjualan'      => $grafikPenjualan,
                 'obat_terlaris'         => $obatTerlaris,
                 'transaksi_terbaru'     => $transaksiTerbaru,
+                'profil_apotek'         => ProfilApotek::ambilAtauDefault()->terserialisasi(),
             ]
         ]);
     }
@@ -401,19 +402,12 @@ class ApiController extends Controller
         ]);
     }
 
-    // 4. Untuk ProfilFragment (Informasi Profil & Koordinat Apotek)
+    // 4. Untuk ProfilFragment (Informasi Profil, Jam Operasional & Status Apotek)
     public function profil()
     {
-        $profil = ProfilApotek::first() ?? [
-            'nama_apotek' => 'Apotek Astria 2 Farma',
-            'alamat' => 'Jl. Mastrip No.79A, Sukorame, Kec. Mojoroto, Kota Kediri',
-            'latitude' => -7.8166,
-            'longitude' => 112.0116
-        ];
-
         return response()->json([
             'success' => true,
-            'data' => $profil
+            'data'    => ProfilApotek::ambilAtauDefault()->terserialisasi(),
         ]);
     }
 }

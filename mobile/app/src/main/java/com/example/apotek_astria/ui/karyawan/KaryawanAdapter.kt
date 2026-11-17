@@ -20,7 +20,7 @@ class KaryawanAdapter(
         val item = getItem(position) ?: return view
 
         view.findViewById<TextView>(R.id.tvNama).text = item.nama
-        view.findViewById<TextView>(R.id.tvUsername).text = "@${item.username}"
+        view.findViewById<TextView>(R.id.tvUsername).text = "Username: @${item.username}"
 
         val tvStatus = view.findViewById<TextView>(R.id.tvStatus)
         if (item.aktif) {
