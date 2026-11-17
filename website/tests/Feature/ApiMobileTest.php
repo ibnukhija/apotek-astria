@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\DetailTransaksi;
 use App\Models\Kategori;
 use App\Models\Obat;
 use App\Models\Transaksi;
@@ -438,7 +439,7 @@ class ApiMobileTest extends TestCase
         }
     }
 
-    public function test_dashboard_mengembalikan_grafik_penjualan_harian_mingguan_bulanan(): void
+    public function test_dashboard_mengembalikan_grafik_penjualan_harian_mingguan_bulanan_tahunan(): void
     {
         Carbon::setTestNow(Carbon::parse('2026-11-18 10:00:00'));
 
@@ -467,6 +468,7 @@ class ApiMobileTest extends TestCase
             $buatTrx('TRX-G1', 15000, '2026-11-18 09:00:00');
             $buatTrx('TRX-G2', 20000, '2026-11-16 14:00:00');
             $buatTrx('TRX-G3', 50000, '2026-10-15 11:00:00');
+            $buatTrx('TRX-G4', 75000, '2024-06-10 10:00:00');
 
             // Harian: 7 hari terakhir (12/11 - 18/11)
             $resHarian = $this->getJson('/api/dashboard?periode=harian&periode_grafik=harian')
@@ -490,18 +492,114 @@ class ApiMobileTest extends TestCase
             $this->assertSame(35000, $resMingguan[5]['total']);
             $this->assertSame(2, $resMingguan[5]['jumlah_transaksi']);
 
-            // Bulanan: 6 bulan terakhir (Jun - Nov)
+            // Bulanan: bulan 1-12 tahun berjalan (Jan - Des 2026)
             $resBulanan = $this->getJson('/api/dashboard?periode_grafik=bulanan')
                 ->assertOk()
                 ->json('data.grafik_penjualan');
-            $this->assertCount(6, $resBulanan);
-            $this->assertSame('Okt', $resBulanan[4]['label']);
-            $this->assertSame(50000, $resBulanan[4]['total']);
-            $this->assertSame('Nov', $resBulanan[5]['label']);
-            $this->assertSame(35000, $resBulanan[5]['total']);
+            $this->assertCount(12, $resBulanan);
+            $this->assertSame('Jan', $resBulanan[0]['label']);
+            $this->assertSame('Okt', $resBulanan[9]['label']);
+            $this->assertSame(50000, $resBulanan[9]['total']);
+            $this->assertSame('Nov', $resBulanan[10]['label']);
+            $this->assertSame(35000, $resBulanan[10]['total']);
+            $this->assertSame('Des', $resBulanan[11]['label']);
+            $this->assertSame(0, $resBulanan[11]['total']);
+
+            // Tahunan: lintas beberapa tahun (2023 - 2026)
+            $resTahunan = $this->getJson('/api/dashboard?periode_grafik=tahunan')
+                ->assertOk()
+                ->assertJsonPath('data.periode_grafik', 'tahunan')
+                ->json('data.grafik_penjualan');
+            $this->assertCount(4, $resTahunan);
+            $this->assertSame(['2023', '2024', '2025', '2026'], array_column($resTahunan, 'label'));
+            $this->assertSame(0, $resTahunan[0]['total']);
+            $this->assertSame(75000, $resTahunan[1]['total']);
+            $this->assertSame(0, $resTahunan[2]['total']);
+            $this->assertSame(85000, $resTahunan[3]['total']);
 
             $this->getJson('/api/dashboard?periode_grafik=tidak_valid')
                 ->assertStatus(422);
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
+
+    public function test_dashboard_mengembalikan_top_5_obat_terlaris_keseluruhan(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-11-18 10:00:00'));
+
+        try {
+            $this->loginSebagaiOwner();
+
+            $kasir = User::create([
+                'nama'     => 'Kasir Terlaris',
+                'username' => 'kasir_terlaris',
+                'password' => Hash::make('rahasia123'),
+                'role'     => 'karyawan',
+                'status'   => 'aktif',
+            ]);
+
+            $daftarObat = [];
+            foreach (['A', 'B', 'C', 'D', 'E', 'F'] as $idx => $huruf) {
+                $daftarObat[$huruf] = $this->buatObat([
+                    'kode_obat'  => 'TOP-00' . ($idx + 1),
+                    'nama_obat'  => 'Obat ' . $huruf,
+                    'harga_jual' => 10000,
+                ]);
+            }
+
+            $simpanItem = function (string $kode, string $waktu, array $items) use ($kasir): void {
+                $total = collect($items)->sum(fn ($i) => $i['qty'] * 10000);
+                $trx = Transaksi::create([
+                    'no_transaksi' => $kode,
+                    'user_id'      => $kasir->id,
+                    'total_harga'  => $total,
+                    'total_bayar'  => $total,
+                    'kembalian'    => 0,
+                ]);
+                $trx->forceFill(['created_at' => $waktu])->save();
+
+                foreach ($items as $item) {
+                    DetailTransaksi::create([
+                        'transaksi_id' => $trx->id,
+                        'obat_id'      => $item['obat']->id,
+                        'qty'          => $item['qty'],
+                        'harga_satuan' => 10000,
+                        'subtotal'     => $item['qty'] * 10000,
+                    ]);
+                }
+            };
+
+            // Hari ini: B=4, A=2
+            $simpanItem('TRX-TOP1', '2026-11-18 09:00:00', [
+                ['obat' => $daftarObat['B'], 'qty' => 4],
+                ['obat' => $daftarObat['A'], 'qty' => 2],
+            ]);
+
+            // Bulan lalu: C=10, D=8, E=6, F=5, A=1 (sehingga keseluruhan: C=10, D=8, E=6, F=5, B=4, A=3 -> B posisi 5, A tereliminasi)
+            $simpanItem('TRX-TOP2', '2026-10-10 11:00:00', [
+                ['obat' => $daftarObat['C'], 'qty' => 10],
+                ['obat' => $daftarObat['D'], 'qty' => 8],
+                ['obat' => $daftarObat['E'], 'qty' => 6],
+                ['obat' => $daftarObat['F'], 'qty' => 5],
+                ['obat' => $daftarObat['A'], 'qty' => 1],
+            ]);
+
+            // Meskipun periode ringkasan penjualan dipilih harian, top 5 obat terlaris tetap dihitung keseluruhan
+            $topDariHarian = $this->getJson('/api/dashboard?periode=harian')
+                ->assertOk()
+                ->json('data.obat_terlaris');
+            $this->assertCount(5, $topDariHarian);
+            $this->assertSame(
+                ['Obat C', 'Obat D', 'Obat E', 'Obat F', 'Obat B'],
+                array_column($topDariHarian, 'nama_obat')
+            );
+            $this->assertSame([10, 8, 6, 5, 4], array_column($topDariHarian, 'total_terjual'));
+
+            $topDariBulanan = $this->getJson('/api/dashboard?periode=bulanan')
+                ->assertOk()
+                ->json('data.obat_terlaris');
+            $this->assertSame($topDariHarian, $topDariBulanan);
         } finally {
             Carbon::setTestNow();
         }

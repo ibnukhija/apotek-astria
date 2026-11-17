@@ -20,6 +20,28 @@ import com.example.apotek_astria.ui.profil.ProfilFragment
 class MainActivity : AppCompatActivity() {
     private lateinit var tvHeaderTitle: TextView
     private lateinit var btnLogout: ImageView
+    private var pendingBukaLaporan = false
+
+    fun bukaLaporan() {
+        pendingBukaLaporan = true
+        val bottomNav = findViewById<BottomNavigationView>(R.id.bottom_navigation)
+        if (bottomNav.selectedItemId == R.id.nav_riwayat) {
+            loadFragment(buatRiwayatFragment(), "Riwayat")
+        } else {
+            bottomNav.selectedItemId = R.id.nav_riwayat
+        }
+    }
+
+    private fun buatRiwayatFragment(): RiwayatFragment {
+        val fragment = RiwayatFragment()
+        if (pendingBukaLaporan) {
+            pendingBukaLaporan = false
+            fragment.arguments = Bundle().apply {
+                putBoolean(RiwayatFragment.ARG_BUKA_LAPORAN, true)
+            }
+        }
+        return fragment
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -60,7 +82,7 @@ class MainActivity : AppCompatActivity() {
                     title = "Beranda"
                 }
                 R.id.nav_riwayat -> {
-                    selectedFragment = RiwayatFragment()
+                    selectedFragment = buatRiwayatFragment()
                     title = "Riwayat"
                 }
                 R.id.nav_stok -> {

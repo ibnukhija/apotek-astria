@@ -28,6 +28,10 @@ import java.util.Locale
 
 class RiwayatFragment : Fragment() {
 
+    companion object {
+        const val ARG_BUKA_LAPORAN = "buka_laporan"
+    }
+
     private var _binding: FragmentRiwayatBinding? = null
     private val binding get() = _binding!!
 

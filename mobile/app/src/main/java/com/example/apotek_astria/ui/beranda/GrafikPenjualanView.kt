@@ -143,6 +143,9 @@ class GrafikPenjualanView @JvmOverloads constructor(
 
         slotWidth = chartWidth / items.size
         val barWidth = min(slotWidth * 0.56f, dp(30f))
+        val ukuranLabelX = if (items.size >= 10) sp(9.5f) else sp(11f)
+        xLabelPaint.textSize = ukuranLabelX
+        xLabelSelectedPaint.textSize = ukuranLabelX
         val cornerRadius = dp(5f)
         val radii = floatArrayOf(
             cornerRadius, cornerRadius,

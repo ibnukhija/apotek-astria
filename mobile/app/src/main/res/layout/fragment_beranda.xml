@@ -9,7 +9,7 @@
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="#FFFFFF"
+        android:background="#F8FAFC"
         android:fillViewport="true">
 
         <LinearLayout
@@ -22,9 +22,9 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginBottom="20dp"
                 android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:layout_marginBottom="20dp">
+                android:orientation="horizontal">
 
                 <androidx.cardview.widget.CardView
                     android:layout_width="50dp"
@@ -34,7 +34,7 @@
                     <ImageView
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
-                        android:src="@drawable/logo_ular_nobg"/>
+                        android:src="@drawable/logo_ular_nobg" />
                 </androidx.cardview.widget.CardView>
 
                 <TextView
@@ -43,24 +43,56 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="12dp"
                     android:text="Apotek Astria 2 Farma"
-                    android:textColor="#333333"
+                    android:textColor="#1E293B"
                     android:textSize="18sp"
                     android:textStyle="bold" />
             </LinearLayout>
+
+            <!-- ================= BAGIAN 1: PENJUALAN ================= -->
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_centerVertical="true"
+                    android:text="Penjualan"
+                    android:textColor="#1E293B"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tv_lihat_laporan"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:background="?android:attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:paddingHorizontal="4dp"
+                    android:paddingVertical="4dp"
+                    android:text="Lihat Laporan ›"
+                    android:textColor="#2A9D8F"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+            </RelativeLayout>
 
             <!-- Kartu Ringkasan Penjualan Utama (Hijau Teal) -->
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginBottom="14dp"
                 app:cardCornerRadius="16dp"
-                app:cardElevation="2dp"
-                android:layout_marginBottom="16dp">
+                app:cardElevation="2dp">
 
                 <RelativeLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:minHeight="140dp"
                     android:background="#2A9D8F"
+                    android:minHeight="136dp"
                     android:padding="20dp">
 
                     <TextView
@@ -114,28 +146,278 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_below="@id/tv_total_penjualan"
-                        android:layout_marginTop="16dp"
+                        android:layout_marginTop="14dp"
                         android:text="0 transaksi hari ini"
                         android:textColor="#E8F4F2"
                         android:textSize="12sp" />
 
-                    <!-- Placeholder Ikon Grafik (Bisa diganti image riil jika ada) -->
                     <ImageView
                         android:layout_width="80dp"
                         android:layout_height="40dp"
                         android:layout_below="@id/tv_total_penjualan"
                         android:layout_alignParentEnd="true"
+                        android:alpha="0.3"
                         android:src="@android:drawable/ic_menu_sort_by_size"
-                        app:tint="#FFFFFF"
-                        android:alpha="0.3"/>
+                        app:tint="#FFFFFF" />
                 </RelativeLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- Kartu Grafik Analisis Penjualan (4 Periode) -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="14dp"
+                app:cardBackgroundColor="#FFFFFF"
+                app:cardCornerRadius="14dp"
+                app:cardElevation="2dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Grafik Analisis Penjualan"
+                        android:textColor="#1E293B"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:background="#F1F5F9"
+                        android:orientation="horizontal"
+                        android:padding="4dp">
+
+                        <TextView
+                            android:id="@+id/tv_grafik_harian"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:background="#2A9D8F"
+                            android:gravity="center"
+                            android:paddingVertical="6dp"
+                            android:text="Harian"
+                            android:textColor="#FFFFFF"
+                            android:textSize="11sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tv_grafik_mingguan"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:gravity="center"
+                            android:paddingVertical="6dp"
+                            android:text="Mingguan"
+                            android:textColor="#475569"
+                            android:textSize="11sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tv_grafik_bulanan"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:gravity="center"
+                            android:paddingVertical="6dp"
+                            android:text="Bulanan"
+                            android:textColor="#475569"
+                            android:textSize="11sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tv_grafik_tahunan"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:gravity="center"
+                            android:paddingVertical="6dp"
+                            android:text="Tahunan"
+                            android:textColor="#475569"
+                            android:textSize="11sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tv_info_grafik"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:text="Memuat grafik penjualan..."
+                        android:textColor="#2A9D8F"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+
+                    <com.example.apotek_astria.ui.beranda.GrafikPenjualanView
+                        android:id="@+id/grafik_penjualan"
+                        android:layout_width="match_parent"
+                        android:layout_height="190dp"
+                        android:layout_marginTop="6dp" />
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- Kartu Rangkuman Top 5 Obat Paling Laku -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="22dp"
+                app:cardBackgroundColor="#FFFFFF"
+                app:cardCornerRadius="14dp"
+                app:cardElevation="2dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Obat Paling Laku"
+                            android:textColor="#1E293B"
+                            android:textSize="15sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tv_periode_terlaris"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:background="@drawable/bg_badge_teal_soft"
+                            android:paddingHorizontal="10dp"
+                            android:paddingVertical="3dp"
+                            android:text="Keseluruhan"
+                            android:textColor="#1F7A6F"
+                            android:textSize="11sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:layout_marginBottom="8dp"
+                        android:text="Top 5 produk dengan jumlah terjual terbanyak"
+                        android:textColor="#64748B"
+                        android:textSize="11sp" />
+
+                    <LinearLayout
+                        android:id="@+id/layout_obat_terlaris"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical" />
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- ================= BAGIAN 2: STOK OBAT ================= -->
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_centerVertical="true"
+                    android:text="Stok Obat"
+                    android:textColor="#1E293B"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tv_lihat_stok"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:background="?android:attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:paddingHorizontal="4dp"
+                    android:paddingVertical="4dp"
+                    android:text="Kelola Stok ›"
+                    android:textColor="#2A9D8F"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+            </RelativeLayout>
+
+            <!-- Banner Pemberitahuan Stok Menipis (< 10) -->
+            <androidx.cardview.widget.CardView
+                android:id="@+id/card_banner_stok"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?android:attr/selectableItemBackground"
+                app:cardBackgroundColor="#FEF3C7"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:padding="14dp">
+
+                    <TextView
+                        android:id="@+id/tv_banner_stok_ikon"
+                        android:layout_width="30dp"
+                        android:layout_height="30dp"
+                        android:gravity="center"
+                        android:text="!"
+                        android:textColor="#FFFFFF"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/tv_banner_stok_judul"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Memeriksa stok menipis..."
+                            android:textColor="#92400E"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tv_banner_stok_isi"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:ellipsize="end"
+                            android:maxLines="2"
+                            android:text="Mengambil daftar obat dengan stok &lt; 10"
+                            android:textColor="#78350F"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+                </LinearLayout>
             </androidx.cardview.widget.CardView>
 
             <!-- 2 Kotak Ringkasan Berjejer: Stok Menipis & Mau Kadaluarsa -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
+                android:layout_marginBottom="8dp"
                 android:orientation="horizontal">
 
                 <androidx.cardview.widget.CardView
@@ -237,128 +519,6 @@
                 </androidx.cardview.widget.CardView>
             </LinearLayout>
 
-            <!-- Kartu Grafik Penjualan -->
-            <androidx.cardview.widget.CardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="20dp"
-                app:cardBackgroundColor="#FFFFFF"
-                app:cardCornerRadius="14dp"
-                app:cardElevation="2dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Grafik Penjualan"
-                        android:textColor="#1E293B"
-                        android:textSize="15sp"
-                        android:textStyle="bold" />
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="10dp"
-                        android:background="#F1F5F9"
-                        android:orientation="horizontal"
-                        android:padding="4dp">
-
-                        <TextView
-                            android:id="@+id/tv_grafik_harian"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:background="#2A9D8F"
-                            android:gravity="center"
-                            android:paddingVertical="6dp"
-                            android:text="Harian"
-                            android:textColor="#FFFFFF"
-                            android:textSize="12sp"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:id="@+id/tv_grafik_mingguan"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:gravity="center"
-                            android:paddingVertical="6dp"
-                            android:text="Mingguan"
-                            android:textColor="#475569"
-                            android:textSize="12sp"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:id="@+id/tv_grafik_bulanan"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:gravity="center"
-                            android:paddingVertical="6dp"
-                            android:text="Bulanan"
-                            android:textColor="#475569"
-                            android:textSize="12sp"
-                            android:textStyle="bold" />
-                    </LinearLayout>
-
-                    <TextView
-                        android:id="@+id/tv_info_grafik"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="10dp"
-                        android:text="Memuat grafik penjualan..."
-                        android:textColor="#2A9D8F"
-                        android:textSize="12sp"
-                        android:textStyle="bold" />
-
-                    <com.example.apotek_astria.ui.beranda.GrafikPenjualanView
-                        android:id="@+id/grafik_penjualan"
-                        android:layout_width="match_parent"
-                        android:layout_height="190dp"
-                        android:layout_marginTop="6dp" />
-                </LinearLayout>
-            </androidx.cardview.widget.CardView>
-
-            <!-- Judul Bagian Transaksi Terbaru -->
-            <RelativeLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Transaksi Terbaru"
-                    android:textColor="#333333"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/tv_lihat_semua"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_alignParentEnd="true"
-                    android:text="Lihat Semua"
-                    android:textColor="#2A9D8F"
-                    android:textSize="13sp"
-                    android:textStyle="bold" />
-            </RelativeLayout>
-
-            <!-- Kontainer Daftar Transaksi -->
-            <LinearLayout
-                android:id="@+id/layout_list_transaksi"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical">
-
-                <!-- Item transaksi akan dimuat secara dinamis oleh Kotlin di sini -->
-            </LinearLayout>
-
-    </LinearLayout>
-</ScrollView>
+        </LinearLayout>
+    </ScrollView>
 </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>

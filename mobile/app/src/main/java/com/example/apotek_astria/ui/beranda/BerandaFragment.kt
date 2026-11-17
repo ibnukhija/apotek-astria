@@ -3,9 +3,11 @@ package com.example.apotek_astria.ui.beranda
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
+import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.LinearLayout
 import android.widget.PopupMenu
 import android.widget.TextView
 import android.widget.Toast
@@ -13,10 +15,13 @@ import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import com.android.volley.Request
 import com.android.volley.toolbox.Volley
+import com.example.apotek_astria.MainActivity
 import com.example.apotek_astria.R
 import com.example.apotek_astria.databinding.FragmentBerandaBinding
 import com.example.apotek_astria.network.ApiConfig
 import com.example.apotek_astria.network.ApiRequest
+import com.google.android.material.bottomnavigation.BottomNavigationView
+import org.json.JSONArray
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -28,6 +33,7 @@ class BerandaFragment : Fragment() {
     private var periodeAktif = "harian"
     private var periodeGrafik = "harian"
     private val daftarPeringatanStok = mutableListOf<String>()
+    private val daftarNamaStokMenipis = mutableListOf<String>()
     private val daftarPeringatanKadaluarsa = mutableListOf<String>()
     private val formatRupiah by lazy { NumberFormat.getNumberInstance(Locale.forLanguageTag("id-ID")) }
 
@@ -46,12 +52,37 @@ class BerandaFragment : Fragment() {
             loadDashboardData()
         }
 
-        // Pilih periode kartu pendapatan (Harian / Mingguan / Bulanan)
+        // Pilih periode kartu pendapatan (Harian / Mingguan / Bulanan / Keseluruhan)
         binding.tvFilterPeriode.setOnClickListener {
             tampilkanMenuPeriode(it)
         }
 
-        // Klik 2 kotak ringkasan berjejer untuk menampilkan daftar obatnya
+        // Tautan langsung dari Penjualan ke Laporan dan dari Stok Obat ke halaman Stok
+        binding.tvLihatLaporan.setOnClickListener {
+            val mainActivity = activity as? MainActivity
+            if (mainActivity != null) {
+                mainActivity.bukaLaporan()
+            } else {
+                bukaTabNavigasi(R.id.nav_riwayat)
+            }
+        }
+        binding.tvLihatStok.setOnClickListener {
+            bukaTabNavigasi(R.id.nav_stok)
+        }
+
+        // Banner pemberitahuan stok menipis & 2 kotak ringkasan stok
+        val bukaDialogStokMenipis: (View) -> Unit = {
+            if (daftarPeringatanStok.isEmpty()) {
+                bukaTabNavigasi(R.id.nav_stok)
+            } else {
+                tampilkanDaftarPeringatan(
+                    "Obat Stok Menipis (Stok < 10)",
+                    daftarPeringatanStok,
+                    "Semua stok obat dalam batas aman (>= 10)."
+                )
+            }
+        }
+        binding.cardBannerStok.setOnClickListener(bukaDialogStokMenipis)
         binding.cardStokMenipis.setOnClickListener {
             tampilkanDaftarPeringatan(
                 "Obat Stok Menipis (Stok < 10)",
@@ -67,10 +98,11 @@ class BerandaFragment : Fragment() {
             )
         }
 
-        // Tab periode grafik penjualan
+        // 4 Tab periode grafik penjualan (Harian, Mingguan, Bulanan, Tahunan)
         binding.tvGrafikHarian.setOnClickListener { pilihPeriodeGrafik("harian") }
         binding.tvGrafikMingguan.setOnClickListener { pilihPeriodeGrafik("mingguan") }
         binding.tvGrafikBulanan.setOnClickListener { pilihPeriodeGrafik("bulanan") }
+        binding.tvGrafikTahunan.setOnClickListener { pilihPeriodeGrafik("tahunan") }
         perbaruiTampilanTabGrafik()
 
         binding.grafikPenjualan.onBarSelected = { titik ->
@@ -80,14 +112,13 @@ class BerandaFragment : Fragment() {
             }
         }
 
-        // Direct ke halaman Riwayat saat klik Lihat Semua
-        binding.tvLihatSemua.setOnClickListener {
-            val bottomNav = requireActivity().findViewById<com.google.android.material.bottomnavigation.BottomNavigationView>(R.id.bottom_navigation)
-            bottomNav.selectedItemId = R.id.nav_riwayat
-        }
-
         binding.swipeRefreshLayout.isRefreshing = true
         loadDashboardData()
+    }
+
+    private fun bukaTabNavigasi(itemId: Int) {
+        val bottomNav = requireActivity().findViewById<BottomNavigationView>(R.id.bottom_navigation)
+        bottomNav.selectedItemId = itemId
     }
 
     private fun pilihPeriodeGrafik(periodeBaru: String) {
@@ -102,7 +133,8 @@ class BerandaFragment : Fragment() {
         val tabs = listOf(
             binding.tvGrafikHarian to "harian",
             binding.tvGrafikMingguan to "mingguan",
-            binding.tvGrafikBulanan to "bulanan"
+            binding.tvGrafikBulanan to "bulanan",
+            binding.tvGrafikTahunan to "tahunan"
         )
         val radius = 8f * resources.displayMetrics.density
         for ((tab, nilai) in tabs) {
@@ -147,6 +179,7 @@ class BerandaFragment : Fragment() {
     private fun labelChipPeriode(periode: String): String = when (periode) {
         "mingguan" -> "Mingguan"
         "bulanan" -> "Bulanan"
+        "tahunan" -> "Tahunan"
         "keseluruhan" -> "Keseluruhan"
         else -> "Harian"
     }
@@ -164,8 +197,7 @@ class BerandaFragment : Fragment() {
             .setTitle(judul)
             .setMessage(pesan)
             .setPositiveButton("Lihat Stok") { _, _ ->
-                val bottomNav = requireActivity().findViewById<com.google.android.material.bottomnavigation.BottomNavigationView>(R.id.bottom_navigation)
-                bottomNav.selectedItemId = R.id.nav_stok
+                bukaTabNavigasi(R.id.nav_stok)
             }
             .setNegativeButton("Tutup", null)
             .show()
@@ -190,6 +222,86 @@ class BerandaFragment : Fragment() {
         tvSub.text = subTeks
     }
 
+    private fun perbaruiBannerStok(namaMenipis: List<String>) {
+        val ikonBg = GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+        }
+        if (namaMenipis.isNotEmpty()) {
+            binding.cardBannerStok.setCardBackgroundColor(Color.parseColor("#FEF3C7"))
+            ikonBg.setColor(Color.parseColor("#D97706"))
+            binding.tvBannerStokIkon.background = ikonBg
+            binding.tvBannerStokIkon.text = "!"
+            binding.tvBannerStokJudul.setTextColor(Color.parseColor("#92400E"))
+            binding.tvBannerStokJudul.text = "Peringatan: ${namaMenipis.size} obat stok menipis (< 10)"
+            val pratinjau = namaMenipis.take(2).joinToString(", ")
+            val sisa = namaMenipis.size - 2
+            val tambahan = if (sisa > 0) ", +$sisa lainnya" else ""
+            binding.tvBannerStokIsi.setTextColor(Color.parseColor("#78350F"))
+            binding.tvBannerStokIsi.text = "$pratinjau$tambahan • Tap lihat"
+        } else {
+            binding.cardBannerStok.setCardBackgroundColor(Color.parseColor("#F0FDF4"))
+            ikonBg.setColor(Color.parseColor("#16A34A"))
+            binding.tvBannerStokIkon.background = ikonBg
+            binding.tvBannerStokIkon.text = "✓"
+            binding.tvBannerStokJudul.setTextColor(Color.parseColor("#166534"))
+            binding.tvBannerStokJudul.text = "Semua stok obat aman (>= 10)"
+            binding.tvBannerStokIsi.setTextColor(Color.parseColor("#15803D"))
+            binding.tvBannerStokIsi.text = "Tidak ada obat yang perlu segera di-restock"
+        }
+    }
+
+    private fun tampilkanObatTerlaris(arrayTerlaris: JSONArray?) {
+        binding.tvPeriodeTerlaris.text = "Keseluruhan"
+        binding.layoutObatTerlaris.removeAllViews()
+
+        if (arrayTerlaris == null || arrayTerlaris.length() == 0) {
+            val emptyText = TextView(requireContext()).apply {
+                text = "Belum ada data penjualan obat"
+                setTextColor(Color.parseColor("#94A3B8"))
+                textSize = 12f
+                setPadding(0, 24, 0, 12)
+                gravity = Gravity.CENTER
+            }
+            binding.layoutObatTerlaris.addView(emptyText)
+            return
+        }
+
+        val density = resources.displayMetrics.density
+        val maxItems = minOf(arrayTerlaris.length(), 5)
+        for (i in 0 until maxItems) {
+            val obj = arrayTerlaris.getJSONObject(i)
+            val itemView = layoutInflater.inflate(R.layout.item_obat_terlaris, binding.layoutObatTerlaris, false)
+
+            val tvPeringkat = itemView.findViewById<TextView>(R.id.tv_peringkat_terlaris)
+            val tvNama = itemView.findViewById<TextView>(R.id.tv_nama_obat_terlaris)
+            val tvQty = itemView.findViewById<TextView>(R.id.tv_qty_terlaris)
+
+            val peringkat = i + 1
+            tvPeringkat.text = peringkat.toString()
+            tvPeringkat.background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(Color.parseColor(if (peringkat <= 3) "#E8F4F2" else "#F1F5F9"))
+            }
+            tvPeringkat.setTextColor(Color.parseColor(if (peringkat <= 3) "#1F7A6F" else "#64748B"))
+
+            tvNama.text = obj.optString("nama_obat", "-")
+            tvQty.text = "${obj.optInt("total_terjual", 0)} terjual"
+
+            binding.layoutObatTerlaris.addView(itemView)
+
+            if (i < maxItems - 1) {
+                val divider = View(requireContext()).apply {
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        maxOf(1, density.toInt())
+                    )
+                    setBackgroundColor(Color.parseColor("#F1F5F9"))
+                }
+                binding.layoutObatTerlaris.addView(divider)
+            }
+        }
+    }
+
     private fun loadDashboardData() {
         val url = "${ApiConfig.URL_DASHBOARD}?periode=$periodeAktif&periode_grafik=$periodeGrafik"
         val request = ApiRequest(requireContext(), Request.Method.GET, url, null,
@@ -199,7 +311,7 @@ class BerandaFragment : Fragment() {
                 if (response.optBoolean("success", false)) {
                     val data = response.getJSONObject("data")
 
-                    // 1. Ringkasan Pendapatan
+                    // 1. Bagian Penjualan: Ringkasan Total
                     val periodeRespon = data.optString("periode", periodeAktif)
                     val totalPenjualan = data.optLong("total_penjualan", 0L)
                     val jumlahTransaksi = data.optInt("jumlah_transaksi", 0)
@@ -208,13 +320,41 @@ class BerandaFragment : Fragment() {
                     binding.tvTotalPenjualan.text = "Rp ${formatRupiah.format(totalPenjualan)}"
                     binding.tvJumlahTransaksi.text = "$jumlahTransaksi transaksi ${labelWaktuPeriode(periodeRespon)}"
 
-                    // 2. Kotak Ringkasan Stok Menipis (< 10)
+                    // 2. Bagian Penjualan: Grafik Analisis Penjualan (4 periode)
+                    val grafikArray = data.optJSONArray("grafik_penjualan")
+                    val titikList = mutableListOf<TitikGrafik>()
+                    if (grafikArray != null) {
+                        for (i in 0 until grafikArray.length()) {
+                            val g = grafikArray.getJSONObject(i)
+                            titikList.add(
+                                TitikGrafik(
+                                    label = g.optString("label", ""),
+                                    keterangan = g.optString("keterangan", ""),
+                                    total = g.optLong("total", 0L),
+                                    jumlahTransaksi = g.optInt("jumlah_transaksi", 0)
+                                )
+                            )
+                        }
+                    }
+                    binding.grafikPenjualan.setData(titikList)
+                    if (titikList.none { it.total > 0L }) {
+                        binding.tvInfoGrafik.text = "Belum ada penjualan pada rentang ${labelChipPeriode(periodeGrafik).lowercase(Locale.ROOT)}"
+                    }
+
+                    // 3. Bagian Penjualan: Top 5 Obat Paling Laku (Keseluruhan)
+                    tampilkanObatTerlaris(data.optJSONArray("obat_terlaris"))
+
+                    // 4. Bagian Stok: Banner & Ringkasan Stok Menipis (< 10)
                     val peringatanObatArray = data.optJSONArray("peringatan_obat")
                     daftarPeringatanStok.clear()
+                    daftarNamaStokMenipis.clear()
                     if (peringatanObatArray != null && peringatanObatArray.length() > 0) {
                         for (i in 0 until peringatanObatArray.length()) {
                             val o = peringatanObatArray.getJSONObject(i)
-                            daftarPeringatanStok.add("• ${o.optString("nama_obat")} (stok: ${o.optInt("stok", 0)})")
+                            val namaObat = o.optString("nama_obat", "-")
+                            val stokObat = o.optInt("stok", 0)
+                            daftarPeringatanStok.add("• $namaObat (stok: $stokObat)")
+                            daftarNamaStokMenipis.add("$namaObat ($stokObat)")
                         }
                         perbaruiKartuRingkasan(
                             binding.cardStokMenipis, binding.tvLabelStokMenipis,
@@ -230,8 +370,9 @@ class BerandaFragment : Fragment() {
                             "#F0FDF4", "#166534", "#15803D"
                         )
                     }
+                    perbaruiBannerStok(daftarNamaStokMenipis)
 
-                    // 3. Kotak Ringkasan Mau Kadaluarsa
+                    // 5. Bagian Stok: Ringkasan Mau Kadaluarsa
                     val peringatanKadaluarsaArray = data.optJSONArray("peringatan_kadaluarsa")
                     daftarPeringatanKadaluarsa.clear()
                     if (peringatanKadaluarsaArray != null && peringatanKadaluarsaArray.length() > 0) {
@@ -268,59 +409,6 @@ class BerandaFragment : Fragment() {
                             0, "Tanggal aman",
                             "#F0FDF4", "#166534", "#15803D"
                         )
-                    }
-
-                    // 4. Grafik Penjualan
-                    val grafikArray = data.optJSONArray("grafik_penjualan")
-                    val titikList = mutableListOf<TitikGrafik>()
-                    if (grafikArray != null) {
-                        for (i in 0 until grafikArray.length()) {
-                            val g = grafikArray.getJSONObject(i)
-                            titikList.add(
-                                TitikGrafik(
-                                    label = g.optString("label", ""),
-                                    keterangan = g.optString("keterangan", ""),
-                                    total = g.optLong("total", 0L),
-                                    jumlahTransaksi = g.optInt("jumlah_transaksi", 0)
-                                )
-                            )
-                        }
-                    }
-                    binding.grafikPenjualan.setData(titikList)
-                    if (titikList.none { it.total > 0L }) {
-                        binding.tvInfoGrafik.text = "Belum ada penjualan pada rentang ${labelChipPeriode(periodeGrafik).lowercase(Locale.ROOT)}"
-                    }
-
-                    // 5. Muat 5 Transaksi Terbaru
-                    val transaksiTerbaruArray = data.optJSONArray("transaksi_terbaru")
-                    binding.layoutListTransaksi.removeAllViews()
-                    if (transaksiTerbaruArray != null && transaksiTerbaruArray.length() > 0) {
-                        for (i in 0 until transaksiTerbaruArray.length()) {
-                            val trx = transaksiTerbaruArray.getJSONObject(i)
-                            val itemView = layoutInflater.inflate(R.layout.item_transaksi_terbaru, binding.layoutListTransaksi, false)
-                            val tvKode = itemView.findViewById<TextView>(R.id.tv_kode_trx)
-                            val tvWaktuKasir = itemView.findViewById<TextView>(R.id.tv_waktu_kasir)
-                            val tvTotal = itemView.findViewById<TextView>(R.id.tv_total_harga)
-
-                            tvKode.text = trx.getString("no_transaksi")
-                            val totalTrx = trx.optLong("total_harga", 0L)
-                            tvTotal.text = "Rp ${formatRupiah.format(totalTrx)}"
-
-                            val rawDate = trx.getString("created_at")
-                            val jamTrx = ApiConfig.formatWaktuIso(rawDate, "HH:mm")
-                            val userObj = trx.optJSONObject("user")
-                            val namaKasir = userObj?.optString("nama", "Kasir") ?: "Kasir"
-                            tvWaktuKasir.text = "$jamTrx / $namaKasir"
-
-                            binding.layoutListTransaksi.addView(itemView)
-                        }
-                    } else {
-                        val emptyText = TextView(requireContext()).apply {
-                            text = "Belum ada transaksi"
-                            setPadding(0, 30, 0, 30)
-                            gravity = android.view.Gravity.CENTER
-                        }
-                        binding.layoutListTransaksi.addView(emptyText)
                     }
                 }
                 binding.swipeRefreshLayout.isRefreshing = false

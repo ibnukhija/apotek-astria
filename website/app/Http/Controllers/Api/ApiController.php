@@ -18,7 +18,7 @@ class ApiController extends Controller
     {
         $request->validate([
             'periode'        => 'nullable|in:harian,mingguan,bulanan,keseluruhan',
-            'periode_grafik' => 'nullable|in:harian,mingguan,bulanan',
+            'periode_grafik' => 'nullable|in:harian,mingguan,bulanan,tahunan',
         ]);
 
         $periode = $request->input('periode', 'harian');
@@ -27,19 +27,7 @@ class ApiController extends Controller
         $hariIni = Carbon::today();
 
         $transaksiQuery = Transaksi::query();
-        if ($periode === 'mingguan') {
-            $transaksiQuery->whereBetween('created_at', [
-                $hariIni->copy()->startOfWeek(),
-                $hariIni->copy()->endOfDay(),
-            ]);
-        } elseif ($periode === 'bulanan') {
-            $transaksiQuery->whereBetween('created_at', [
-                $hariIni->copy()->startOfMonth(),
-                $hariIni->copy()->endOfDay(),
-            ]);
-        } elseif ($periode === 'harian') {
-            $transaksiQuery->whereDate('created_at', $hariIni);
-        }
+        $this->terapkanFilterPeriode($transaksiQuery, $periode, $hariIni);
 
         $totalPenjualan = $transaksiQuery->sum('total_harga');
         $jumlahTransaksi = $transaksiQuery->count();
@@ -65,8 +53,9 @@ class ApiController extends Controller
             });
 
         $grafikPenjualan = $this->hitungGrafikPenjualan($periodeGrafik, $hariIni);
+        $obatTerlaris = $this->hitungObatTerlaris();
 
-        // 5 transaksi terbaru
+        // 5 transaksi terbaru (disertakan untuk kompatibilitas API)
         $transaksiTerbaru = Transaksi::with('user')->latest()->orderByDesc('id')->limit(5)->get();
 
         return response()->json([
@@ -79,14 +68,68 @@ class ApiController extends Controller
                 'peringatan_obat'       => $obatMenipis,
                 'peringatan_kadaluarsa' => $obatKadaluarsa,
                 'grafik_penjualan'      => $grafikPenjualan,
+                'obat_terlaris'         => $obatTerlaris,
                 'transaksi_terbaru'     => $transaksiTerbaru,
             ]
         ]);
     }
 
     /**
+     * Terapkan filter rentang waktu (harian/mingguan/bulanan/keseluruhan) pada query transaksi.
+     */
+    private function terapkanFilterPeriode($query, string $periode, Carbon $hariIni, string $kolom = 'created_at'): void
+    {
+        if ($periode === 'mingguan') {
+            $query->whereBetween($kolom, [
+                $hariIni->copy()->startOfWeek(),
+                $hariIni->copy()->endOfDay(),
+            ]);
+        } elseif ($periode === 'bulanan') {
+            $query->whereBetween($kolom, [
+                $hariIni->copy()->startOfMonth(),
+                $hariIni->copy()->endOfDay(),
+            ]);
+        } elseif ($periode === 'harian') {
+            $query->whereDate($kolom, $hariIni);
+        }
+    }
+
+    /**
+     * Top 5 obat paling laku berdasarkan total unit terjual keseluruhan.
+     */
+    private function hitungObatTerlaris(): array
+    {
+        return DB::table('detail_transaksi')
+            ->join('obat', 'obat.id', '=', 'detail_transaksi.obat_id')
+            ->select(
+                'obat.id as obat_id',
+                'obat.kode_obat',
+                'obat.nama_obat',
+                'obat.satuan',
+                DB::raw('SUM(detail_transaksi.qty) as total_terjual'),
+                DB::raw('SUM(detail_transaksi.subtotal) as total_pendapatan')
+            )
+            ->groupBy('obat.id', 'obat.kode_obat', 'obat.nama_obat', 'obat.satuan')
+            ->orderByDesc('total_terjual')
+            ->orderByDesc('total_pendapatan')
+            ->orderBy('obat.nama_obat')
+            ->limit(5)
+            ->get()
+            ->map(fn ($row) => [
+                'obat_id'          => (int) $row->obat_id,
+                'kode_obat'        => $row->kode_obat,
+                'nama_obat'        => $row->nama_obat,
+                'satuan'           => $row->satuan,
+                'total_terjual'    => (int) $row->total_terjual,
+                'total_pendapatan' => (int) $row->total_pendapatan,
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
      * Susun titik grafik penjualan untuk rentang harian (7 hari), mingguan (6 minggu),
-     * atau bulanan (6 bulan) secara konsisten di MySQL maupun SQLite.
+     * bulanan (Jan-Des tahun berjalan), atau tahunan (4 tahun terakhir) secara konsisten di MySQL maupun SQLite.
      */
     private function hitungGrafikPenjualan(string $periodeGrafik, Carbon $hariIni): array
     {
@@ -111,19 +154,33 @@ class ApiController extends Controller
             }
             $resolusiKey = fn (Carbon $tgl): string => $tgl->copy()->startOfWeek()->format('Y-m-d');
         } elseif ($periodeGrafik === 'bulanan') {
-            $awalRentang = $hariIni->copy()->startOfMonth()->subMonths(5);
-            for ($i = 0; $i < 6; $i++) {
-                $bulan = $awalRentang->copy()->addMonths($i);
-                $key = $bulan->format('Y-m');
-                $singkatan = $namaBulan[(int) $bulan->month];
+            $tahun = $hariIni->year;
+            $awalRentang = Carbon::create($tahun, 1, 1)->startOfDay();
+            for ($bulanKe = 1; $bulanKe <= 12; $bulanKe++) {
+                $key = sprintf('%04d-%02d', $tahun, $bulanKe);
+                $singkatan = $namaBulan[$bulanKe];
                 $buckets[$key] = [
                     'label'            => $singkatan,
-                    'keterangan'       => $singkatan . ' ' . $bulan->format('Y'),
+                    'keterangan'       => $singkatan . ' ' . $tahun,
                     'total'            => 0,
                     'jumlah_transaksi' => 0,
                 ];
             }
             $resolusiKey = fn (Carbon $tgl): string => $tgl->format('Y-m');
+        } elseif ($periodeGrafik === 'tahunan') {
+            $tahunAkhir = $hariIni->year;
+            $tahunMulai = $tahunAkhir - 3;
+            $awalRentang = Carbon::create($tahunMulai, 1, 1)->startOfDay();
+            for ($tahunKe = $tahunMulai; $tahunKe <= $tahunAkhir; $tahunKe++) {
+                $key = (string) $tahunKe;
+                $buckets[$key] = [
+                    'label'            => $key,
+                    'keterangan'       => 'Tahun ' . $key,
+                    'total'            => 0,
+                    'jumlah_transaksi' => 0,
+                ];
+            }
+            $resolusiKey = fn (Carbon $tgl): string => $tgl->format('Y');
         } else {
             $awalRentang = $hariIni->copy()->subDays(6)->startOfDay();
             for ($i = 0; $i < 7; $i++) {
