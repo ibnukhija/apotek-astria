@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <cache-path
+        name="laporan_cache"
+        path="laporan/" />
+    <external-files-path
+        name="laporan_docs"
+        path="Documents/" />
+</paths>

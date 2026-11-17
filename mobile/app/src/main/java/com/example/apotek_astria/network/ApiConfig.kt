@@ -22,6 +22,8 @@ object ApiConfig {
     const val URL_DASHBOARD = "$BASE_URL/dashboard"
     const val URL_STOK = "$BASE_URL/stok"
     const val URL_RIWAYAT = "$BASE_URL/riwayat"
+    const val URL_LAPORAN = "$BASE_URL/laporan"
+    const val URL_LAPORAN_EXPORT = "$BASE_URL/laporan/export"
     const val URL_PROFIL = "$BASE_URL/profil"
     const val URL_KARYAWAN = "$BASE_URL/karyawan"
     const val URL_NOTIFIKASI = "$BASE_URL/notifikasi"

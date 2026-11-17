@@ -1,168 +1,690 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="#F8F9FA">
+    android:background="#F8FAFC"
+    android:orientation="vertical">
 
-
-
-    <!-- Filter Tanggal (DatePickerDialog) -->
+    <!-- Sub-Tab Switch: Riwayat | Laporan -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="12dp"
         android:background="#FFFFFF"
-        android:elevation="2dp">
+        android:elevation="2dp"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="10dp">
 
         <LinearLayout
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginEnd="6dp"
-            android:orientation="vertical">
+            android:background="#F1F5F9"
+            android:orientation="horizontal"
+            android:padding="4dp">
 
             <TextView
-                android:layout_width="wrap_content"
+                android:id="@+id/tabRiwayat"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="Dari"
-                android:textColor="#757575"
-                android:textSize="11sp" />
-
-            <EditText
-                android:id="@+id/etTanggalMulai"
-                android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:background="@drawable/bg_edittext"
-                android:focusable="false"
+                android:layout_weight="1"
                 android:clickable="true"
-                android:hint="Pilih tanggal"
-                android:paddingStart="8dp"
-                android:paddingEnd="8dp"
-                android:textSize="12sp" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginStart="6dp"
-            android:layout_marginEnd="6dp"
-            android:orientation="vertical">
+                android:focusable="true"
+                android:gravity="center"
+                android:paddingVertical="8dp"
+                android:text="Riwayat"
+                android:textColor="#FFFFFF"
+                android:textSize="13sp"
+                android:textStyle="bold" />
 
             <TextView
-                android:layout_width="wrap_content"
+                android:id="@+id/tabLaporan"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="Sampai"
-                android:textColor="#757575"
-                android:textSize="11sp" />
-
-            <EditText
-                android:id="@+id/etTanggalSelesai"
-                android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:background="@drawable/bg_edittext"
-                android:focusable="false"
+                android:layout_weight="1"
                 android:clickable="true"
-                android:hint="Pilih tanggal"
-                android:paddingStart="8dp"
-                android:paddingEnd="8dp"
-                android:textSize="12sp" />
+                android:focusable="true"
+                android:gravity="center"
+                android:paddingVertical="8dp"
+                android:text="Laporan"
+                android:textColor="#475569"
+                android:textSize="13sp"
+                android:textStyle="bold" />
         </LinearLayout>
-
-        <Button
-            android:id="@+id/btnFilter"
-            android:layout_width="wrap_content"
-            android:layout_height="40dp"
-            android:layout_gravity="bottom"
-            android:text="Filter"
-            android:backgroundTint="#208B7A"
-            android:textColor="#FFFFFF"
-            android:textSize="12sp"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp" />
-
-        <Button
-            android:id="@+id/btnReset"
-            android:layout_width="wrap_content"
-            android:layout_height="40dp"
-            android:layout_gravity="bottom"
-            android:layout_marginStart="4dp"
-            android:text="Reset"
-            android:backgroundTint="#757575"
-            android:textColor="#FFFFFF"
-            android:textSize="12sp"
-            android:paddingStart="8dp"
-            android:paddingEnd="8dp" />
     </LinearLayout>
 
-    <!-- Teks Kosong (Disembunyikan secara default) -->
-    <TextView
-        android:id="@+id/tvEmpty"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:layout_marginTop="32dp"
-        android:text="Tidak ada data transaksi"
-        android:textColor="#757575"
-        android:visibility="gone" />
-
-    <!-- Widget ListView Sesuai Soal PML & Backlog PTT -->
-    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
-        android:id="@+id/swipeRefreshLayout"
+    <!-- ================= PANEL 1: RIWAYAT TRANSAKSI ================= -->
+    <LinearLayout
+        android:id="@+id/layoutPanelRiwayat"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1">
+        android:layout_weight="1"
+        android:orientation="vertical">
 
-        <ListView
-            android:id="@+id/lvRiwayat"
+        <!-- Filter Tanggal (DatePickerDialog) -->
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:divider="@null"
-            android:dividerHeight="0dp" />
+            android:layout_height="wrap_content"
+            android:background="#FFFFFF"
+            android:elevation="1dp"
+            android:orientation="horizontal"
+            android:padding="12dp">
 
-    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="6dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
 
-    <!-- Navigasi Paginasi (Pagination) -->
-    <LinearLayout
-        android:id="@+id/layout_pagination"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center"
-        android:padding="12dp"
-        android:background="#FFFFFF"
-        android:visibility="gone">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Dari"
+                    android:textColor="#757575"
+                    android:textSize="11sp" />
 
-        <Button
-            android:id="@+id/btn_prev_page"
-            android:layout_width="wrap_content"
-            android:layout_height="40dp"
-            android:text="Sebelumnya"
-            android:textSize="12sp"
-            android:textColor="#FFFFFF"
-            android:backgroundTint="#757575"
-            android:layout_marginEnd="8dp"/>
+                <EditText
+                    android:id="@+id/etTanggalMulai"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:background="@drawable/bg_edittext"
+                    android:clickable="true"
+                    android:focusable="false"
+                    android:hint="Pilih tanggal"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:layout_marginEnd="6dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Sampai"
+                    android:textColor="#757575"
+                    android:textSize="11sp" />
+
+                <EditText
+                    android:id="@+id/etTanggalSelesai"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:background="@drawable/bg_edittext"
+                    android:clickable="true"
+                    android:focusable="false"
+                    android:hint="Pilih tanggal"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <Button
+                android:id="@+id/btnFilter"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:layout_gravity="bottom"
+                android:backgroundTint="#208B7A"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:text="Filter"
+                android:textColor="#FFFFFF"
+                android:textSize="12sp" />
+
+            <Button
+                android:id="@+id/btnReset"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:layout_gravity="bottom"
+                android:layout_marginStart="4dp"
+                android:backgroundTint="#757575"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:text="Reset"
+                android:textColor="#FFFFFF"
+                android:textSize="12sp" />
+        </LinearLayout>
 
         <TextView
-            android:id="@+id/tv_page_info"
+            android:id="@+id/tvEmpty"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Halaman 1 dari 1"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:textColor="#333333"/>
+            android:layout_gravity="center"
+            android:layout_marginTop="32dp"
+            android:text="Tidak ada data transaksi"
+            android:textColor="#757575"
+            android:visibility="gone" />
 
-        <Button
-            android:id="@+id/btn_next_page"
-            android:layout_width="wrap_content"
-            android:layout_height="40dp"
-            android:text="Selanjutnya"
-            android:textSize="12sp"
-            android:textColor="#FFFFFF"
-            android:backgroundTint="#208B7A"
-            android:layout_marginStart="8dp"/>
+        <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+            android:id="@+id/swipeRefreshLayout"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
+
+            <ListView
+                android:id="@+id/lvRiwayat"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:divider="@null"
+                android:dividerHeight="0dp" />
+        </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+
+        <LinearLayout
+            android:id="@+id/layout_pagination"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#FFFFFF"
+            android:gravity="center"
+            android:orientation="horizontal"
+            android:padding="12dp"
+            android:visibility="gone">
+
+            <Button
+                android:id="@+id/btn_prev_page"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:layout_marginEnd="8dp"
+                android:backgroundTint="#757575"
+                android:text="Sebelumnya"
+                android:textColor="#FFFFFF"
+                android:textSize="12sp" />
+
+            <TextView
+                android:id="@+id/tv_page_info"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Halaman 1 dari 1"
+                android:textColor="#333333"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <Button
+                android:id="@+id/btn_next_page"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:layout_marginStart="8dp"
+                android:backgroundTint="#208B7A"
+                android:text="Selanjutnya"
+                android:textColor="#FFFFFF"
+                android:textSize="12sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- ================= PANEL 2: LAPORAN PENJUALAN ================= -->
+    <LinearLayout
+        android:id="@+id/layoutPanelLaporan"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+            android:id="@+id/swipeRefreshLaporan"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <ScrollView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:fillViewport="true">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <!-- Kartu Filter Lengkap Laporan -->
+                    <androidx.cardview.widget.CardView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="12dp"
+                        app:cardBackgroundColor="#FFFFFF"
+                        app:cardCornerRadius="14dp"
+                        app:cardElevation="2dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="14dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginBottom="8dp"
+                                android:text="Filter Laporan"
+                                android:textColor="#1E293B"
+                                android:textSize="14sp"
+                                android:textStyle="bold" />
+
+                            <!-- Baris 1: Periode & Kategori Obat -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal">
+
+                                <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginEnd="6dp"
+                                    android:layout_weight="1"
+                                    android:orientation="vertical">
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="Periode"
+                                        android:textColor="#64748B"
+                                        android:textSize="11sp" />
+
+                                    <Spinner
+                                        android:id="@+id/spPeriodeLaporan"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="40dp"
+                                        android:layout_marginTop="2dp"
+                                        android:background="@drawable/bg_edittext" />
+                                </LinearLayout>
+
+                                <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="6dp"
+                                    android:layout_weight="1"
+                                    android:orientation="vertical">
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="Kategori Obat"
+                                        android:textColor="#64748B"
+                                        android:textSize="11sp" />
+
+                                    <Spinner
+                                        android:id="@+id/spKategoriLaporan"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="40dp"
+                                        android:layout_marginTop="2dp"
+                                        android:background="@drawable/bg_edittext" />
+                                </LinearLayout>
+                            </LinearLayout>
+
+                            <!-- Baris 2: Rentang Tanggal (Dari - Sampai) -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:orientation="horizontal">
+
+                                <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginEnd="6dp"
+                                    android:layout_weight="1"
+                                    android:orientation="vertical">
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="Dari Tanggal"
+                                        android:textColor="#64748B"
+                                        android:textSize="11sp" />
+
+                                    <EditText
+                                        android:id="@+id/etLapTanggalMulai"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="40dp"
+                                        android:layout_marginTop="2dp"
+                                        android:background="@drawable/bg_edittext"
+                                        android:clickable="true"
+                                        android:focusable="false"
+                                        android:hint="Pilih tanggal"
+                                        android:paddingHorizontal="8dp"
+                                        android:textSize="12sp" />
+                                </LinearLayout>
+
+                                <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="6dp"
+                                    android:layout_weight="1"
+                                    android:orientation="vertical">
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="Sampai Tanggal"
+                                        android:textColor="#64748B"
+                                        android:textSize="11sp" />
+
+                                    <EditText
+                                        android:id="@+id/etLapTanggalSelesai"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="40dp"
+                                        android:layout_marginTop="2dp"
+                                        android:background="@drawable/bg_edittext"
+                                        android:clickable="true"
+                                        android:focusable="false"
+                                        android:hint="Pilih tanggal"
+                                        android:paddingHorizontal="8dp"
+                                        android:textSize="12sp" />
+                                </LinearLayout>
+                            </LinearLayout>
+
+                            <!-- Baris 3: Nama Obat -->
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:text="Nama Obat"
+                                android:textColor="#64748B"
+                                android:textSize="11sp" />
+
+                            <AutoCompleteTextView
+                                android:id="@+id/actvLapNamaObat"
+                                android:layout_width="match_parent"
+                                android:layout_height="40dp"
+                                android:layout_marginTop="2dp"
+                                android:background="@drawable/bg_edittext"
+                                android:completionThreshold="1"
+                                android:hint="Cari nama atau kode obat (opsional)..."
+                                android:imeOptions="actionSearch"
+                                android:inputType="text"
+                                android:maxLines="1"
+                                android:paddingHorizontal="10dp"
+                                android:textSize="12sp" />
+
+                            <!-- Baris 4: Tombol Terapkan & Reset -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="10dp"
+                                android:orientation="horizontal">
+
+                                <Button
+                                    android:id="@+id/btnLapTerapkan"
+                                    android:layout_width="0dp"
+                                    android:layout_height="40dp"
+                                    android:layout_weight="1"
+                                    android:backgroundTint="#2A9D8F"
+                                    android:text="Terapkan Filter"
+                                    android:textColor="#FFFFFF"
+                                    android:textSize="12sp" />
+
+                                <Button
+                                    android:id="@+id/btnLapReset"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="40dp"
+                                    android:layout_marginStart="8dp"
+                                    android:backgroundTint="#64748B"
+                                    android:paddingHorizontal="14dp"
+                                    android:text="Reset"
+                                    android:textColor="#FFFFFF"
+                                    android:textSize="12sp" />
+                            </LinearLayout>
+                        </LinearLayout>
+                    </androidx.cardview.widget.CardView>
+
+                    <!-- Kartu Ringkasan Laporan -->
+                    <androidx.cardview.widget.CardView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="12dp"
+                        app:cardBackgroundColor="#2A9D8F"
+                        app:cardCornerRadius="14dp"
+                        app:cardElevation="2dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="16dp">
+
+                            <TextView
+                                android:id="@+id/tvLapPeriodeLabel"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Bulan Ini"
+                                android:textColor="#E8F4F2"
+                                android:textSize="12sp" />
+
+                            <TextView
+                                android:id="@+id/tvLapTotalPendapatan"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:text="Rp 0"
+                                android:textColor="#FFFFFF"
+                                android:textSize="24sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/tvLapRingkasanDetail"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:text="0 unit terjual • 0 transaksi"
+                                android:textColor="#E8F4F2"
+                                android:textSize="12sp" />
+
+                            <TextView
+                                android:id="@+id/tvLapMetodeRingkas"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:text="Cash: Rp 0 • QRIS: Rp 0"
+                                android:textColor="#FFFFFF"
+                                android:textSize="11sp"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+                    </androidx.cardview.widget.CardView>
+
+                    <!-- Kartu Pratinjau Daftar Hasil Laporan -->
+                    <androidx.cardview.widget.CardView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="12dp"
+                        app:cardBackgroundColor="#FFFFFF"
+                        app:cardCornerRadius="14dp"
+                        app:cardElevation="2dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="14dp">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="Rincian Penjualan"
+                                    android:textColor="#1E293B"
+                                    android:textSize="14sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:id="@+id/tvLapJumlahData"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="0 data"
+                                    android:textColor="#64748B"
+                                    android:textSize="12sp" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/tvLapEmpty"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:gravity="center"
+                                android:paddingVertical="24dp"
+                                android:text="Tidak ada data penjualan pada filter ini"
+                                android:textColor="#94A3B8"
+                                android:textSize="12sp"
+                                android:visibility="gone" />
+
+                            <LinearLayout
+                                android:id="@+id/layoutLapDaftar"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:orientation="vertical" />
+
+                            <LinearLayout
+                                android:id="@+id/layoutLapPagination"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:gravity="center"
+                                android:orientation="horizontal"
+                                android:visibility="gone">
+
+                                <Button
+                                    android:id="@+id/btnLapPrev"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="36dp"
+                                    android:layout_marginEnd="8dp"
+                                    android:backgroundTint="#757575"
+                                    android:text="Sebelumnya"
+                                    android:textColor="#FFFFFF"
+                                    android:textSize="11sp" />
+
+                                <TextView
+                                    android:id="@+id/tvLapPageInfo"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Hal 1 / 1"
+                                    android:textColor="#334155"
+                                    android:textSize="12sp"
+                                    android:textStyle="bold" />
+
+                                <Button
+                                    android:id="@+id/btnLapNext"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="36dp"
+                                    android:layout_marginStart="8dp"
+                                    android:backgroundTint="#208B7A"
+                                    android:text="Selanjutnya"
+                                    android:textColor="#FFFFFF"
+                                    android:textSize="11sp" />
+                            </LinearLayout>
+                        </LinearLayout>
+                    </androidx.cardview.widget.CardView>
+
+                    <!-- Kartu Unduh Laporan Penjualan (PDF/Cetak & Excel) -->
+                    <androidx.cardview.widget.CardView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="8dp"
+                        app:cardBackgroundColor="#FFFFFF"
+                        app:cardCornerRadius="14dp"
+                        app:cardElevation="2dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="16dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Unduh Laporan Penjualan"
+                                android:textColor="#1E293B"
+                                android:textSize="15sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
+                                android:text="Ekspor mengikuti filter yang sedang aktif"
+                                android:textColor="#64748B"
+                                android:textSize="11sp" />
+
+                            <RadioGroup
+                                android:id="@+id/rgFormatLaporan"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="10dp"
+                                android:orientation="horizontal">
+
+                                <RadioButton
+                                    android:id="@+id/rbFormatPdf"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginEnd="20dp"
+                                    android:buttonTint="#2A9D8F"
+                                    android:checked="true"
+                                    android:text="PDF / Cetak"
+                                    android:textColor="#1E293B"
+                                    android:textSize="13sp" />
+
+                                <RadioButton
+                                    android:id="@+id/rbFormatExcel"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:buttonTint="#2A9D8F"
+                                    android:text="Excel (.xlsx)"
+                                    android:textColor="#1E293B"
+                                    android:textSize="13sp" />
+                            </RadioGroup>
+
+                            <Button
+                                android:id="@+id/btnUnduhLaporan"
+                                android:layout_width="match_parent"
+                                android:layout_height="46dp"
+                                android:layout_marginTop="10dp"
+                                android:backgroundTint="#2A9D8F"
+                                android:text="Unduh Laporan"
+                                android:textColor="#FFFFFF"
+                                android:textSize="14sp"
+                                android:textStyle="bold" />
+
+                            <LinearLayout
+                                android:id="@+id/layoutProgressUnduh"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="10dp"
+                                android:orientation="vertical"
+                                android:visibility="gone">
+
+                                <ProgressBar
+                                    android:id="@+id/pbUnduhLaporan"
+                                    style="?android:attr/progressBarStyleHorizontal"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:indeterminate="true"
+                                    android:indeterminateTint="#2A9D8F" />
+
+                                <TextView
+                                    android:id="@+id/tvStatusUnduh"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="4dp"
+                                    android:text="Sedang mengunduh laporan..."
+                                    android:textColor="#1F7A6F"
+                                    android:textSize="12sp"
+                                    android:textStyle="bold" />
+                            </LinearLayout>
+                        </LinearLayout>
+                    </androidx.cardview.widget.CardView>
+
+                </LinearLayout>
+            </ScrollView>
+        </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
     </LinearLayout>
 
 </LinearLayout>

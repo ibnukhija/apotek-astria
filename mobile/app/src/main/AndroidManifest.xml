@@ -18,7 +18,6 @@
         android:theme="@style/Theme.Apotekastria"
         android:usesCleartextTraffic="true"> <!-- Untuk koneksi HTTP Volley -->
 
-        <!-- MainActivity sekarang bukan lagi launcher -->
         <activity
             android:name=".MainActivity"
             android:exported="false"
@@ -39,7 +38,16 @@
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="stok_menipis" />
 
-        <!-- LoginActivity diatur sebagai halaman pertama yang terbuka -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
         <activity
             android:name=".ui.login.LoginActivity"
             android:exported="true"

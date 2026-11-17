@@ -18,6 +18,8 @@ Route::middleware(['auth:sanctum', 'cekrole:owner'])->group(function () {
     Route::get('/stok', [ApiController::class, 'stok']);
     Route::put('/obat/{id}', [ApiController::class, 'updateObatCepat']);
     Route::get('/riwayat', [ApiController::class, 'riwayat']);
+    Route::get('/laporan', [ApiController::class, 'laporan']);
+    Route::get('/laporan/export', [ApiController::class, 'exportLaporan']);
     Route::get('/profil', [ApiController::class, 'profil']);
 
     // Tambahan mobile owner: poin D (karyawan) dan E (simpan profil)

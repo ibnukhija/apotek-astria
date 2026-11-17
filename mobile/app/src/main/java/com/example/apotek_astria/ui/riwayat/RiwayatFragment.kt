@@ -2,25 +2,33 @@ package com.example.apotek_astria.ui.riwayat
 
 import android.app.AlertDialog
 import android.app.DatePickerDialog
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
+import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.inputmethod.EditorInfo
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
+import android.widget.LinearLayout
+import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import com.android.volley.Request
 import com.android.volley.toolbox.Volley
+import com.example.apotek_astria.R
 import com.example.apotek_astria.databinding.FragmentRiwayatBinding
+import com.example.apotek_astria.model.DetailObat
+import com.example.apotek_astria.model.LaporanItemModel
+import com.example.apotek_astria.model.TransaksiModel
 import com.example.apotek_astria.network.ApiConfig
 import com.example.apotek_astria.network.ApiRequest
-import com.example.apotek_astria.model.DetailObat
-import com.example.apotek_astria.model.TransaksiModel
-// Import coroutines
-import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -35,15 +43,32 @@ class RiwayatFragment : Fragment() {
     private var _binding: FragmentRiwayatBinding? = null
     private val binding get() = _binding!!
 
+    private val formatRupiah by lazy { NumberFormat.getNumberInstance(Locale.forLanguageTag("id-ID")) }
+    private val sdfApi by lazy { SimpleDateFormat("yyyy-MM-dd", Locale.US) }
+
+    // State Sub-tab
+    private var tabAktif = "riwayat"
+    private var riwayatSudahDimuat = false
+    private var laporanSudahDimuat = false
+
+    // State Riwayat
     private val transaksiList = mutableListOf<TransaksiModel>()
     private lateinit var adapter: RiwayatAdapter
-    
-    // Variabel Pagination
     private var currentPage = 1
     private var lastPage = 1
 
-    // Gunakan Base URL dari ApiConfig
-    private val baseUrl = com.example.apotek_astria.network.ApiConfig.URL_RIWAYAT
+    // State Laporan
+    private val daftarPeriodeLabel = listOf("Bulan Ini", "Hari Ini", "Minggu Ini", "Tahun Ini", "Semua", "Kustom")
+    private val daftarPeriodeNilai = listOf("bulan_ini", "hari_ini", "minggu_ini", "tahun_ini", "semua", "kustom")
+    private val daftarKategori = mutableListOf("Semua Kategori")
+    private val daftarSaranObat = mutableListOf<String>()
+    private lateinit var kategoriAdapter: ArrayAdapter<String>
+    private lateinit var saranObatAdapter: ArrayAdapter<String>
+    private var periodeLaporan = "bulan_ini"
+    private var kategoriLaporan = ""
+    private var lapCurrentPage = 1
+    private var lapLastPage = 1
+    private var sedangAturSpinner = false
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -57,18 +82,61 @@ class RiwayatFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        setupPanelRiwayat()
+        setupPanelLaporan()
+
+        binding.tabRiwayat.setOnClickListener { pilihSubTab("riwayat") }
+        binding.tabLaporan.setOnClickListener { pilihSubTab("laporan") }
+
+        val langsungLaporan = arguments?.getBoolean(ARG_BUKA_LAPORAN, false) == true
+        arguments?.remove(ARG_BUKA_LAPORAN)
+        pilihSubTab(if (langsungLaporan) "laporan" else "riwayat")
+    }
+
+    private fun pilihSubTab(tabBaru: String) {
+        tabAktif = tabBaru
+        val isLaporan = tabBaru == "laporan"
+
+        binding.layoutPanelRiwayat.visibility = if (isLaporan) View.GONE else View.VISIBLE
+        binding.layoutPanelLaporan.visibility = if (isLaporan) View.VISIBLE else View.GONE
+
+        val radius = 8f * resources.displayMetrics.density
+        val tabs = listOf(binding.tabRiwayat to !isLaporan, binding.tabLaporan to isLaporan)
+        for ((tab, aktif) in tabs) {
+            if (aktif) {
+                tab.background = GradientDrawable().apply {
+                    setColor(Color.parseColor("#2A9D8F"))
+                    cornerRadius = radius
+                }
+                tab.setTextColor(Color.WHITE)
+            } else {
+                tab.background = null
+                tab.setTextColor(Color.parseColor("#475569"))
+            }
+        }
+
+        if (isLaporan && !laporanSudahDimuat) {
+            laporanSudahDimuat = true
+            loadLaporan()
+        } else if (!isLaporan && !riwayatSudahDimuat) {
+            riwayatSudahDimuat = true
+            muatDataSesuaiFilter()
+        }
+    }
+
+    // ==================== BAGIAN RIWAYAT ====================
+    private fun setupPanelRiwayat() {
         adapter = RiwayatAdapter(requireContext(), transaksiList)
         binding.lvRiwayat.adapter = adapter
 
-        setupDatePicker()
+        pasangDatePicker(binding.etTanggalMulai)
+        pasangDatePicker(binding.etTanggalSelesai)
 
-        // Tombol Filter & Reset
         binding.btnFilter.setOnClickListener {
             val tglMulai = binding.etTanggalMulai.text.toString().trim()
             val tglSelesai = binding.etTanggalSelesai.text.toString().trim()
-
             if (tglMulai.isNotEmpty() && tglSelesai.isNotEmpty()) {
-                currentPage = 1 // Kembali ke halaman 1 setiap filter baru
+                currentPage = 1
                 muatDataSesuaiFilter()
             } else {
                 Toast.makeText(requireContext(), "Pilih kedua rentang tanggal", Toast.LENGTH_SHORT).show()
@@ -82,85 +150,44 @@ class RiwayatFragment : Fragment() {
             muatDataSesuaiFilter()
         }
 
-        // Klik salah satu baris di ListView -> Tampilkan Dialog Rincian Transaksi
         binding.lvRiwayat.setOnItemClickListener { _, _, position, _ ->
-            val transaksi = transaksiList[position]
-            tampilkanDetailTransaksi(transaksi)
+            tampilkanDetailTransaksi(transaksiList[position])
         }
 
-        // Setup SwipeRefreshLayout
         binding.swipeRefreshLayout.setOnRefreshListener {
-            currentPage = 1 // Kembali ke halaman pertama saat refresh
+            currentPage = 1
             muatDataSesuaiFilter()
         }
-        
-        // Tombol Pagination
+
         binding.btnPrevPage.setOnClickListener {
             if (currentPage > 1) {
                 currentPage--
                 muatDataSesuaiFilter()
             }
         }
-        
+
         binding.btnNextPage.setOnClickListener {
             if (currentPage < lastPage) {
                 currentPage++
                 muatDataSesuaiFilter()
             }
         }
-
-        muatDataSesuaiFilter()
     }
-    
+
     private fun muatDataSesuaiFilter() {
         val tglMulai = binding.etTanggalMulai.text.toString().trim()
         val tglSelesai = binding.etTanggalSelesai.text.toString().trim()
-        
-        var targetUrl = "$baseUrl?page=$currentPage"
+
+        val builder = Uri.parse(ApiConfig.URL_RIWAYAT).buildUpon()
+            .appendQueryParameter("page", currentPage.toString())
         if (tglMulai.isNotEmpty() && tglSelesai.isNotEmpty()) {
-            targetUrl += "&tanggal_mulai=$tglMulai&tanggal_selesai=$tglSelesai"
+            builder.appendQueryParameter("tanggal_mulai", tglMulai)
+            builder.appendQueryParameter("tanggal_selesai", tglSelesai)
         }
-        loadRiwayatTransaksi(targetUrl)
-    }
-
-    private fun setupDatePicker() {
-        val calendar = Calendar.getInstance()
-
-        binding.etTanggalMulai.setOnClickListener {
-            DatePickerDialog(
-                requireContext(),
-                { _, year, month, dayOfMonth ->
-                    val selectedDate = Calendar.getInstance().apply {
-                        set(year, month, dayOfMonth)
-                    }
-                    val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                    binding.etTanggalMulai.setText(sdf.format(selectedDate.time))
-                },
-                calendar.get(Calendar.YEAR),
-                calendar.get(Calendar.MONTH),
-                calendar.get(Calendar.DAY_OF_MONTH)
-            ).show()
-        }
-
-        binding.etTanggalSelesai.setOnClickListener {
-            DatePickerDialog(
-                requireContext(),
-                { _, year, month, dayOfMonth ->
-                    val selectedDate = Calendar.getInstance().apply {
-                        set(year, month, dayOfMonth)
-                    }
-                    val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                    binding.etTanggalSelesai.setText(sdf.format(selectedDate.time))
-                },
-                calendar.get(Calendar.YEAR),
-                calendar.get(Calendar.MONTH),
-                calendar.get(Calendar.DAY_OF_MONTH)
-            ).show()
-        }
+        loadRiwayatTransaksi(builder.build().toString())
     }
 
     private fun loadRiwayatTransaksi(url: String) {
-        // Menampilkan loading dari SwipeRefresh
         binding.swipeRefreshLayout.isRefreshing = true
         binding.tvEmpty.visibility = View.GONE
 
@@ -168,38 +195,34 @@ class RiwayatFragment : Fragment() {
             requireContext(),
             Request.Method.GET, url, null,
             { response ->
-                // Membatalkan proses jika pengguna sudah pindah tab/layar
                 if (!isAdded || _binding == null) return@ApiRequest
-
-                // Matikan loading dari SwipeRefresh
                 binding.swipeRefreshLayout.isRefreshing = false
-                
+
                 if (response.optBoolean("success", false)) {
                     val dataArray = response.optJSONArray("data")
-                    
-                    // Ambil informasi Pagination dari Laravel
                     currentPage = response.optInt("current_page", 1)
                     lastPage = response.optInt("last_page", 1)
-                    
-                    // Update UI Pagination
+
                     binding.tvPageInfo.text = "Halaman $currentPage dari $lastPage"
                     binding.layoutPagination.visibility = if (lastPage > 1) View.VISIBLE else View.GONE
                     binding.btnPrevPage.isEnabled = currentPage > 1
                     binding.btnNextPage.isEnabled = currentPage < lastPage
-                    
-                    // COROUTINE untuk memproses ribuan data secara bersamaan
+
                     viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Default) {
                         val temporaryList = mutableListOf<TransaksiModel>()
-                        
                         if (dataArray != null && dataArray.length() > 0) {
                             for (i in 0 until dataArray.length()) {
                                 val obj = dataArray.getJSONObject(i)
                                 val userObj = obj.optJSONObject("user")
                                 val kasir = userObj?.optString("nama") ?: "Kasir"
+                                val metode = obj.optString("metode_bayar", "cash").ifBlank { "cash" }
+                                val metodeLabel = obj.optString(
+                                    "metode_bayar_label",
+                                    if (metode.equals("qris", ignoreCase = true)) "QRIS" else "Cash"
+                                )
 
                                 val detailsArray = obj.optJSONArray("details")
                                 val detailList = mutableListOf<DetailObat>()
-
                                 if (detailsArray != null) {
                                     for (j in 0 until detailsArray.length()) {
                                         val d = detailsArray.getJSONObject(j)
@@ -216,15 +239,15 @@ class RiwayatFragment : Fragment() {
                                     }
                                 }
 
-                                val rawWaktu = obj.optString("created_at")
-                                val formatWaktu = ApiConfig.formatWaktuIso(rawWaktu, "dd/MM/yyyy HH:mm")
-
+                                val formatWaktu = ApiConfig.formatWaktuIso(obj.optString("created_at"), "dd/MM/yyyy HH:mm")
                                 temporaryList.add(
                                     TransaksiModel(
                                         id = obj.optInt("id"),
                                         noTransaksi = obj.optString("no_transaksi"),
                                         waktu = formatWaktu,
                                         namaKasir = kasir,
+                                        metodeBayar = metode,
+                                        metodeBayarLabel = metodeLabel,
                                         totalHarga = obj.optInt("total_harga", 0),
                                         totalBayar = obj.optInt("total_bayar", 0),
                                         kembalian = obj.optInt("kembalian", 0),
@@ -234,8 +257,9 @@ class RiwayatFragment : Fragment() {
                             }
                         }
 
-                        // Kembali ke thread utama untuk memperbarui UI
+                        // Update UI
                         withContext(Dispatchers.Main) {
+                            if (!isAdded || _binding == null) return@withContext
                             transaksiList.clear()
                             transaksiList.addAll(temporaryList)
                             adapter.notifyDataSetChanged()
@@ -249,45 +273,453 @@ class RiwayatFragment : Fragment() {
                 }
             },
             { error ->
-                // PENGAMAN: Batalkan proses jika pengguna sudah pindah tab/layar
                 if (!isAdded || _binding == null) return@ApiRequest
-
                 binding.swipeRefreshLayout.isRefreshing = false
                 if (!ApiConfig.tanganiAuthError(context, error)) {
                     Toast.makeText(context, ApiConfig.pesanError(error), Toast.LENGTH_SHORT).show()
                 }
             }
         )
-
         Volley.newRequestQueue(requireContext()).add(request)
     }
 
     private fun tampilkanDetailTransaksi(trx: TransaksiModel) {
-        val rupiah = NumberFormat.getCurrencyInstance(Locale("id", "ID")).apply {
-            maximumFractionDigits = 0
-        }
-
         val sb = StringBuilder()
-        sb.append("Waktu: ${trx.waktu}\n")
-        sb.append("Kasir  : ${trx.namaKasir}\n\n")
+        sb.append("Waktu   : ${trx.waktu}\n")
+        sb.append("Kasir   : ${trx.namaKasir}\n")
+        sb.append("Metode  : ${trx.metodeBayarLabel}\n\n")
         sb.append("Daftar Obat Dibeli:\n")
         sb.append("--------------------------------\n")
 
         for (item in trx.details) {
             sb.append("${item.namaObat}\n")
-            sb.append("  ${item.qty} x ${rupiah.format(item.hargaSatuan)} = ${rupiah.format(item.subtotal)}\n")
+            sb.append("  ${item.qty} x Rp ${formatRupiah.format(item.hargaSatuan)} = Rp ${formatRupiah.format(item.subtotal)}\n")
         }
 
         sb.append("--------------------------------\n")
-        sb.append("Total Belanja : ${rupiah.format(trx.totalHarga)}\n")
-        sb.append("Total Bayar    : ${rupiah.format(trx.totalBayar)}\n")
-        sb.append("Kembalian     : ${rupiah.format(trx.kembalian)}\n")
+        sb.append("Total Belanja : Rp ${formatRupiah.format(trx.totalHarga)}\n")
+        sb.append("Bayar (${trx.metodeBayarLabel}) : Rp ${formatRupiah.format(trx.totalBayar)}\n")
+        if (!trx.metodeBayar.equals("qris", ignoreCase = true)) {
+            sb.append("Kembalian     : Rp ${formatRupiah.format(trx.kembalian)}\n")
+        }
 
         AlertDialog.Builder(requireContext())
             .setTitle(trx.noTransaksi)
             .setMessage(sb.toString())
             .setPositiveButton("Tutup", null)
             .show()
+    }
+
+    // ==================== BAGIAN LAPORAN ====================
+    private fun setupPanelLaporan() {
+        val periodeAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, daftarPeriodeLabel).apply {
+            setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        }
+        binding.spPeriodeLaporan.adapter = periodeAdapter
+        sedangAturSpinner = true
+        binding.spPeriodeLaporan.setSelection(0, false) // Bulan Ini
+        isiTanggalSesuaiPeriode("bulan_ini")
+        sedangAturSpinner = false
+
+        kategoriAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, daftarKategori).apply {
+            setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        }
+        binding.spKategoriLaporan.adapter = kategoriAdapter
+
+        saranObatAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, daftarSaranObat)
+        binding.actvLapNamaObat.setAdapter(saranObatAdapter)
+
+        binding.spPeriodeLaporan.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                if (sedangAturSpinner) return
+                val baru = daftarPeriodeNilai[position]
+                periodeLaporan = baru
+                if (baru != "kustom") {
+                    isiTanggalSesuaiPeriode(baru)
+                    lapCurrentPage = 1
+                    if (laporanSudahDimuat) loadLaporan()
+                }
+            }
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+
+        binding.spKategoriLaporan.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                if (sedangAturSpinner) return
+                kategoriLaporan = if (position == 0) "" else daftarKategori[position]
+                lapCurrentPage = 1
+                if (laporanSudahDimuat) loadLaporan()
+            }
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+
+        val saatTanggalManualDipilih = {
+            periodeLaporan = "kustom"
+            sedangAturSpinner = true
+            binding.spPeriodeLaporan.setSelection(daftarPeriodeNilai.indexOf("kustom"))
+            sedangAturSpinner = false
+        }
+        pasangDatePicker(binding.etLapTanggalMulai) { saatTanggalManualDipilih() }
+        pasangDatePicker(binding.etLapTanggalSelesai) { saatTanggalManualDipilih() }
+
+        binding.actvLapNamaObat.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_SEARCH || actionId == EditorInfo.IME_ACTION_DONE) {
+                lapCurrentPage = 1
+                loadLaporan()
+                true
+            } else {
+                false
+            }
+        }
+
+        binding.btnLapTerapkan.setOnClickListener {
+            lapCurrentPage = 1
+            loadLaporan()
+        }
+
+        binding.btnLapReset.setOnClickListener {
+            sedangAturSpinner = true
+            periodeLaporan = "bulan_ini"
+            kategoriLaporan = ""
+            binding.spPeriodeLaporan.setSelection(0)
+            binding.spKategoriLaporan.setSelection(0)
+            isiTanggalSesuaiPeriode("bulan_ini")
+            binding.actvLapNamaObat.setText("")
+            sedangAturSpinner = false
+            lapCurrentPage = 1
+            loadLaporan()
+        }
+
+        binding.swipeRefreshLaporan.setOnRefreshListener {
+            lapCurrentPage = 1
+            loadLaporan()
+        }
+
+        binding.btnLapPrev.setOnClickListener {
+            if (lapCurrentPage > 1) {
+                lapCurrentPage--
+                loadLaporan()
+            }
+        }
+
+        binding.btnLapNext.setOnClickListener {
+            if (lapCurrentPage < lapLastPage) {
+                lapCurrentPage++
+                loadLaporan()
+            }
+        }
+
+        binding.btnUnduhLaporan.setOnClickListener {
+            unduhLaporanAktif()
+        }
+    }
+
+    private fun isiTanggalSesuaiPeriode(periode: String) {
+        val cal = Calendar.getInstance()
+        val hariIniStr = sdfApi.format(cal.time)
+        when (periode) {
+            "hari_ini" -> {
+                binding.etLapTanggalMulai.setText(hariIniStr)
+                binding.etLapTanggalSelesai.setText(hariIniStr)
+            }
+            "minggu_ini" -> {
+                val awal = Calendar.getInstance().apply {
+                    firstDayOfWeek = Calendar.MONDAY
+                    set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
+                }
+                binding.etLapTanggalMulai.setText(sdfApi.format(awal.time))
+                binding.etLapTanggalSelesai.setText(hariIniStr)
+            }
+            "bulan_ini" -> {
+                val awal = Calendar.getInstance().apply { set(Calendar.DAY_OF_MONTH, 1) }
+                binding.etLapTanggalMulai.setText(sdfApi.format(awal.time))
+                binding.etLapTanggalSelesai.setText(hariIniStr)
+            }
+            "tahun_ini" -> {
+                val awal = Calendar.getInstance().apply { set(Calendar.DAY_OF_YEAR, 1) }
+                binding.etLapTanggalMulai.setText(sdfApi.format(awal.time))
+                binding.etLapTanggalSelesai.setText(hariIniStr)
+            }
+            "semua" -> {
+                binding.etLapTanggalMulai.setText("")
+                binding.etLapTanggalSelesai.setText("")
+            }
+        }
+    }
+
+    private fun loadLaporan() {
+        val tglMulai = binding.etLapTanggalMulai.text.toString().trim()
+        val tglSelesai = binding.etLapTanggalSelesai.text.toString().trim()
+        val namaObat = binding.actvLapNamaObat.text.toString().trim()
+
+        val builder = Uri.parse(ApiConfig.URL_LAPORAN).buildUpon()
+            .appendQueryParameter("page", lapCurrentPage.toString())
+            .appendQueryParameter("periode", periodeLaporan)
+        if (tglMulai.isNotEmpty()) builder.appendQueryParameter("tanggal_mulai", tglMulai)
+        if (tglSelesai.isNotEmpty()) builder.appendQueryParameter("tanggal_selesai", tglSelesai)
+        if (kategoriLaporan.isNotEmpty()) builder.appendQueryParameter("kategori", kategoriLaporan)
+        if (namaObat.isNotEmpty()) builder.appendQueryParameter("nama_obat", namaObat)
+
+        binding.swipeRefreshLaporan.isRefreshing = true
+
+        val request = ApiRequest(
+            requireContext(),
+            Request.Method.GET,
+            builder.build().toString(),
+            null,
+            { response ->
+                if (!isAdded || _binding == null) return@ApiRequest
+                binding.swipeRefreshLaporan.isRefreshing = false
+
+                if (!response.optBoolean("success", false)) return@ApiRequest
+
+                val filterObj = response.optJSONObject("filter")
+                val ringkasanObj = response.optJSONObject("ringkasan")
+                val dataArr = response.optJSONArray("data")
+                val katArr = response.optJSONArray("kategoris")
+                val obatArr = response.optJSONArray("daftar_obat")
+
+                lapCurrentPage = response.optInt("current_page", 1)
+                lapLastPage = response.optInt("last_page", 1)
+                val totalData = response.optInt("total", 0)
+
+                binding.tvLapPeriodeLabel.text = filterObj?.optString("periode_label", "Laporan Penjualan") ?: "Laporan Penjualan"
+                val totalPendapatan = ringkasanObj?.optLong("total_pendapatan", 0L) ?: 0L
+                val totalQty = ringkasanObj?.optInt("total_qty", 0) ?: 0
+                val jmlTrx = ringkasanObj?.optInt("jumlah_transaksi", 0) ?: 0
+                val totalCash = ringkasanObj?.optLong("total_cash", 0L) ?: 0L
+                val totalQris = ringkasanObj?.optLong("total_qris", 0L) ?: 0L
+
+                binding.tvLapTotalPendapatan.text = "Rp ${formatRupiah.format(totalPendapatan)}"
+                binding.tvLapRingkasanDetail.text = "$totalQty unit terjual • $jmlTrx transaksi"
+                binding.tvLapMetodeRingkas.text =
+                    "Cash: Rp ${formatRupiah.format(totalCash)} • QRIS: Rp ${formatRupiah.format(totalQris)}"
+                binding.tvLapJumlahData.text = "$totalData baris"
+
+                binding.tvLapPageInfo.text = "Hal $lapCurrentPage / $lapLastPage"
+                binding.layoutLapPagination.visibility = if (lapLastPage > 1) View.VISIBLE else View.GONE
+                binding.btnLapPrev.isEnabled = lapCurrentPage > 1
+                binding.btnLapNext.isEnabled = lapCurrentPage < lapLastPage
+
+                // Sinkronkan opsi kategori & saran nama obat
+                if (katArr != null) {
+                    val opsiBaru = mutableListOf("Semua Kategori")
+                    for (i in 0 until katArr.length()) {
+                        val k = katArr.optString(i)
+                        if (k.isNotBlank()) opsiBaru.add(k)
+                    }
+                    if (opsiBaru != daftarKategori) {
+                        sedangAturSpinner = true
+                        daftarKategori.clear()
+                        daftarKategori.addAll(opsiBaru)
+                        kategoriAdapter.notifyDataSetChanged()
+                        val idx = if (kategoriLaporan.isEmpty()) 0 else daftarKategori.indexOf(kategoriLaporan).coerceAtLeast(0)
+                        binding.spKategoriLaporan.setSelection(idx)
+                        sedangAturSpinner = false
+                    }
+                }
+                if (obatArr != null) {
+                    val baru = mutableListOf<String>()
+                    for (i in 0 until obatArr.length()) {
+                        val n = obatArr.optString(i)
+                        if (n.isNotBlank()) baru.add(n)
+                    }
+                    if (baru != daftarSaranObat) {
+                        daftarSaranObat.clear()
+                        daftarSaranObat.addAll(baru)
+                        saranObatAdapter.notifyDataSetChanged()
+                    }
+                }
+
+                viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Default) {
+                    val items = mutableListOf<LaporanItemModel>()
+                    if (dataArr != null) {
+                        for (i in 0 until dataArr.length()) {
+                            val o = dataArr.getJSONObject(i)
+                            items.add(
+                                LaporanItemModel(
+                                    detailId = o.optInt("detail_id"),
+                                    noTransaksi = o.optString("no_transaksi", "-"),
+                                    tanggal = o.optString("tanggal", "-"),
+                                    namaKasir = o.optString("nama_kasir", "Kasir"),
+                                    metodeBayar = o.optString("metode_bayar", "cash"),
+                                    metodeBayarLabel = o.optString("metode_bayar_label", "Cash"),
+                                    namaKategori = o.optString("nama_kategori", "-"),
+                                    namaObat = o.optString("nama_obat", "-"),
+                                    qty = o.optInt("qty", 0),
+                                    hargaSatuan = o.optInt("harga_satuan", 0),
+                                    subtotal = o.optInt("subtotal", 0)
+                                )
+                            )
+                        }
+                    }
+
+                    withContext(Dispatchers.Main) {
+                        if (!isAdded || _binding == null) return@withContext
+                        tampilkanDaftarLaporan(items)
+                    }
+                }
+            },
+            { error ->
+                if (!isAdded || _binding == null) return@ApiRequest
+                binding.swipeRefreshLaporan.isRefreshing = false
+                if (!ApiConfig.tanganiAuthError(context, error)) {
+                    Toast.makeText(context, ApiConfig.pesanError(error), Toast.LENGTH_SHORT).show()
+                }
+            }
+        )
+        Volley.newRequestQueue(requireContext()).add(request)
+    }
+
+    private fun tampilkanDaftarLaporan(items: List<LaporanItemModel>) {
+        binding.layoutLapDaftar.removeAllViews()
+        binding.tvLapEmpty.visibility = if (items.isEmpty()) View.VISIBLE else View.GONE
+
+        val density = resources.displayMetrics.density
+        for ((idx, item) in items.withIndex()) {
+            val rowView = layoutInflater.inflate(R.layout.item_laporan, binding.layoutLapDaftar, false)
+            rowView.findViewById<TextView>(R.id.tvLapNamaObat).text = item.namaObat
+            rowView.findViewById<TextView>(R.id.tvLapKategoriNota).text =
+                "${item.namaKategori} • ${item.noTransaksi} • ${item.tanggal}"
+            rowView.findViewById<TextView>(R.id.tvLapQtyHarga).text =
+                "${item.qty} x Rp ${formatRupiah.format(item.hargaSatuan)}"
+            rowView.findViewById<TextView>(R.id.tvLapSubtotal).text =
+                "Rp ${formatRupiah.format(item.subtotal)}"
+
+            val tvMetode = rowView.findViewById<TextView>(R.id.tvLapMetode)
+            val isQris = item.metodeBayar.equals("qris", ignoreCase = true)
+            tvMetode.text = item.metodeBayarLabel
+            tvMetode.setTextColor(Color.parseColor(if (isQris) "#1D4ED8" else "#1F7A6F"))
+            tvMetode.background = GradientDrawable().apply {
+                setColor(Color.parseColor(if (isQris) "#DBEAFE" else "#E8F4F2"))
+                cornerRadius = 10f * density
+            }
+
+            binding.layoutLapDaftar.addView(rowView)
+
+            if (idx < items.lastIndex) {
+                val divider = View(requireContext()).apply {
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        maxOf(1, density.toInt())
+                    )
+                    setBackgroundColor(Color.parseColor("#F1F5F9"))
+                }
+                binding.layoutLapDaftar.addView(divider)
+            }
+        }
+    }
+
+    private fun unduhLaporanAktif() {
+        val format = if (binding.rbFormatExcel.isChecked) "excel" else "pdf"
+        val tglMulai = binding.etLapTanggalMulai.text.toString().trim()
+        val tglSelesai = binding.etLapTanggalSelesai.text.toString().trim()
+        val namaObat = binding.actvLapNamaObat.text.toString().trim()
+
+        val urlEkspor = LaporanExportHelper.buatUrlEkspor(
+            format = format,
+            periode = periodeLaporan,
+            tglMulai = tglMulai,
+            tglSelesai = tglSelesai,
+            kategori = kategoriLaporan,
+            namaObat = namaObat
+        )
+
+        val ctx = requireContext().applicationContext
+        val labelFormat = if (format == "excel") "Excel (.xlsx)" else "PDF"
+        binding.btnUnduhLaporan.isEnabled = false
+        binding.btnUnduhLaporan.text = "Mengunduh..."
+        binding.layoutProgressUnduh.visibility = View.VISIBLE
+        binding.pbUnduhLaporan.visibility = View.VISIBLE
+        binding.tvStatusUnduh.setTextColor(Color.parseColor("#1F7A6F"))
+        binding.tvStatusUnduh.text = "Sedang mengunduh laporan $labelFormat..."
+
+        Toast.makeText(requireContext(), "Mengunduh laporan $labelFormat...", Toast.LENGTH_SHORT).show()
+        LaporanExportHelper.tampilkanNotifMulai(ctx, format)
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            val hasilRes = withContext(Dispatchers.IO) {
+                runCatching { LaporanExportHelper.unduhDanSimpan(ctx, urlEkspor, format) }
+            }
+
+            hasilRes.onSuccess { hasil ->
+                LaporanExportHelper.tampilkanNotifSelesai(ctx, hasil)
+            }.onFailure { err ->
+                LaporanExportHelper.tampilkanNotifGagal(ctx, err.message ?: "Gagal mengunduh laporan")
+            }
+
+            if (!isAdded || _binding == null) return@launch
+            binding.btnUnduhLaporan.isEnabled = true
+            binding.btnUnduhLaporan.text = "Unduh Laporan"
+            binding.pbUnduhLaporan.visibility = View.GONE
+
+            hasilRes.onSuccess { hasil ->
+                binding.tvStatusUnduh.setTextColor(Color.parseColor("#166534"))
+                binding.tvStatusUnduh.text = "Tersimpan: ${hasil.lokasiSimpan}"
+                Toast.makeText(
+                    requireContext(),
+                    "Laporan berhasil disimpan ke ${hasil.lokasiSimpan}",
+                    Toast.LENGTH_LONG
+                ).show()
+
+                val builder = AlertDialog.Builder(requireContext())
+                if (hasil.isPdf) {
+                    builder.setTitle("Laporan PDF Siap")
+                        .setMessage("Laporan tersimpan di:\n${hasil.lokasiSimpan}\n\nAnda dapat langsung mencetak atau membuka file PDF.")
+                        .setPositiveButton("Cetak / Simpan PDF") { _, _ ->
+                            LaporanExportHelper.cetakPdf(requireContext(), hasil)
+                        }
+                        .setNeutralButton("Buka PDF") { _, _ ->
+                            LaporanExportHelper.bukaFile(requireContext(), hasil)
+                        }
+                        .setNegativeButton("Tutup", null)
+                } else {
+                    builder.setTitle("Laporan Excel Siap")
+                        .setMessage("Laporan tersimpan di:\n${hasil.lokasiSimpan}")
+                        .setPositiveButton("Buka Excel") { _, _ ->
+                            LaporanExportHelper.bukaFile(requireContext(), hasil)
+                        }
+                        .setNeutralButton("Bagikan") { _, _ ->
+                            LaporanExportHelper.bagikanFile(requireContext(), hasil)
+                        }
+                        .setNegativeButton("Tutup", null)
+                }
+                builder.show()
+            }.onFailure { err ->
+                binding.tvStatusUnduh.setTextColor(Color.parseColor("#DC2626"))
+                binding.tvStatusUnduh.text = err.message ?: "Gagal mengunduh laporan"
+                Toast.makeText(
+                    requireContext(),
+                    err.message ?: "Gagal mengunduh laporan",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
+
+    private fun pasangDatePicker(target: TextView, setelahPilih: (() -> Unit)? = null) {
+        target.setOnClickListener {
+            val cal = Calendar.getInstance()
+            val teks = target.text.toString().trim()
+            if (teks.isNotEmpty()) {
+                try {
+                    val d = sdfApi.parse(teks)
+                    if (d != null) cal.time = d
+                } catch (_: Exception) {
+                }
+            }
+            DatePickerDialog(
+                requireContext(),
+                { _, year, month, dayOfMonth ->
+                    val dipilih = Calendar.getInstance().apply { set(year, month, dayOfMonth) }
+                    target.text = sdfApi.format(dipilih.time)
+                    setelahPilih?.invoke()
+                },
+                cal.get(Calendar.YEAR),
+                cal.get(Calendar.MONTH),
+                cal.get(Calendar.DAY_OF_MONTH)
+            ).show()
+        }
     }
 
     override fun onDestroyView() {

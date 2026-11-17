@@ -705,4 +705,134 @@ class ApiMobileTest extends TestCase
                 ],
             ]);
     }
+
+    public function test_riwayat_menyertakan_metode_bayar_dan_filter_laporan_lengkap(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-11-18 10:00:00'));
+
+        try {
+            $this->loginSebagaiOwner();
+
+            $katAnalgesik = Kategori::firstOrCreate(['nama_kategori' => 'Analgesik']);
+            $katVitamin = Kategori::firstOrCreate(['nama_kategori' => 'Vitamin']);
+
+            $paracetamol = $this->buatObat([
+                'kategori_id' => $katAnalgesik->id,
+                'kode_obat'   => 'LAP-001',
+                'nama_obat'   => 'Paracetamol Forte',
+                'harga_jual'  => 10000,
+            ]);
+            $vitaminC = $this->buatObat([
+                'kategori_id' => $katVitamin->id,
+                'kode_obat'   => 'LAP-002',
+                'nama_obat'   => 'Vitamin C 500mg',
+                'harga_jual'  => 15000,
+            ]);
+
+            $kasir = User::create([
+                'nama'     => 'Kasir Laporan',
+                'username' => 'kasir_laporan',
+                'password' => Hash::make('rahasia123'),
+                'role'     => 'karyawan',
+                'status'   => 'aktif',
+            ]);
+
+            $tCash = Transaksi::create([
+                'no_transaksi' => 'TRX-CASH-01',
+                'metode_bayar' => Transaksi::METODE_CASH,
+                'user_id'      => $kasir->id,
+                'total_harga'  => 30000,
+                'total_bayar'  => 50000,
+                'kembalian'    => 20000,
+            ]);
+            $tCash->forceFill(['created_at' => '2026-11-18 09:00:00'])->save();
+            DetailTransaksi::create([
+                'transaksi_id' => $tCash->id,
+                'obat_id'      => $paracetamol->id,
+                'qty'          => 3,
+                'harga_satuan' => 10000,
+                'subtotal'     => 30000,
+            ]);
+
+            $tQris = Transaksi::create([
+                'no_transaksi' => 'TRX-QRIS-01',
+                'metode_bayar' => Transaksi::METODE_QRIS,
+                'user_id'      => $kasir->id,
+                'total_harga'  => 30000,
+                'total_bayar'  => 30000,
+                'kembalian'    => 0,
+            ]);
+            $tQris->forceFill(['created_at' => '2026-11-05 14:00:00'])->save();
+            DetailTransaksi::create([
+                'transaksi_id' => $tQris->id,
+                'obat_id'      => $vitaminC->id,
+                'qty'          => 2,
+                'harga_satuan' => 15000,
+                'subtotal'     => 30000,
+            ]);
+
+            // 1. /api/riwayat menyertakan metode_bayar & metode_bayar_label
+            $this->getJson('/api/riwayat')
+                ->assertOk()
+                ->assertJsonPath('data.0.no_transaksi', 'TRX-CASH-01')
+                ->assertJsonPath('data.0.metode_bayar', 'cash')
+                ->assertJsonPath('data.0.metode_bayar_label', 'Cash')
+                ->assertJsonPath('data.1.no_transaksi', 'TRX-QRIS-01')
+                ->assertJsonPath('data.1.metode_bayar', 'qris')
+                ->assertJsonPath('data.1.metode_bayar_label', 'QRIS');
+
+            // 2. /api/laporan filter periode hari_ini hanya mengambil TRX-CASH-01
+            $this->getJson('/api/laporan?periode=hari_ini')
+                ->assertOk()
+                ->assertJsonPath('total', 1)
+                ->assertJsonPath('ringkasan.total_pendapatan', 30000)
+                ->assertJsonPath('ringkasan.total_cash', 30000)
+                ->assertJsonPath('ringkasan.total_qris', 0)
+                ->assertJsonPath('data.0.nama_obat', 'Paracetamol Forte');
+
+            // 3. /api/laporan filter kategori + rentang tanggal + nama obat
+            $this->getJson('/api/laporan?periode=bulan_ini&kategori=Vitamin&nama_obat=Vitamin%20C')
+                ->assertOk()
+                ->assertJsonPath('total', 1)
+                ->assertJsonPath('ringkasan.total_pendapatan', 30000)
+                ->assertJsonPath('ringkasan.total_qris', 30000)
+                ->assertJsonPath('ringkasan.total_qty', 2)
+                ->assertJsonPath('data.0.no_transaksi', 'TRX-QRIS-01')
+                ->assertJsonPath('data.0.metode_bayar_label', 'QRIS');
+
+            // 4. Ekspor Excel menghasilkan file XLSX valid sesuai filter
+            $resExcel = $this->get('/api/laporan/export?format=excel&kategori=Vitamin')
+                ->assertOk();
+            $this->assertStringContainsString(
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                (string) $resExcel->headers->get('Content-Type')
+            );
+            $xlsxBytes = $resExcel->getContent();
+            $this->assertSame("PK", substr($xlsxBytes, 0, 2));
+
+            $tmpXlsx = tempnam(sys_get_temp_dir(), 'test_xlsx_');
+            file_put_contents($tmpXlsx, $xlsxBytes);
+            $zip = new \ZipArchive();
+            $this->assertTrue($zip->open($tmpXlsx) === true);
+            $sheetXml = $zip->getFromName('xl/worksheets/sheet1.xml');
+            $zip->close();
+            @unlink($tmpXlsx);
+
+            $this->assertIsString($sheetXml);
+            $this->assertStringContainsString('Vitamin C 500mg', $sheetXml);
+            $this->assertStringNotContainsString('Paracetamol Forte', $sheetXml);
+
+            // 5. Ekspor PDF menghasilkan dokumen PDF valid sesuai filter
+            $resPdf = $this->get('/api/laporan/export?format=pdf&nama_obat=Paracetamol')
+                ->assertOk();
+            $this->assertSame('application/pdf', $resPdf->headers->get('Content-Type'));
+            $pdfBytes = $resPdf->getContent();
+            $this->assertStringStartsWith('%PDF-1.4', $pdfBytes);
+            $this->assertStringEndsWith('%%EOF', trim($pdfBytes));
+            $this->assertStringContainsString('Paracetamol Forte', $pdfBytes);
+            $this->assertStringNotContainsString('Vitamin C 500mg', $pdfBytes);
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
 }

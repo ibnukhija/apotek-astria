@@ -7,6 +7,9 @@ use App\Models\Kategori;
 use App\Models\Obat;
 use App\Models\Transaksi;
 use App\Models\ProfilApotek;
+use App\Services\LaporanExcelService;
+use App\Services\LaporanPdfService;
+use App\Services\LaporanPenjualanService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -292,12 +295,13 @@ class ApiController extends Controller
         ]);
     }
 
-    // 3. Untuk RiwayatFragment (Laporan Transaksi Kasir)
+    // 3. Untuk RiwayatFragment (Daftar Transaksi Kasir)
     public function riwayat(Request $request)
     {
         $request->validate([
             'tanggal_mulai'   => 'nullable|date',
             'tanggal_selesai' => 'nullable|date' . ($request->filled('tanggal_mulai') ? '|after_or_equal:tanggal_mulai' : ''),
+            'metode_bayar'    => 'nullable|in:cash,qris',
         ]);
 
         $query = Transaksi::with(['user', 'details.obat'])->latest()->orderByDesc('id');
@@ -313,14 +317,87 @@ class ApiController extends Controller
             $query->where('created_at', '<=', Carbon::parse($request->tanggal_selesai)->endOfDay());
         }
 
+        if ($request->filled('metode_bayar')) {
+            $query->where('metode_bayar', $request->metode_bayar);
+        }
+
         $riwayat = $query->paginate(50);
+
+        $data = collect($riwayat->items())->map(function (Transaksi $trx) {
+            $trx->metode_bayar = $trx->metode_bayar === Transaksi::METODE_QRIS
+                ? Transaksi::METODE_QRIS
+                : Transaksi::METODE_CASH;
+            $trx->metode_bayar_label = $trx->metode_bayar_label;
+            return $trx;
+        })->values();
 
         return response()->json([
             'success'      => true,
-            'data'         => $riwayat->items(),
+            'data'         => $data,
             'current_page' => $riwayat->currentPage(),
             'last_page'    => $riwayat->lastPage(),
             'total'        => $riwayat->total(),
+        ]);
+    }
+
+    // 3b. Untuk Tab Laporan Penjualan (Filter lengkap & pratinjau ekspor)
+    public function laporan(Request $request, LaporanPenjualanService $service)
+    {
+        $filter = $service->ambilFilter($request);
+        $hasil = $service->ambilLaporanPaginasi($filter);
+
+        return response()->json([
+            'success'      => true,
+            'filter'       => [
+                'periode'         => $filter['periode'],
+                'periode_label'   => $filter['periode_label'],
+                'tanggal_mulai'   => $filter['tanggal_mulai'],
+                'tanggal_selesai' => $filter['tanggal_selesai'],
+                'kategori'        => $filter['kategori'],
+                'nama_obat'       => $filter['nama_obat'],
+                'metode_bayar'    => $filter['metode_bayar'],
+            ],
+            'ringkasan'    => $hasil['ringkasan'],
+            'data'         => $hasil['items'],
+            'current_page' => $hasil['current_page'],
+            'last_page'    => $hasil['last_page'],
+            'total'        => $hasil['total'],
+            'kategoris'    => $hasil['kategoris'],
+            'daftar_obat'  => $hasil['daftar_obat'],
+        ]);
+    }
+
+    // 3c. Ekspor Laporan Penjualan ke PDF atau Excel (XLSX)
+    public function exportLaporan(
+        Request $request,
+        LaporanPenjualanService $service,
+        LaporanExcelService $excel,
+        LaporanPdfService $pdf
+    ) {
+        $request->validate([
+            'format' => 'required|in:pdf,excel',
+        ]);
+
+        $filter = $service->ambilFilter($request);
+        $dataEkspor = $service->ambilDataEkspor($filter);
+        $capWaktu = Carbon::now()->format('Ymd_His');
+
+        if ($request->input('format') === 'excel') {
+            $konten = $excel->buatXlsx($dataEkspor);
+            $namaFile = "Laporan_Penjualan_{$capWaktu}.xlsx";
+
+            return response($konten, 200, [
+                'Content-Type'        => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'Content-Disposition' => "attachment; filename=\"{$namaFile}\"",
+            ]);
+        }
+
+        $konten = $pdf->buatPdf($dataEkspor);
+        $namaFile = "Laporan_Penjualan_{$capWaktu}.pdf";
+
+        return response($konten, 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => "attachment; filename=\"{$namaFile}\"",
         ]);
     }
 

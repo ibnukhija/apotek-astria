@@ -26,7 +26,7 @@ class MainActivity : AppCompatActivity() {
         pendingBukaLaporan = true
         val bottomNav = findViewById<BottomNavigationView>(R.id.bottom_navigation)
         if (bottomNav.selectedItemId == R.id.nav_riwayat) {
-            loadFragment(buatRiwayatFragment(), "Riwayat")
+            loadFragment(buatRiwayatFragment(), "Riwayat & Laporan")
         } else {
             bottomNav.selectedItemId = R.id.nav_riwayat
         }
@@ -83,7 +83,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 R.id.nav_riwayat -> {
                     selectedFragment = buatRiwayatFragment()
-                    title = "Riwayat"
+                    title = "Riwayat & Laporan"
                 }
                 R.id.nav_stok -> {
                     selectedFragment = StokFragment()
