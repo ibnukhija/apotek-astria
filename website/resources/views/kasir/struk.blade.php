@@ -54,6 +54,7 @@
         <div>No. Nota : {{ $transaksi->no_transaksi }}</div>
         <div>Waktu    : {{ $transaksi->created_at->format('d/m/Y H:i') }}</div>
         <div>Kasir    : {{ $transaksi->user->nama ?? 'Kasir' }}</div>
+        <div>Metode   : {{ $transaksi->metode_bayar_label }}</div>
     </div>
 
     <table class="border-top border-bottom">
@@ -74,13 +75,15 @@
             <td class="text-right">Rp{{ number_format($transaksi->total_harga, 0, ',', '.') }}</td>
         </tr>
         <tr>
-            <td>Bayar</td>
+            <td>Bayar ({{ $transaksi->metode_bayar_label }})</td>
             <td class="text-right">Rp{{ number_format($transaksi->total_bayar, 0, ',', '.') }}</td>
         </tr>
+        @if($transaksi->metode_bayar !== 'qris')
         <tr>
             <td>Kembali</td>
             <td class="text-right">Rp{{ number_format($transaksi->kembalian, 0, ',', '.') }}</td>
         </tr>
+        @endif
     </table>
 
     <div class="text-center border-top" style="margin-top: 10px;">

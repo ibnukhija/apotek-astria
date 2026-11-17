@@ -156,19 +156,29 @@
                         Rp{{ number_format($trx->total_harga, 0, ',', '.') }}
                     </td>
                     <td class="py-2.5 px-3.5 text-xs whitespace-nowrap">
+                        <div class="mb-0.5">
+                            @if($trx->metode_bayar === 'qris')
+                                <span class="inline-block bg-blue-50 text-blue-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase">QRIS</span>
+                            @else
+                                <span class="inline-block bg-[#E8F4F2] text-soft-teal px-2 py-0.5 rounded text-[10px] font-bold uppercase">Cash</span>
+                            @endif
+                        </div>
                         <div>
                             <span class="text-gray-text">Bayar:</span> 
                             <span class="font-semibold text-dark-slate">Rp{{ number_format($trx->total_bayar, 0, ',', '.') }}</span>
                         </div>
+                        @if($trx->metode_bayar !== 'qris')
                         <div class="text-[11px] text-soft-teal font-medium">
                             Kembali: Rp{{ number_format($trx->kembalian, 0, ',', '.') }}
                         </div>
+                        @endif
                     </td>
                     <td class="py-2.5 px-3.5 text-xs sm:text-[13px] text-center whitespace-nowrap">
                         <div class="flex items-center justify-center gap-1.5">
                             <button type="button" 
                                 data-trx="{{ json_encode([
                                     'no_transaksi' => $trx->no_transaksi,
+                                    'metode_bayar' => $trx->metode_bayar_label,
                                     'waktu' => $trx->created_at->format('d/m/Y H:i') . ' WIB',
                                     'kasir' => $trx->user->nama ?? 'Kasir',
                                     'total_harga' => number_format($trx->total_harga, 0, ',', '.'),
@@ -289,6 +299,10 @@
         {{-- Footer Modal: Total, Bayar, Kembalian & Tombol Aksi --}}
         <div class="p-5 border-t border-border-color bg-off-white shrink-0">
             <div class="space-y-1.5 text-sm mb-4">
+                <div class="flex justify-between text-gray-text text-xs">
+                    <span>Metode Bayar:</span>
+                    <span id="mdlMetodeBayar" class="font-bold text-dark-slate"></span>
+                </div>
                 <div class="flex justify-between text-dark-slate">
                     <span class="font-semibold">Total Belanja:</span>
                     <span id="mdlTotalHarga" class="font-bold text-soft-teal text-base"></span>
@@ -328,6 +342,7 @@
         document.getElementById('mdlNoTrx').textContent = data.no_transaksi;
         document.getElementById('mdlWaktu').textContent = data.waktu;
         document.getElementById('mdlKasir').textContent = data.kasir;
+        document.getElementById('mdlMetodeBayar').textContent = data.metode_bayar || 'Cash';
         document.getElementById('mdlTotalHarga').textContent = 'Rp' + data.total_harga;
         document.getElementById('mdlTotalBayar').textContent = 'Rp' + data.total_bayar;
         document.getElementById('mdlKembalian').textContent = 'Rp' + data.kembalian;

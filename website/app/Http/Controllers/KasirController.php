@@ -44,10 +44,11 @@ class KasirController extends Controller
             'items'           => 'required|array|min:1',
             'items.*.obat_id' => 'required|integer|exists:obat,id',
             'items.*.jumlah'  => 'required|integer|min:1',
-            'total_bayar'     => 'required|numeric|min:0',
+            'metode_bayar'    => 'nullable|in:cash,qris',
+            'total_bayar'     => 'required_unless:metode_bayar,qris|nullable|numeric|min:0',
         ]);
 
-        return DB::transaction(function () use ($data, $request) {
+        return DB::transaction(function () use ($data) {
             StokService::kurangi($data['items']);
 
             $totalHarga = 0;
@@ -65,7 +66,11 @@ class KasirController extends Controller
                 ];
             }
 
-            $totalBayar = (int) $data['total_bayar'];
+            $metodeBayar = $data['metode_bayar'] ?? Transaksi::METODE_CASH;
+            $totalBayar = $metodeBayar === Transaksi::METODE_QRIS
+                ? $totalHarga
+                : (int) ($data['total_bayar'] ?? 0);
+
             if ($totalBayar < $totalHarga) {
                 throw ValidationException::withMessages([
                     'total_bayar' => ['Nominal uang yang diterima kurang dari total harga belanja.'],
@@ -76,6 +81,7 @@ class KasirController extends Controller
 
             $transaksi = Transaksi::create([
                 'no_transaksi' => 'TRX-' . date('Ymd') . '-' . strtoupper(Str::random(5)),
+                'metode_bayar' => $metodeBayar,
                 'user_id'      => Auth::id() ?? (User::first()?->id ?? 1),
                 'total_harga'  => $totalHarga,
                 'total_bayar'  => $totalBayar,

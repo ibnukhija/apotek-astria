@@ -1754,20 +1754,29 @@ class TransaksiSeeder extends Seeder
                     ];
                 }
 
+                // Tentukan metode bayar (sekitar 25% QRIS, 75% Cash)
+                $metodeBayar = ($index % 4 === 1) ? Transaksi::METODE_QRIS : Transaksi::METODE_CASH;
+
                 // Hitung total bayar dan kembalian
-                $totalBayar = $trxData['nominal_bayar'] ?? 0;
-                if ($totalBayar < $totalHarga) {
-                    // Bulatkan ke kelipatan 5.000, 10.000, atau 20.000 di atas total harga
-                    $kelipatanList = [5000, 10000, 20000];
-                    $kelipatan = $kelipatanList[$index % 3];
-                    $totalBayar = (int) ceil($totalHarga / $kelipatan) * $kelipatan;
+                if ($metodeBayar === Transaksi::METODE_QRIS) {
+                    $totalBayar = $totalHarga;
+                    $kembalian = 0;
+                } else {
+                    $totalBayar = $trxData['nominal_bayar'] ?? 0;
+                    if ($totalBayar < $totalHarga) {
+                        // Bulatkan ke kelipatan 5.000, 10.000, atau 20.000 di atas total harga
+                        $kelipatanList = [5000, 10000, 20000];
+                        $kelipatan = $kelipatanList[$index % 3];
+                        $totalBayar = (int) ceil($totalHarga / $kelipatan) * $kelipatan;
+                    }
+                    $kembalian = $totalBayar - $totalHarga;
                 }
-                $kembalian = $totalBayar - $totalHarga;
 
                 // Buat transaksi
                 $transaksi = Transaksi::create([
                     'user_id'      => $user->id,
                     'no_transaksi' => $noTransaksi,
+                    'metode_bayar' => $metodeBayar,
                     'total_harga'  => $totalHarga,
                     'total_bayar'  => $totalBayar,
                     'kembalian'    => $kembalian,
