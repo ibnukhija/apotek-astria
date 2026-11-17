@@ -5,6 +5,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:allowBackup="true"
@@ -25,6 +26,19 @@
         <activity
             android:name=".KaryawanActivity"
             android:exported="false" />
+
+        <!-- Menerima push notifikasi stok menipis dari FCM -->
+        <service
+            android:name=".StokMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="stok_menipis" />
+
         <!-- LoginActivity diatur sebagai halaman pertama yang terbuka -->
         <activity
             android:name=".LoginActivity"

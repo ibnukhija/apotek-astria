@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "350655999521",
+    "project_id": "apotek-astria-89f4d",
+    "storage_bucket": "apotek-astria-89f4d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:350655999521:android:8f5b6b07ee693b2df2fd60",
+        "android_client_info": {
+          "package_name": "com.example.apotek_astria"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBgKZmZ-EhUSSjeVv8OQRh_cGZOrFZZmkw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

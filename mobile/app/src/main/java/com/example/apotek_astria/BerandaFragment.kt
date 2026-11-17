@@ -69,7 +69,7 @@ class BerandaFragment : Fragment() {
                     // 3. Tampil Peringatan Stok (Jika Ada)
                     if (peringatanObatArray.length() > 0) {
                         binding.layoutPeringatanStok.visibility = View.VISIBLE
-                        binding.tvPeringatanStok.text = "${peringatanObatArray.length()} obat hampir habis (stok <= 10)"
+                        binding.tvPeringatanStok.text = "${peringatanObatArray.length()} obat hampir habis (stok <= ${PengaturanNotifikasiRepo.bacaLokal(requireContext()).batasStok})"
                     } else {
                         binding.layoutPeringatanStok.visibility = View.GONE
                     }

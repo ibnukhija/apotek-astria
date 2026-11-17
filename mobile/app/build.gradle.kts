@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.android.application)
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -36,8 +37,10 @@ android {
 }
 
 dependencies {
-    //
     implementation("com.android.volley:volley:1.2.1")
+    implementation(platform("com.google.firebase:firebase-bom:34.0.0"))
+    implementation("com.google.firebase:firebase-firestore")
+    implementation("com.google.firebase:firebase-messaging")
 
     implementation(libs.androidx.activity.ktx)
     implementation(libs.androidx.appcompat)
