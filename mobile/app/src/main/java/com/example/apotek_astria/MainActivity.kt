@@ -1,13 +1,21 @@
 package com.example.apotek_astria
 
-import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
+import com.android.volley.Request
+import com.android.volley.toolbox.Volley
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.example.apotek_astria.network.ApiConfig
+import com.example.apotek_astria.network.ApiRequest
+import com.example.apotek_astria.ui.login.LoginActivity
+import com.example.apotek_astria.ui.beranda.BerandaFragment
+import com.example.apotek_astria.ui.riwayat.RiwayatFragment
+import com.example.apotek_astria.ui.stok.StokFragment
+import com.example.apotek_astria.ui.profil.ProfilFragment
 
 class MainActivity : AppCompatActivity() {
     private lateinit var tvHeaderTitle: TextView
@@ -22,9 +30,17 @@ class MainActivity : AppCompatActivity() {
         val bottomNav = findViewById<BottomNavigationView>(R.id.bottom_navigation)
 
         btnLogout.setOnClickListener {
-            // Hapus session login di SharedPreferences
-            val sharedPref = getSharedPreferences("SesiApotek", Context.MODE_PRIVATE)
-            sharedPref.edit().clear().apply()
+            // Cabut token Sanctum di server lalu bersihkan sesi lokal
+            val logoutReq = ApiRequest(
+                applicationContext,
+                Request.Method.POST,
+                ApiConfig.URL_LOGOUT,
+                null,
+                {},
+                {}
+            )
+            Volley.newRequestQueue(applicationContext).add(logoutReq)
+            ApiConfig.hapusSesi(this)
 
             val intent = Intent(this, LoginActivity::class.java)
             startActivity(intent)

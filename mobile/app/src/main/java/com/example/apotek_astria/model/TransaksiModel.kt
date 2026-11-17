@@ -1,4 +1,4 @@
-package com.example.apotek_astria
+package com.example.apotek_astria.model
 
 data class DetailObat(
     val namaObat: String,

@@ -16,8 +16,17 @@ class CekRole
      */
     public function handle(Request $request, Closure $next, $role)
     {
-        if (Auth::check() && Auth::user()->role == $role) {
+        $user = $request->user() ?? Auth::user();
+
+        if ($user && $user->role === $role && $user->status !== 'nonaktif') {
             return $next($request);
+        }
+
+        if ($request->expectsJson() || $request->is('api/*')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Akses ditolak.',
+            ], 403);
         }
 
         return redirect('/')->withErrors(['username' => 'Akses ditolak. Anda tidak memiliki izin ke halaman ini.']);

@@ -4,75 +4,87 @@
 
 @section('content')
 
-<div class="flex justify-between items-center mb-5 shrink-0">
+<div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 mb-4 shrink-0">
     <div>
-        <h2 class="m-0 text-2xl font-bold">Kasir</h2>
-        <span class="text-gray-text text-sm">Transaksi baru</span>
+        <h2 class="m-0 text-xl lg:text-2xl font-bold">Kasir</h2>
+        <span class="text-gray-text text-xs sm:text-sm">Transaksi baru</span>
     </div>
-    <span class="text-gray-text text-sm font-medium">
+    <span class="text-gray-text text-xs sm:text-sm font-medium">
         {{ \Carbon\Carbon::now()->locale('id')->translatedFormat('d F Y') }}
     </span>
 </div>
 
-<div class="flex-1 min-h-0 grid grid-cols-3 gap-5">
+<div class="lg:flex-1 lg:min-h-0 grid grid-cols-1 lg:grid-cols-3 gap-4">
 
     {{-- ===== KIRI: PENCARIAN, KATEGORI, TABEL PRODUK ===== --}}
-    <div class="col-span-2 min-h-0 bg-pure-white border border-border-color rounded-xl flex flex-col overflow-hidden shadow-sm">
+    <div class="lg:col-span-2 min-h-[420px] lg:min-h-0 bg-pure-white border border-border-color rounded-xl flex flex-col overflow-hidden shadow-sm">
 
         <form method="GET" action="{{ route('kasir.index') }}" id="filterForm"
-              class="p-4 border-b border-border-color shrink-0">
+              class="p-3 px-4 border-b border-border-color shrink-0 space-y-2.5">
             <input type="hidden" name="kategori" id="inputKategori" value="{{ request('kategori') }}">
-            <div class="flex flex-wrap gap-2 items-center">
-                <input type="text" name="q" id="searchProduct" value="{{ request('q') }}"
-                    placeholder="Cari nama obat atau kode produk..." autocomplete="off"
-                    class="flex-1 min-w-[200px] py-2.5 px-3 border border-border-color rounded-lg text-sm outline-none focus:border-soft-teal">
+            <input type="text" name="q" id="searchProduct" value="{{ request('q') }}"
+                placeholder="Cari nama obat atau kode produk..." autocomplete="off"
+                class="w-full py-2 px-3 border border-border-color rounded-lg text-sm outline-none focus:border-soft-teal">
 
+            <div class="flex gap-1.5 items-center overflow-x-auto pb-0.5">
                 <button type="button" data-kategori=""
-                    class="pill px-4 py-2 rounded-lg text-sm font-bold border border-border-color {{ request('kategori') ? 'bg-pure-white' : 'bg-soft-teal text-white' }}">Semua</button>
+                    class="pill shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold border border-border-color {{ request('kategori') ? 'bg-pure-white' : 'bg-soft-teal text-white' }}">Semua</button>
                 @foreach ($kategoris as $kategori)
                     <button type="button" data-kategori="{{ $kategori->id }}"
-                        class="pill px-4 py-2 rounded-lg text-sm font-bold border border-border-color {{ request('kategori') == $kategori->id ? 'bg-soft-teal text-white' : 'bg-pure-white' }}">
+                        class="pill shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold border border-border-color {{ request('kategori') == $kategori->id ? 'bg-soft-teal text-white' : 'bg-pure-white' }}">
                         {{ $kategori->nama_kategori }}
                     </button>
                 @endforeach
             </div>
         </form>
 
-        <div class="flex-1 overflow-y-auto transition-opacity" id="areaProduk">
+        <div class="flex-1 overflow-auto transition-opacity" id="areaProduk">
             <table class="w-full text-left border-collapse">
                 <thead class="sticky top-0 bg-off-white z-10">
                     <tr>
                         @foreach (['PRODUK', 'KATEGORI', 'STOK', 'HARGA'] as $judul)
-                            <th class="p-3 px-5 text-xs text-gray-text font-bold uppercase border-b border-border-color">{{ $judul }}</th>
+                            <th class="py-2.5 px-3.5 text-[11px] text-gray-text font-bold uppercase border-b border-border-color whitespace-nowrap">{{ $judul }}</th>
                         @endforeach
-                        <th class="p-3 px-5 border-b border-border-color"></th>
+                        <th class="py-2.5 px-3.5 border-b border-border-color"></th>
                     </tr>
                 </thead>
                 <tbody>
                     @forelse ($obats as $obat)
                         @php($info = $obat->stok_info)
+                        @php($kadaluarsa = $obat->kadaluarsa_info)
                         <tr class="border-b border-border-color hover:bg-off-white transition">
-                            <td class="p-4 px-5 text-sm">
-                                <strong>{{ $obat->nama_obat }}</strong><br>
-                                <span class="text-xs text-gray-text">{{ $obat->kode_obat }} / {{ $obat->satuan }}</span>
+                            <td class="py-2.5 px-3.5 text-xs sm:text-[13px] min-w-[190px]">
+                                <strong>{{ $obat->nama_obat }}</strong>
+                                @if ($kadaluarsa['label'] !== 'Aman')
+                                    <span class="{{ $kadaluarsa['kelas'] }} ml-1 px-2 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap">{{ $kadaluarsa['label'] }}</span>
+                                @endif
+                                <br>
+                                <span class="text-[11px] text-gray-text whitespace-nowrap">
+                                    {{ $obat->kode_obat }} / {{ $obat->satuan }}
+                                    @if ($obat->tgl_kadaluarsa)
+                                        &bull; <span class="{{ $kadaluarsa['label'] === 'Kadaluarsa' ? 'text-red-600 font-semibold' : ($kadaluarsa['label'] === 'Hampir kadaluarsa' ? 'text-yellow-700 font-semibold' : '') }}">ED: {{ $obat->tgl_kadaluarsa->format('d/m/Y') }}</span>
+                                    @endif
+                                </span>
                             </td>
-                            <td class="p-4 px-5 text-sm">{{ $obat->kategori->nama_kategori ?? '-' }}</td>
-                            <td class="p-4 px-5 text-sm font-semibold">
-                                <span class="{{ $info['kelas'] }} px-2.5 py-1 rounded-full text-xs">{{ $obat->stok }} ({{ $info['label'] }})</span>
+                            <td class="py-2.5 px-3.5 text-xs sm:text-[13px] whitespace-nowrap">{{ $obat->kategori->nama_kategori ?? '-' }}</td>
+                            <td class="py-2.5 px-3.5 text-xs font-semibold whitespace-nowrap">
+                                <span class="{{ $info['kelas'] }} inline-block px-2 py-0.5 rounded-full text-[11px] whitespace-nowrap">{{ $obat->stok }} ({{ $info['label'] }})</span>
                             </td>
-                            <td class="p-4 px-5 text-sm font-bold">Rp{{ number_format($obat->harga_jual, 0, ',', '.') }}</td>
-                            <td class="p-4 px-5 text-center">
+                            <td class="py-2.5 px-3.5 text-xs sm:text-[13px] font-bold whitespace-nowrap">Rp{{ number_format($obat->harga_jual, 0, ',', '.') }}</td>
+                            <td class="py-2.5 px-3.5 text-center whitespace-nowrap">
                                 <button type="button"
                                     data-id="{{ $obat->id }}"
                                     data-nama="{{ $obat->nama_obat }}"
                                     data-harga="{{ (int) $obat->harga_jual }}"
                                     data-stok="{{ $obat->stok }}"
+                                    data-kadaluarsa="{{ $kadaluarsa['label'] === 'Kadaluarsa' ? '1' : '0' }}"
+                                    data-ed="{{ $obat->tgl_kadaluarsa ? $obat->tgl_kadaluarsa->format('d/m/Y') : '-' }}"
                                     class="btn-tambah w-8 h-8 rounded-lg bg-[#E8F4F2] text-soft-teal font-bold hover:bg-soft-teal hover:text-white transition {{ $obat->stok <= 0 ? 'opacity-40 pointer-events-none' : '' }}">+</button>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="p-10 text-center text-gray-text">
+                            <td colspan="5" class="p-10 text-center text-gray-text text-sm">
                                 {{ request()->hasAny(['q', 'kategori']) ? 'Tidak ada produk yang cocok.' : 'Belum ada produk tersedia.' }}
                             </td>
                         </tr>
@@ -81,29 +93,32 @@
             </table>
         </div>
 
-        <div id="areaFooter" class="p-4 px-5 border-t border-border-color shrink-0 flex flex-wrap justify-between items-center gap-4">
-            <div class="text-sm text-gray-text font-medium">
+        <div id="areaFooter" class="py-2.5 px-4 border-t border-border-color shrink-0 flex flex-col sm:flex-row justify-between items-center gap-2">
+            <div class="text-xs text-gray-text font-medium">
                 Menampilkan {{ $obats->firstItem() ?? 0 }}-{{ $obats->lastItem() ?? 0 }} dari {{ $obats->total() }} produk
             </div>
-            <div class="pagination-custom">{{ $obats->links() }}</div>
+            <div class="pagination-custom shrink-0">{{ $obats->onEachSide(1)->links() }}</div>
         </div>
     </div>
 
     {{-- ===== KANAN: RINGKASAN PESANAN ===== --}}
-    <div class="min-h-0 bg-pure-white border border-border-color rounded-xl p-5 shadow-sm flex flex-col">
-        <h3 class="m-0 mb-4 text-base font-bold">Ringkasan Pesanan</h3>
-        <div id="daftarKeranjang" class="flex-1 overflow-y-auto text-sm"></div>
-        <div class="border-t border-border-color pt-4 mt-4 flex justify-between items-center">
-            <span class="font-bold">Total Harga</span>
-            <span id="totalHarga" class="text-xl font-bold">Rp0</span>
+    <div class="lg:min-h-0 bg-pure-white border border-border-color rounded-xl p-4 shadow-sm flex flex-col">
+        <h3 class="m-0 mb-3 text-base font-bold">Ringkasan Pesanan</h3>
+        <div id="daftarKeranjang" class="flex-1 min-h-[140px] overflow-y-auto text-sm"></div>
+        <div class="border-t border-border-color pt-3 mt-3 flex justify-between items-center">
+            <span class="font-bold text-sm">Total Harga</span>
+            <span id="totalHarga" class="text-lg lg:text-xl font-bold">Rp0</span>
         </div>
 
         <!-- Input Uang Diterima & Kembalian -->
-        <div class="mt-4 mb-4">
-            <label class="block text-xs font-semibold text-gray-text mb-1 uppercase">Uang Diterima (Rp)</label>
-            <input type="number" id="uang_diterima" min="0" placeholder="0"
+        <div class="mt-3 mb-3">
+            <div class="flex justify-between items-center mb-1">
+                <label class="block text-xs font-semibold text-gray-text uppercase">Uang Diterima (Rp)</label>
+                <button type="button" onclick="setUangPas()" class="text-xs text-soft-teal hover:underline font-semibold cursor-pointer">Uang Pas</button>
+            </div>
+            <input type="text" inputmode="numeric" id="uang_diterima" placeholder="0" autocomplete="off"
                 class="w-full p-2.5 border border-border-color rounded-lg text-sm font-semibold outline-none focus:border-soft-teal"
-                oninput="hitungKembalian()">
+                oninput="formatUangDiterima(this)">
 
             <div class="flex justify-between items-center mt-2 text-sm">
                 <span class="text-gray-text">Kembalian:</span>
@@ -112,16 +127,45 @@
         </div>
 
         <button type="button" id="btn_bayar"
-            class="w-full bg-soft-teal text-white p-3.5 rounded-lg font-bold hover:opacity-90 transition opacity-50 cursor-not-allowed" disabled>
+            class="w-full bg-soft-teal text-white p-3 rounded-lg font-bold hover:opacity-90 transition opacity-50 cursor-not-allowed" disabled>
             Bayar
         </button>
     </div>
 </div>
 
-<style>
-    .pagination-custom nav div.hidden.sm\:flex-1 > div:first-child { display: none !important; }
-    .pagination-custom nav div.hidden.sm\:flex-1 > div:last-child { margin-left: auto; }
-</style>
+{{-- ================= MODAL KONFIRMASI OBAT KADALUARSA ================= --}}
+<div id="modalKadaluarsa" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center backdrop-blur-sm p-4">
+    <div class="bg-pure-white w-full max-w-md rounded-xl p-5 sm:p-6 shadow-2xl border border-border-color">
+        <div class="flex items-start gap-3 mb-4">
+            <div class="w-10 h-10 rounded-full bg-red-100 text-red-700 flex items-center justify-center shrink-0">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 3l10 18H2L12 3z"/><path d="M12 10v4"/><circle cx="12" cy="17.5" r=".5" fill="currentColor"/>
+                </svg>
+            </div>
+            <div>
+                <h3 class="m-0 text-base sm:text-lg font-bold text-dark-slate">Peringatan Obat Kadaluarsa</h3>
+                <p class="text-xs text-gray-text mt-0.5 mb-0">Pastikan kondisi fisik obat sebelum dijual</p>
+            </div>
+        </div>
+
+        <div class="bg-red-50 border border-red-200 rounded-lg p-3.5 text-xs sm:text-sm text-dark-slate mb-5 leading-relaxed">
+            Produk <strong id="mdlExpNama"></strong> di sistem tercatat sudah lewat tanggal kadaluarsa
+            (<strong id="mdlExpTanggal" class="text-red-700"></strong>).
+            Pastikan kemasan obat yang akan diserahkan adalah stok baru dan belum kadaluarsa.
+        </div>
+
+        <div class="flex justify-end gap-2.5">
+            <button type="button" onclick="tutupModalKadaluarsa()"
+                class="px-4 py-2 border border-border-color bg-pure-white rounded-lg text-sm font-semibold hover:bg-off-white transition">
+                Batal
+            </button>
+            <button type="button" onclick="konfirmasiTambahKadaluarsa()"
+                class="px-4 py-2 bg-muted-coral text-white rounded-lg text-sm font-bold hover:opacity-90 shadow-sm transition">
+                Ya, Tetap Tambahkan
+            </button>
+        </div>
+    </div>
+</div>
 
 <script>
 const $ = (id) => document.getElementById(id);
@@ -190,8 +234,42 @@ const keranjang = {};   // { id: { id, nama, harga, stok, qty } }
 const rupiah = (n) => 'Rp' + Math.round(n).toLocaleString('id-ID');
 let totalBelanja = 0; // Sesuaikan dengan variabel total belanja keranjang Anda
 
+function getUangDiterima() {
+    const el = document.getElementById('uang_diterima');
+    if (!el) return 0;
+    const bersih = el.value.replace(/\D/g, '');
+    return parseInt(bersih, 10) || 0;
+}
+
+function formatUangDiterima(el) {
+    const cursorPosition = el.selectionStart;
+    const oldLength = el.value.length;
+    
+    // Ambil hanya angka
+    const bersih = el.value.replace(/\D/g, '');
+    if (bersih) {
+        el.value = Number(bersih).toLocaleString('id-ID');
+    } else {
+        el.value = '';
+    }
+    
+    // Sesuaikan posisi kursor
+    const newLength = el.value.length;
+    const newCursor = Math.max(0, cursorPosition + (newLength - oldLength));
+    el.setSelectionRange(newCursor, newCursor);
+    
+    hitungKembalian();
+}
+
+function setUangPas() {
+    if (totalBelanja <= 0) return;
+    const el = document.getElementById('uang_diterima');
+    el.value = Number(totalBelanja).toLocaleString('id-ID');
+    hitungKembalian();
+}
+
 function hitungKembalian() {
-    const inputUang = parseFloat(document.getElementById('uang_diterima').value) || 0;
+    const inputUang = getUangDiterima();
     const kembalian = inputUang - totalBelanja;
     const kembalianEl = document.getElementById('kembalian_teks');
     const btnBayar = document.getElementById('btn_bayar'); // id tombol bayar
@@ -232,7 +310,10 @@ function renderKeranjang() {
     area.innerHTML = items.map(i => `
         <div class="flex justify-between items-start gap-3 py-3 border-b border-border-color">
             <div class="flex-1">
-                <div class="font-semibold">${i.nama}</div>
+                <div class="font-semibold">
+                    ${i.nama}
+                    ${i.kadaluarsa ? '<span class="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-red-100 text-red-700">Cek tanggal kemasan</span>' : ''}
+                </div>
                 <div class="text-xs text-gray-text">${i.qty} x ${rupiah(i.harga)}</div>
                 <div class="flex items-center gap-2 mt-2">
                     <button type="button" data-aksi="kurang" data-id="${i.id}" class="w-6 h-6 rounded border border-border-color font-bold">−</button>
@@ -250,10 +331,48 @@ function renderKeranjang() {
     hitungKembalian();
 }
 
+let itemKadaluarsaTertunda = null;
+
+function bukaModalKadaluarsa(d) {
+    itemKadaluarsaTertunda = d;
+    $('mdlExpNama').textContent = d.nama;
+    $('mdlExpTanggal').textContent = d.ed || '-';
+    $('modalKadaluarsa').classList.remove('hidden');
+}
+
+function tutupModalKadaluarsa() {
+    itemKadaluarsaTertunda = null;
+    $('modalKadaluarsa').classList.add('hidden');
+}
+
+function konfirmasiTambahKadaluarsa() {
+    if (itemKadaluarsaTertunda) {
+        tambahItem(itemKadaluarsaTertunda);
+    }
+    tutupModalKadaluarsa();
+}
+
+$('modalKadaluarsa')?.addEventListener('click', (e) => {
+    if (e.target.id === 'modalKadaluarsa') tutupModalKadaluarsa();
+});
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !$('modalKadaluarsa').classList.contains('hidden')) {
+        tutupModalKadaluarsa();
+    }
+});
+
 function tambahItem(d) {
     const id = d.id;
     if (!keranjang[id]) {
-        keranjang[id] = { id, nama: d.nama, harga: Number(d.harga), stok: Number(d.stok), qty: 0 };
+        keranjang[id] = {
+            id,
+            nama: d.nama,
+            harga: Number(d.harga),
+            stok: Number(d.stok),
+            kadaluarsa: d.kadaluarsa === '1' || d.kadaluarsa === true,
+            qty: 0
+        };
     }
     if (keranjang[id].qty >= keranjang[id].stok) {
         alert('Jumlah melebihi stok tersedia (' + keranjang[id].stok + ').');
@@ -266,7 +385,14 @@ function tambahItem(d) {
 // Tombol + di tabel produk (delegasi, tetap jalan setelah tabel diganti AJAX)
 $('areaProduk').addEventListener('click', (e) => {
     const btn = e.target.closest('.btn-tambah');
-    if (btn) tambahItem(btn.dataset);
+    if (!btn) return;
+
+    if (btn.dataset.kadaluarsa === '1' && !keranjang[btn.dataset.id]) {
+        bukaModalKadaluarsa({ ...btn.dataset });
+        return;
+    }
+
+    tambahItem(btn.dataset);
 });
 
 // Tombol di keranjang
@@ -291,7 +417,7 @@ btnBayar.addEventListener('click', async () => {
     const items = Object.values(keranjang).map(i => ({ obat_id: i.id, jumlah: i.qty }));
     if (!items.length) { alert('Keranjang masih kosong.'); return; }
 
-    const inputUang = parseFloat(document.getElementById('uang_diterima').value) || 0;
+    const inputUang = getUangDiterima();
     if (inputUang < totalBelanja) {
         alert('Nominal uang yang diterima kurang dari total belanja.');
         return;

@@ -30,7 +30,8 @@ class KelolaProdukTest extends TestCase
             'kode_obat' => 'OBT-001', 'nama_obat' => 'Paracetamol 500mg',
             'kategori_id' => $kategori->id, 'satuan' => 'Strip',
             'harga_beli' => 8000, 'margin' => 50, 'tipe_margin' => 'persen',
-            'stok' => 50, 'status' => 'tersedia',
+            'stok' => 50, 'tgl_kadaluarsa' => now()->addYear()->format('Y-m-d'),
+            'status' => 'tersedia',
         ], $ubah);
     }
 
@@ -152,13 +153,51 @@ class KelolaProdukTest extends TestCase
         $this->assertSame('Cukup', Obat::infoStok(300)['label']);
     }
 
+    public function test_batas_status_kadaluarsa(): void
+    {
+        $this->assertSame('Kadaluarsa', Obat::infoKadaluarsa(now()->subDay()->format('Y-m-d'))['label']);
+        $this->assertSame('Hampir kadaluarsa', Obat::infoKadaluarsa(now()->format('Y-m-d'))['label']);
+        $this->assertSame('Hampir kadaluarsa', Obat::infoKadaluarsa(now()->addDays(30)->format('Y-m-d'))['label']);
+        $this->assertSame('Aman', Obat::infoKadaluarsa(now()->addDays(31)->format('Y-m-d'))['label']);
+    }
+
+    public function test_validasi_dan_simpan_tgl_kadaluarsa(): void
+    {
+        $this->login();
+        $this->post('/obat', $this->dataObat(['tgl_kadaluarsa' => '']))
+            ->assertSessionHasErrors('tgl_kadaluarsa');
+
+        $tglBaru = now()->addMonths(6)->format('Y-m-d');
+        $this->post('/obat', $this->dataObat(['tgl_kadaluarsa' => $tglBaru]))
+            ->assertRedirect('/obat');
+
+        $obat = Obat::first();
+        $this->assertSame($tglBaru, $obat->tgl_kadaluarsa->format('Y-m-d'));
+
+        $tglUpdate = now()->addDays(15)->format('Y-m-d');
+        $this->put('/obat/' . $obat->id, $this->dataObat(['tgl_kadaluarsa' => $tglUpdate]))
+            ->assertRedirect('/obat');
+
+        $this->assertSame($tglUpdate, $obat->fresh()->tgl_kadaluarsa->format('Y-m-d'));
+    }
+
     /* ---------- Halaman ---------- */
 
     public function test_halaman_kelola_produk_menampilkan_kotak_ringkasan_dan_badge(): void
     {
         $this->login();
-        foreach ([['A', 50], ['B', 24], ['C', 10], ['D', 7]] as [$kode, $stok]) {
-            $this->post('/obat', $this->dataObat(['kode_obat' => $kode, 'nama_obat' => "Obat $kode", 'stok' => $stok]));
+        foreach ([
+            ['A', 50, now()->addDays(90)],
+            ['B', 24, now()->addDays(15)],
+            ['C', 10, now()->subDays(2)],
+            ['D', 7,  now()->addDays(60)],
+        ] as [$kode, $stok, $tgl]) {
+            $this->post('/obat', $this->dataObat([
+                'kode_obat' => $kode,
+                'nama_obat' => "Obat $kode",
+                'stok' => $stok,
+                'tgl_kadaluarsa' => $tgl->format('Y-m-d'),
+            ]));
         }
 
         $this->get('/obat')->assertOk()
@@ -166,7 +205,14 @@ class KelolaProdukTest extends TestCase
             ->assertSee('Stok menipis')->assertSee('Hampir habis')
             ->assertSee('50 (Cukup)', false)->assertSee('24 (Menipis)', false)
             ->assertSee('10 (Menipis)', false)->assertSee('7 (Hampir habis)', false)
+            ->assertSee('Hampir kadaluarsa')->assertSee('Kadaluarsa')->assertSee('Aman')
             ->assertSee('Rp12.000', false)->assertSee('50%', false);
+
+        $this->get('/kasir')->assertOk()
+            ->assertSee('Hampir kadaluarsa')
+            ->assertSee('Kadaluarsa')
+            ->assertSee('data-kadaluarsa="1"', false)
+            ->assertSee('Peringatan Obat Kadaluarsa');
     }
 
     public function test_pencarian_dan_filter_kategori(): void

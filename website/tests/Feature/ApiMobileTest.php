@@ -1,0 +1,565 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Kategori;
+use App\Models\Obat;
+use App\Models\Transaksi;
+use App\Models\User;
+use Carbon\Carbon;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
+use Laravel\Sanctum\Sanctum;
+use Tests\TestCase;
+
+class ApiMobileTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private function buatObat(array $ubah = []): Obat
+    {
+        $kategori = Kategori::firstOrCreate(['nama_kategori' => 'Analgesik']);
+
+        return Obat::create(array_merge([
+            'kategori_id'    => $kategori->id,
+            'kode_obat'      => 'OBT-' . strtoupper(uniqid()),
+            'nama_obat'      => 'Paracetamol 500mg',
+            'satuan'         => 'Strip',
+            'harga_beli'     => 8000,
+            'margin'         => 50,
+            'tipe_margin'    => 'persen',
+            'harga_jual'     => 12000,
+            'stok'           => 30,
+            'tgl_kadaluarsa' => now()->addMonths(6)->format('Y-m-d'),
+            'status'         => 'tersedia',
+        ], $ubah));
+    }
+
+    private function loginSebagaiOwner(array $ubah = []): User
+    {
+        $owner = User::create(array_merge([
+            'nama'     => 'Owner Apotek',
+            'username' => 'owner_' . uniqid(),
+            'password' => Hash::make('rahasia123'),
+            'role'     => 'owner',
+            'status'   => 'aktif',
+        ], $ubah));
+
+        Sanctum::actingAs($owner);
+
+        return $owner;
+    }
+
+    public function test_endpoint_owner_menolak_akses_tanpa_token(): void
+    {
+        $this->getJson('/api/dashboard')->assertStatus(401);
+        $this->get('/api/dashboard')->assertStatus(401)->assertJson(['message' => 'Unauthenticated.']);
+        $this->getJson('/api/stok')->assertStatus(401);
+        $this->putJson('/api/obat/1', ['harga_jual' => 1000, 'status' => 'tersedia'])->assertStatus(401);
+        $this->getJson('/api/riwayat')->assertStatus(401);
+        $this->getJson('/api/profil')->assertStatus(401);
+        $this->putJson('/api/profil', ['nama_apotek' => 'Tes', 'alamat' => 'Jl. Tes'])->assertStatus(401);
+        $this->getJson('/api/karyawan')->assertStatus(401);
+        $this->postJson('/api/karyawan', [])->assertStatus(401);
+        $this->postJson('/api/logout-mobile')->assertStatus(401);
+    }
+
+    public function test_endpoint_owner_menolak_role_non_owner_dan_owner_nonaktif(): void
+    {
+        $karyawan = User::create([
+            'nama'     => 'Kasir',
+            'username' => 'kasir_tok',
+            'password' => Hash::make('rahasia123'),
+            'role'     => 'karyawan',
+            'status'   => 'aktif',
+        ]);
+        Sanctum::actingAs($karyawan);
+        $this->getJson('/api/dashboard')->assertStatus(403)->assertJson(['success' => false]);
+
+        $ownerNonaktif = User::create([
+            'nama'     => 'Owner Nonaktif',
+            'username' => 'owner_off',
+            'password' => Hash::make('rahasia123'),
+            'role'     => 'owner',
+            'status'   => 'nonaktif',
+        ]);
+        Sanctum::actingAs($ownerNonaktif);
+        $this->getJson('/api/dashboard')->assertStatus(403)->assertJson(['success' => false]);
+    }
+
+    public function test_login_mobile_menerbitkan_token_sanctum_dan_logout_mencabut_token(): void
+    {
+        $owner = User::create([
+            'nama'     => 'Owner Utama',
+            'username' => 'owner_utama',
+            'password' => Hash::make('rahasia123'),
+            'role'     => 'owner',
+            'status'   => 'aktif',
+        ]);
+
+        $login = $this->postJson('/api/login-mobile', [
+            'username' => 'owner_utama',
+            'password' => 'rahasia123',
+        ])->assertOk()->assertJsonStructure([
+            'success',
+            'message',
+            'data' => ['id', 'nama', 'token'],
+        ]);
+
+        $token = $login->json('data.token');
+        $this->assertNotEmpty($token);
+        $this->assertDatabaseCount('personal_access_tokens', 1);
+
+        $this->withToken($token)
+            ->getJson('/api/dashboard')
+            ->assertOk()
+            ->assertJson(['success' => true]);
+
+        $this->withToken($token)
+            ->postJson('/api/logout-mobile')
+            ->assertOk()
+            ->assertJson(['success' => true]);
+
+        $this->assertDatabaseCount('personal_access_tokens', 0);
+
+        // Reset guard cache dalam proses test yang sama agar verifikasi ulang token ke DB
+        $this->app['auth']->forgetGuards();
+
+        $this->withToken($token)
+            ->getJson('/api/dashboard')
+            ->assertStatus(401);
+    }
+
+    public function test_dashboard_dan_stok_memakai_batas_stok_yang_konsisten(): void
+    {
+        $this->loginSebagaiOwner();
+
+        $this->buatObat(['kode_obat' => 'OBT-001', 'nama_obat' => 'Zink Tablet', 'stok' => 9, 'status' => 'tersedia']);
+        $this->buatObat(['kode_obat' => 'OBT-002', 'nama_obat' => 'Amoxicillin', 'stok' => 10, 'status' => 'tersedia']);
+        $this->buatObat(['kode_obat' => 'OBT-003', 'nama_obat' => 'Cetirizine', 'stok' => 24, 'status' => 'tersedia']);
+        $this->buatObat(['kode_obat' => 'OBT-004', 'nama_obat' => 'Vitamin C', 'stok' => 25, 'status' => 'tersedia']);
+        $this->buatObat(['kode_obat' => 'OBT-005', 'nama_obat' => 'Obat Nonaktif', 'stok' => 2, 'status' => 'tidak']);
+
+        $dashboard = $this->getJson('/api/dashboard')->assertOk()->json('data');
+        $this->assertCount(1, $dashboard['peringatan_obat']);
+        $this->assertSame('OBT-001', $dashboard['peringatan_obat'][0]['kode_obat']);
+
+        $stokData = $this->getJson('/api/stok')->assertOk()->json('data');
+        $statusByKode = collect($stokData)->pluck('status_stok', 'kode_obat')->all();
+
+        $this->assertSame('Hampir habis', $statusByKode['OBT-001']);
+        $this->assertSame('Menipis', $statusByKode['OBT-002']);
+        $this->assertSame('Menipis', $statusByKode['OBT-003']);
+        $this->assertSame('Cukup', $statusByKode['OBT-004']);
+
+        // Terurut berdasarkan nama_obat secara alfabetis
+        $this->assertSame('Amoxicillin', $stokData[0]['nama_obat']);
+    }
+
+    public function test_stok_mendukung_pencarian_nama_dan_kode_obat(): void
+    {
+        $this->loginSebagaiOwner();
+
+        $this->buatObat(['kode_obat' => 'OBT-101', 'nama_obat' => 'Paracetamol']);
+        $this->buatObat(['kode_obat' => 'OBT-202', 'nama_obat' => 'Ibuprofen']);
+
+        $byKode = $this->getJson('/api/stok?search=OBT-202')->assertOk()->json('data');
+        $this->assertCount(1, $byKode);
+        $this->assertSame('Ibuprofen', $byKode[0]['nama_obat']);
+
+        $byNama = $this->getJson('/api/stok?search=Paracet')->assertOk()->json('data');
+        $this->assertCount(1, $byNama);
+        $this->assertSame('OBT-101', $byNama[0]['kode_obat']);
+    }
+
+    public function test_login_mobile_memvalidasi_role_dan_status_aktif(): void
+    {
+        User::create([
+            'nama'     => 'Owner Aktif',
+            'username' => 'owner_aktif',
+            'password' => Hash::make('rahasia123'),
+            'role'     => 'owner',
+            'status'   => 'aktif',
+        ]);
+
+        User::create([
+            'nama'     => 'Owner Nonaktif',
+            'username' => 'owner_nonaktif',
+            'password' => Hash::make('rahasia123'),
+            'role'     => 'owner',
+            'status'   => 'nonaktif',
+        ]);
+
+        User::create([
+            'nama'     => 'Kasir Aktif',
+            'username' => 'kasir_aktif',
+            'password' => Hash::make('rahasia123'),
+            'role'     => 'karyawan',
+            'status'   => 'aktif',
+        ]);
+
+        $this->postJson('/api/login-mobile', [
+            'username' => 'owner_aktif',
+            'password' => 'rahasia123',
+        ])->assertOk()->assertJson([
+            'success' => true,
+            'data'    => ['nama' => 'Owner Aktif'],
+        ]);
+
+        $this->postJson('/api/login-mobile', [
+            'username' => 'owner_nonaktif',
+            'password' => 'rahasia123',
+        ])->assertOk()->assertJson([
+            'success' => false,
+            'message' => 'Akun owner sedang dinonaktifkan',
+        ]);
+
+        $this->postJson('/api/login-mobile', [
+            'username' => 'kasir_aktif',
+            'password' => 'rahasia123',
+        ])->assertOk()->assertJson([
+            'success' => false,
+        ]);
+    }
+
+    public function test_update_obat_cepat_validasi_dan_sinkronisasi_margin(): void
+    {
+        $this->loginSebagaiOwner();
+
+        $obat = $this->buatObat([
+            'harga_beli'  => 8000,
+            'margin'      => 50,
+            'tipe_margin' => 'persen',
+            'harga_jual'  => 12000,
+            'status'      => 'tersedia',
+        ]);
+
+        // Nilai negatif harus ditolak
+        $this->putJson("/api/obat/{$obat->id}", [
+            'harga_jual' => -500,
+            'status'     => 'tersedia',
+        ])->assertStatus(422);
+
+        // Jika hanya status berubah dan harga_jual tetap, margin persen dipertahankan
+        $this->putJson("/api/obat/{$obat->id}", [
+            'harga_jual' => 12000,
+            'status'     => 'tidak',
+        ])->assertOk();
+
+        $obat->refresh();
+        $this->assertSame('tidak', $obat->status);
+        $this->assertSame('persen', $obat->tipe_margin);
+        $this->assertEquals(50.0, $obat->margin);
+
+        // Jika harga_jual diubah, margin disinkronkan ke nominal
+        $this->putJson("/api/obat/{$obat->id}", [
+            'harga_jual' => 15000,
+            'status'     => 'tersedia',
+        ])->assertOk();
+
+        $obat->refresh();
+        $this->assertSame(15000, (int) $obat->harga_jual);
+        $this->assertSame('nominal', $obat->tipe_margin);
+        $this->assertEquals(7000.0, $obat->margin);
+    }
+
+    public function test_riwayat_memvalidasi_tanggal_dan_mengembalikan_total(): void
+    {
+        $this->loginSebagaiOwner();
+
+        $kasir = User::create([
+            'nama'     => 'Kasir 1',
+            'username' => 'kasir1',
+            'password' => Hash::make('rahasia123'),
+            'role'     => 'karyawan',
+            'status'   => 'aktif',
+        ]);
+
+        $t1 = Transaksi::create([
+            'no_transaksi' => 'TRX-001',
+            'user_id'      => $kasir->id,
+            'total_harga'  => 10000,
+            'total_bayar'  => 10000,
+            'kembalian'    => 0,
+        ]);
+        $t1->forceFill(['created_at' => '2026-11-10 10:00:00'])->save();
+
+        $t2 = Transaksi::create([
+            'no_transaksi' => 'TRX-002',
+            'user_id'      => $kasir->id,
+            'total_harga'  => 20000,
+            'total_bayar'  => 20000,
+            'kembalian'    => 0,
+        ]);
+        $t2->forceFill(['created_at' => '2026-11-15 10:00:00'])->save();
+
+        $this->getJson('/api/riwayat?tanggal_mulai=bukan-tanggal')
+            ->assertStatus(422);
+
+        $this->getJson('/api/riwayat?tanggal_mulai=2026-11-15&tanggal_selesai=2026-11-10')
+            ->assertStatus(422);
+
+        $this->getJson('/api/riwayat?tanggal_mulai=2026-11-12')
+            ->assertOk()
+            ->assertJson(['success' => true, 'total' => 1])
+            ->assertJsonPath('data.0.no_transaksi', 'TRX-002');
+
+        $this->getJson('/api/riwayat?tanggal_mulai=2026-11-10&tanggal_selesai=2026-11-15')
+            ->assertOk()
+            ->assertJson(['success' => true, 'total' => 2]);
+    }
+
+    public function test_tambah_karyawan_mengisi_status_aktif_secara_eksplisit(): void
+    {
+        $this->loginSebagaiOwner();
+
+        $this->postJson('/api/karyawan', [
+            'nama'     => 'Budi Kasir',
+            'username' => 'budi_kasir',
+            'password' => 'rahasia123',
+        ])->assertStatus(201)->assertJson(['success' => true]);
+
+        $this->assertDatabaseHas('users', [
+            'username' => 'budi_kasir',
+            'role'     => 'karyawan',
+            'status'   => 'aktif',
+        ]);
+    }
+
+    public function test_dashboard_dan_stok_menyertakan_peringatan_dan_status_kadaluarsa(): void
+    {
+        $this->loginSebagaiOwner();
+
+        $this->buatObat([
+            'kode_obat'      => 'OBT-EXP1',
+            'nama_obat'      => 'Obat Kadaluarsa',
+            'tgl_kadaluarsa' => now()->subDays(3)->format('Y-m-d'),
+            'status'         => 'tersedia',
+        ]);
+        $this->buatObat([
+            'kode_obat'      => 'OBT-EXP2',
+            'nama_obat'      => 'Obat Hampir Kadaluarsa',
+            'tgl_kadaluarsa' => now()->addDays(15)->format('Y-m-d'),
+            'status'         => 'tersedia',
+        ]);
+        $this->buatObat([
+            'kode_obat'      => 'OBT-AMAN',
+            'nama_obat'      => 'Obat Aman',
+            'tgl_kadaluarsa' => now()->addDays(90)->format('Y-m-d'),
+            'status'         => 'tersedia',
+        ]);
+        $this->buatObat([
+            'kode_obat'      => 'OBT-OFF',
+            'nama_obat'      => 'Obat Nonaktif Kadaluarsa',
+            'tgl_kadaluarsa' => now()->subDays(1)->format('Y-m-d'),
+            'status'         => 'tidak',
+        ]);
+
+        $dashboard = $this->getJson('/api/dashboard')->assertOk()->json('data');
+        $kodesKadaluarsa = collect($dashboard['peringatan_kadaluarsa'])->pluck('status_kadaluarsa', 'kode_obat')->all();
+
+        $this->assertCount(2, $kodesKadaluarsa);
+        $this->assertSame('Kadaluarsa', $kodesKadaluarsa['OBT-EXP1']);
+        $this->assertSame('Hampir kadaluarsa', $kodesKadaluarsa['OBT-EXP2']);
+        $this->assertArrayNotHasKey('OBT-AMAN', $kodesKadaluarsa);
+        $this->assertArrayNotHasKey('OBT-OFF', $kodesKadaluarsa);
+
+        $stokData = $this->getJson('/api/stok')->assertOk()->json('data');
+        $statusStokKadaluarsa = collect($stokData)->pluck('status_kadaluarsa', 'kode_obat')->all();
+
+        $this->assertSame('Kadaluarsa', $statusStokKadaluarsa['OBT-EXP1']);
+        $this->assertSame('Hampir kadaluarsa', $statusStokKadaluarsa['OBT-EXP2']);
+        $this->assertSame('Aman', $statusStokKadaluarsa['OBT-AMAN']);
+    }
+
+    public function test_dashboard_mendukung_filter_periode_harian_mingguan_bulanan(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-11-18 10:00:00'));
+
+        try {
+            $this->loginSebagaiOwner();
+
+            $kasir = User::create([
+                'nama'     => 'Kasir',
+                'username' => 'kasir_periode',
+                'password' => Hash::make('rahasia123'),
+                'role'     => 'karyawan',
+                'status'   => 'aktif',
+            ]);
+
+            $buatTrx = function (string $kode, int $total, string $waktu) use ($kasir): void {
+                $t = Transaksi::create([
+                    'no_transaksi' => $kode,
+                    'user_id'      => $kasir->id,
+                    'total_harga'  => $total,
+                    'total_bayar'  => $total,
+                    'kembalian'    => 0,
+                ]);
+                $t->forceFill(['created_at' => $waktu])->save();
+            };
+
+            $buatTrx('TRX-HARI', 10000, '2026-11-18 08:30:00');
+            $buatTrx('TRX-MINGGU', 25000, '2026-11-16 14:00:00');
+            $buatTrx('TRX-BULAN', 40000, '2026-11-05 12:00:00');
+            $buatTrx('TRX-LALU', 99000, '2026-10-25 12:00:00');
+
+            $this->getJson('/api/dashboard?periode=harian')
+                ->assertOk()
+                ->assertJsonPath('data.periode', 'harian')
+                ->assertJsonPath('data.total_penjualan', 10000)
+                ->assertJsonPath('data.jumlah_transaksi', 1);
+
+            $this->getJson('/api/dashboard?periode=mingguan')
+                ->assertOk()
+                ->assertJsonPath('data.periode', 'mingguan')
+                ->assertJsonPath('data.total_penjualan', 35000)
+                ->assertJsonPath('data.jumlah_transaksi', 2);
+
+            $this->getJson('/api/dashboard?periode=bulanan')
+                ->assertOk()
+                ->assertJsonPath('data.periode', 'bulanan')
+                ->assertJsonPath('data.total_penjualan', 75000)
+                ->assertJsonPath('data.jumlah_transaksi', 3);
+
+            $this->getJson('/api/dashboard?periode=keseluruhan')
+                ->assertOk()
+                ->assertJsonPath('data.periode', 'keseluruhan')
+                ->assertJsonPath('data.periode_grafik', 'harian')
+                ->assertJsonPath('data.total_penjualan', 174000)
+                ->assertJsonPath('data.jumlah_transaksi', 4);
+
+            $this->getJson('/api/dashboard?periode=tahunan')
+                ->assertStatus(422);
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
+
+    public function test_dashboard_mengembalikan_grafik_penjualan_harian_mingguan_bulanan(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-11-18 10:00:00'));
+
+        try {
+            $this->loginSebagaiOwner();
+
+            $kasir = User::create([
+                'nama'     => 'Kasir Grafik',
+                'username' => 'kasir_grafik',
+                'password' => Hash::make('rahasia123'),
+                'role'     => 'karyawan',
+                'status'   => 'aktif',
+            ]);
+
+            $buatTrx = function (string $kode, int $total, string $waktu) use ($kasir): void {
+                $t = Transaksi::create([
+                    'no_transaksi' => $kode,
+                    'user_id'      => $kasir->id,
+                    'total_harga'  => $total,
+                    'total_bayar'  => $total,
+                    'kembalian'    => 0,
+                ]);
+                $t->forceFill(['created_at' => $waktu])->save();
+            };
+
+            $buatTrx('TRX-G1', 15000, '2026-11-18 09:00:00');
+            $buatTrx('TRX-G2', 20000, '2026-11-16 14:00:00');
+            $buatTrx('TRX-G3', 50000, '2026-10-15 11:00:00');
+
+            // Harian: 7 hari terakhir (12/11 - 18/11)
+            $resHarian = $this->getJson('/api/dashboard?periode=harian&periode_grafik=harian')
+                ->assertOk()
+                ->assertJsonPath('data.periode_grafik', 'harian')
+                ->json('data.grafik_penjualan');
+            $this->assertCount(7, $resHarian);
+            $this->assertSame('18/11', $resHarian[6]['label']);
+            $this->assertSame(15000, $resHarian[6]['total']);
+            $this->assertSame(1, $resHarian[6]['jumlah_transaksi']);
+
+            // Mingguan: 6 minggu terakhir (minggu ini berisi 15000 + 20000 = 35000)
+            $resMingguan = $this->getJson('/api/dashboard?periode=harian&periode_grafik=mingguan')
+                ->assertOk()
+                ->assertJsonPath('data.periode', 'harian')
+                ->assertJsonPath('data.total_penjualan', 15000)
+                ->assertJsonPath('data.periode_grafik', 'mingguan')
+                ->json('data.grafik_penjualan');
+            $this->assertCount(6, $resMingguan);
+            $this->assertSame('16/11', $resMingguan[5]['label']);
+            $this->assertSame(35000, $resMingguan[5]['total']);
+            $this->assertSame(2, $resMingguan[5]['jumlah_transaksi']);
+
+            // Bulanan: 6 bulan terakhir (Jun - Nov)
+            $resBulanan = $this->getJson('/api/dashboard?periode_grafik=bulanan')
+                ->assertOk()
+                ->json('data.grafik_penjualan');
+            $this->assertCount(6, $resBulanan);
+            $this->assertSame('Okt', $resBulanan[4]['label']);
+            $this->assertSame(50000, $resBulanan[4]['total']);
+            $this->assertSame('Nov', $resBulanan[5]['label']);
+            $this->assertSame(35000, $resBulanan[5]['total']);
+
+            $this->getJson('/api/dashboard?periode_grafik=tidak_valid')
+                ->assertStatus(422);
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
+
+    public function test_stok_mendukung_paginasi_dan_filter_kategori(): void
+    {
+        $this->loginSebagaiOwner();
+
+        $katA = Kategori::create(['nama_kategori' => 'Analgesik']);
+        $katB = Kategori::create(['nama_kategori' => 'Vitamin']);
+
+        for ($i = 1; $i <= 52; $i++) {
+            $this->buatObat([
+                'kategori_id'    => $katA->id,
+                'kode_obat'      => sprintf('OBT-%03d', $i),
+                'nama_obat'      => sprintf('Obat %03d', $i),
+                'stok'           => $i <= 3 ? 5 : 30,
+                'tgl_kadaluarsa' => ($i === 1 ? now()->subDay() : now()->addMonths(6))->format('Y-m-d'),
+            ]);
+        }
+
+        $this->buatObat([
+            'kategori_id' => $katB->id,
+            'kode_obat'   => 'VIT-001',
+            'nama_obat'   => 'Vitamin C 500mg',
+            'stok'        => 40,
+        ]);
+
+        // Total 53 obat -> halaman 1 berisi 50, halaman 2 berisi 3
+        $hal1 = $this->getJson('/api/stok?page=1')
+            ->assertOk()
+            ->assertJson([
+                'success'                    => true,
+                'current_page'               => 1,
+                'last_page'                  => 2,
+                'total'                      => 53,
+                'hampir_habis_total'         => 3,
+                'perhatian_kadaluarsa_total' => 1,
+                'kategoris'                  => ['Analgesik', 'Vitamin'],
+            ]);
+        $this->assertCount(50, $hal1->json('data'));
+
+        $hal2 = $this->getJson('/api/stok?page=2')
+            ->assertOk()
+            ->assertJson([
+                'current_page' => 2,
+                'last_page'    => 2,
+            ]);
+        $this->assertCount(3, $hal2->json('data'));
+
+        // Filter kategori Vitamin tetap mengembalikan daftar kategori lengkap
+        $filterKat = $this->getJson('/api/stok?kategori=Vitamin')
+            ->assertOk()
+            ->assertJson([
+                'total'                      => 1,
+                'last_page'                  => 1,
+                'hampir_habis_total'         => 0,
+                'perhatian_kadaluarsa_total' => 0,
+                'kategoris'                  => ['Analgesik', 'Vitamin'],
+            ]);
+        $this->assertSame('VIT-001', $filterKat->json('data.0.kode_obat'));
+    }
+}

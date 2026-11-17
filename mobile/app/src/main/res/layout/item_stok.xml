@@ -47,6 +47,15 @@
                 android:text="Rp 5.000"
                 android:textColor="#208B7A"
                 android:textSize="12sp" />
+
+            <TextView
+                android:id="@+id/tvKadaluarsa"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="Exp: 31/12/2026 • Aman"
+                android:textColor="#757575"
+                android:textSize="11sp" />
         </LinearLayout>
 
         <TextView

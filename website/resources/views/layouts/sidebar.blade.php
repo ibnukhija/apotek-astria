@@ -1,36 +1,44 @@
-<div class="w-[250px] bg-pure-white border-r border-border-color p-5 flex flex-col shrink-0">
-    <div class="flex items-center gap-2.5 mb-10 font-bold text-soft-teal text-lg">
-        <div class="p-1.5 rounded-md text-white">
-            <img src="{{ asset('img/logo-128.png') }}" alt="Logo" class="w-11 h-11">
+<aside id="appSidebar"
+    class="fixed inset-y-0 left-0 z-40 w-60 lg:w-56 xl:w-60 bg-pure-white border-r border-border-color p-4 flex flex-col shrink-0 transform -translate-x-full lg:translate-x-0 lg:static transition-transform duration-200 ease-out">
+    <div class="flex items-center justify-between gap-2 mb-6">
+        <div class="flex items-center gap-2 font-bold text-soft-teal text-base leading-tight">
+            <img src="{{ asset('img/logo-ular-nobg.png') }}" alt="Logo" class="w-10 h-10 shrink-0">
+            <div>
+                Astria Farma<br>
+                <span class="text-[11px] text-gray-text font-normal">Apotek Astria 2</span>
+            </div>
         </div>
-        <div>Astria Farma<br><span class="text-[11px] text-gray-text font-normal">Apotek Astria 2</span></div>
+        <button type="button" onclick="tutupSidebar()" aria-label="Tutup menu"
+            class="lg:hidden p-1.5 rounded-lg text-gray-text hover:text-dark-slate hover:bg-off-white text-xl leading-none">&times;</button>
     </div>
-    <div class="text-xs text-gray-text font-semibold mb-2.5">OPERASIONAL</div>
+
+    <div class="text-[11px] text-gray-text font-semibold tracking-wider mb-2 px-1">OPERASIONAL</div>
 
     <!-- Link Navigasi -->
-    <!-- Logika sederhana: Beri warna Soft Teal jika route sedang aktif -->
-    <a href="{{ route('kasir.index') }}" class="block p-3 mb-2 rounded-lg {{ request()->routeIs('kasir.index') ? 'font-bold bg-[#E8F4F2] text-soft-teal' : 'font-medium text-gray-text hover:bg-off-white' }} transition">Kasir</a>
-    <a href="{{ route('kasir.riwayat') }}" 
-       class="flex items-center gap-3 px-4 py-3 mb-2 rounded-lg text-sm font-semibold transition {{ request()->routeIs('kasir.riwayat') ? 'bg-[#E8F4F2] text-soft-teal' : 'text-gray-text hover:bg-off-white' }}">
-        Riwayat Transaksi
-    </a>
-    <a href="{{ route('obat.index') }}" class="block p-3 mb-2 rounded-lg {{ request()->routeIs('obat.*') ? 'font-bold bg-[#E8F4F2] text-soft-teal' : 'font-medium text-gray-text hover:bg-off-white' }} transition">Kelola Produk</a>
-    <a href="{{ route('kategori.index') }}" class="block p-3 mb-2 rounded-lg {{ request()->routeIs('kategori.*') ? 'font-bold bg-[#E8F4F2] text-soft-teal' : 'font-medium text-gray-text hover:bg-off-white' }} transition">Kelola Kategori</a>
+    <nav class="flex-1 overflow-y-auto space-y-1">
+        <a href="{{ route('kasir.index') }}" class="block px-3 py-2.5 rounded-lg text-sm {{ request()->routeIs('kasir.index') ? 'font-bold bg-[#E8F4F2] text-soft-teal' : 'font-medium text-gray-text hover:bg-off-white' }} transition">Kasir</a>
+        <a href="{{ route('kasir.riwayat') }}" class="block px-3 py-2.5 rounded-lg text-sm {{ request()->routeIs('kasir.riwayat') ? 'font-bold bg-[#E8F4F2] text-soft-teal' : 'font-medium text-gray-text hover:bg-off-white' }} transition">Riwayat Transaksi</a>
+        <a href="{{ route('obat.index') }}" class="block px-3 py-2.5 rounded-lg text-sm {{ request()->routeIs('obat.*') ? 'font-bold bg-[#E8F4F2] text-soft-teal' : 'font-medium text-gray-text hover:bg-off-white' }} transition">Kelola Produk</a>
+        <a href="{{ route('kategori.index') }}" class="block px-3 py-2.5 rounded-lg text-sm {{ request()->routeIs('kategori.*') ? 'font-bold bg-[#E8F4F2] text-soft-teal' : 'font-medium text-gray-text hover:bg-off-white' }} transition">Kelola Kategori</a>
+    </nav>
 
-    <div class="mt-auto pt-5 border-t border-border-color flex flex-col gap-4">
+    <div class="mt-auto pt-4 border-t border-border-color flex flex-col gap-3">
         <div class="flex items-center gap-2.5">
-            <div class="w-10 h-10 bg-[#E8F4F2] rounded-full flex items-center justify-center text-soft-teal font-bold text-base uppercase">
+            <div class="w-9 h-9 bg-[#E8F4F2] rounded-full flex items-center justify-center text-soft-teal font-bold text-sm uppercase shrink-0">
                 {{ Auth::check() ? substr(Auth::user()->nama, 0, 1) : 'U' }}
             </div>
-            <div class="text-sm font-semibold leading-tight">{{ Auth::check() ? Auth::user()->nama : 'User' }}<br><span class="text-xs text-gray-text font-normal">Akun Karyawan</span></div>
+            <div class="text-sm font-semibold leading-tight min-w-0 truncate">
+                {{ Auth::check() ? Auth::user()->nama : 'User' }}<br>
+                <span class="text-xs text-gray-text font-normal">Akun Karyawan</span>
+            </div>
         </div>
 
         <!-- Tombol Logout -->
         <form method="POST" action="{{ route('logout') }}">
             @csrf
-            <button type="submit" class="w-full bg-muted-coral text-white text-center p-3.5 rounded-lg font-bold text-sm hover:opacity-90 transition shadow-sm">
+            <button type="submit" class="w-full bg-muted-coral text-white text-center py-2.5 px-3 rounded-lg font-bold text-sm hover:opacity-90 transition shadow-sm">
                 Logout Sistem
             </button>
         </form>
     </div>
-</div>
+</aside>

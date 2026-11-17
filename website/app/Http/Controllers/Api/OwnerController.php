@@ -53,6 +53,7 @@ class OwnerController extends Controller
         $user->username = $v['username'];
         $user->password = Hash::make($v['password']);
         $user->role     = 'karyawan';
+        $user->status   = 'aktif';
         $user->save();
 
         return response()->json(['success' => true, 'message' => 'Akun karyawan ditambahkan'], 201);
