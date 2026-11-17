@@ -27,6 +27,7 @@ object ApiConfig {
     const val URL_PROFIL = "$BASE_URL/profil"
     const val URL_KARYAWAN = "$BASE_URL/karyawan"
     const val URL_NOTIFIKASI = "$BASE_URL/notifikasi"
+    const val URL_NOTIFIKASI_TES = "$URL_NOTIFIKASI/tes"
 
     const val PREF_SESI = "SesiApotek"
     const val KEY_LOGGED_IN = "IS_LOGGED_IN"

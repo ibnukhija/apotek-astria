@@ -129,7 +129,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:backgroundTint="#FFFFFF"
-                android:text="Preferensi Notifikasi Stok     ›"
+                android:text="Preferensi Notifikasi     ›"
                 android:textColor="#333333" />
 
             <Button
@@ -548,13 +548,58 @@
                     android:layout_height="wrap_content"
                     android:text="Notifikasi stok menipis"
                     android:textColor="#333333"
-                    android:textSize="14sp" />
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="Peringatan jika stok turun hingga batas minimum."
+                    android:textColor="#777777"
+                    android:textSize="11sp" />
+
+                <Switch
+                    android:id="@+id/switchNotifKadaluarsa"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:text="Notifikasi H-7 &amp; kadaluarsa"
+                    android:textColor="#333333"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="Pengingat obat mendekati expired (retur supplier) dan sudah expired (musnahkan)."
+                    android:textColor="#777777"
+                    android:textSize="11sp" />
+
+                <Switch
+                    android:id="@+id/switchNotifRusak"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:text="Notifikasi obat rusak &amp; stok opname"
+                    android:textColor="#333333"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="Info langsung saat kasir mencatat obat rusak beserta penyebab atau selisih stok opname."
+                    android:textColor="#777777"
+                    android:textSize="11sp" />
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="20dp"
-                    android:text="Batas minimum stok"
+                    android:text="Batas minimum stok (notifikasi stok menipis)"
                     android:textColor="#555555"
                     android:textSize="12sp" />
 
@@ -574,7 +619,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="20dp"
-                    android:text="Jam pengingat harian"
+                    android:text="Jam ringkasan harian"
                     android:textColor="#555555"
                     android:textSize="12sp" />
 
@@ -596,6 +641,16 @@
                     android:backgroundTint="#2A9D8F"
                     android:text="SIMPAN"
                     android:textColor="#FFFFFF"
+                    android:textStyle="bold" />
+
+                <Button
+                    android:id="@+id/btnTesNotifikasi"
+                    android:layout_width="match_parent"
+                    android:layout_height="44dp"
+                    android:layout_marginTop="10dp"
+                    android:backgroundTint="#E0F2EF"
+                    android:text="KIRIM NOTIFIKASI UJI"
+                    android:textColor="#20796F"
                     android:textStyle="bold" />
             </LinearLayout>
         </LinearLayout>

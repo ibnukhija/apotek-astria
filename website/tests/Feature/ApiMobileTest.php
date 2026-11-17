@@ -5,11 +5,16 @@ namespace Tests\Feature;
 use App\Models\DetailTransaksi;
 use App\Models\Kategori;
 use App\Models\Obat;
+use App\Models\PengaturanNotifikasi;
 use App\Models\Transaksi;
 use App\Models\User;
+use App\Services\KondisiStokService;
+use App\Services\NotifikasiStokService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Kreait\Firebase\Messaging\CloudMessage;
+use Kreait\Laravel\Firebase\Facades\Firebase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -673,25 +678,31 @@ class ApiMobileTest extends TestCase
             ->assertJson([
                 'success' => true,
                 'data'    => [
-                    'aktif'         => true,
-                    'batas_stok'    => 10,
-                    'jam_ringkasan' => null,
+                    'aktif'            => true,
+                    'notif_kadaluarsa' => true,
+                    'notif_rusak'      => true,
+                    'batas_stok'       => 10,
+                    'jam_ringkasan'    => null,
                 ],
             ]);
 
         $this->putJson('/api/notifikasi', [
-            'aktif'         => false,
-            'batas_stok'    => 15,
-            'jam_ringkasan' => '09:30',
-            'fcm_token'     => 'token-fcm-contoh',
+            'aktif'            => false,
+            'notif_kadaluarsa' => false,
+            'notif_rusak'      => true,
+            'batas_stok'       => 15,
+            'jam_ringkasan'    => '09:30',
+            'fcm_token'        => 'token-fcm-contoh',
         ])->assertOk()->assertJson(['success' => true]);
 
         $this->assertDatabaseHas('pengaturan_notifikasi', [
-            'user_id'       => $owner->id,
-            'aktif'         => 0,
-            'batas_stok'    => 15,
-            'jam_ringkasan' => '09:30',
-            'fcm_token'     => 'token-fcm-contoh',
+            'user_id'          => $owner->id,
+            'aktif'            => 0,
+            'notif_kadaluarsa' => 0,
+            'notif_rusak'      => 1,
+            'batas_stok'       => 15,
+            'jam_ringkasan'    => '09:30',
+            'fcm_token'        => 'token-fcm-contoh',
         ]);
 
         $this->getJson('/api/notifikasi')
@@ -699,9 +710,11 @@ class ApiMobileTest extends TestCase
             ->assertJson([
                 'success' => true,
                 'data'    => [
-                    'aktif'         => false,
-                    'batas_stok'    => 15,
-                    'jam_ringkasan' => '09:30',
+                    'aktif'            => false,
+                    'notif_kadaluarsa' => false,
+                    'notif_rusak'      => true,
+                    'batas_stok'       => 15,
+                    'jam_ringkasan'    => '09:30',
                 ],
             ]);
     }
@@ -905,6 +918,102 @@ class ApiMobileTest extends TestCase
             ])->assertOk()
                 ->assertJsonPath('data.is_buka', false)
                 ->assertJsonPath('data.kode_status', 'libur');
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
+
+    public function test_notifikasi_fcm_dikirim_sesuai_jenis_dan_preferensi(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-11-18 08:00:00', 'Asia/Jakarta'));
+
+        try {
+            $owner = $this->loginSebagaiOwner();
+
+            $terkirim = [];
+            $messagingMock = \Mockery::mock();
+            $messagingMock->shouldReceive('send')
+                ->andReturnUsing(function (CloudMessage $pesan) use (&$terkirim) {
+                    $terkirim[] = $pesan->jsonSerialize();
+                    return [];
+                });
+            Firebase::shouldReceive('messaging')->andReturn($messagingMock);
+
+            $obatRusak = $this->buatObat([
+                'kode_obat'      => 'NTF-001',
+                'nama_obat'      => 'Sirup Batuk',
+                'stok'           => 12,
+                'tgl_kadaluarsa' => Carbon::today()->addDays(5)->format('Y-m-d'),
+            ]);
+            $this->buatObat([
+                'kode_obat'      => 'NTF-002',
+                'nama_obat'      => 'Obat Tetes Expired',
+                'stok'           => 40,
+                'tgl_kadaluarsa' => Carbon::today()->subDays(2)->format('Y-m-d'),
+            ]);
+            $this->buatObat([
+                'kode_obat'      => 'NTF-003',
+                'nama_obat'      => 'Obat Menipis',
+                'stok'           => 3,
+                'tgl_kadaluarsa' => Carbon::today()->addDays(90)->format('Y-m-d'),
+            ]);
+
+            // Skenario 1: aktif=false (stok menipis off), tetapi kadaluarsa & rusak aktif
+            $p = PengaturanNotifikasi::create([
+                'user_id'          => $owner->id,
+                'fcm_token'        => 'fcm-token-test',
+                'aktif'            => false,
+                'notif_kadaluarsa' => true,
+                'notif_rusak'      => true,
+                'batas_stok'       => 10,
+                'jam_ringkasan'    => '08:00',
+            ]);
+
+            // Catat obat rusak (stok 12 -> 9, melewati batas 10)
+            KondisiStokService::catat([
+                'obat_id'  => $obatRusak->id,
+                'jenis'    => 'rusak',
+                'jumlah'   => 3,
+                'penyebab' => 'Botol pecah',
+            ], $owner->id);
+
+            // Real-time harus mengirim notif obat_rusak, dan melewati stok_menipis karena aktif=false
+            $this->assertCount(1, $terkirim);
+            $this->assertSame('Laporan obat rusak', $terkirim[0]['notification']['title']);
+            $this->assertSame('obat_rusak', $terkirim[0]['data']['jenis']);
+            $this->assertSame('obat_rusak', $terkirim[0]['android']['notification']['channel_id']);
+
+            // Cron jam 08:00 tetap jalan meski aktif=false, mengirim ringkasan kadaluarsa (retur vs musnahkan) & rusak
+            $terkirim = [];
+            $this->artisan('stok:ringkasan-harian')->assertExitCode(0);
+
+            $this->assertCount(2, $terkirim);
+            $this->assertSame('kadaluarsa', $terkirim[0]['data']['jenis']);
+            $this->assertStringContainsString('musnahkan', $terkirim[0]['notification']['body']);
+            $this->assertStringContainsString('retur supplier', $terkirim[0]['notification']['body']);
+            $this->assertSame('obat_rusak', $terkirim[1]['data']['jenis']);
+
+            // Skenario 2: hanya aktif=true (stok menipis), kadaluarsa & rusak off
+            $terkirim = [];
+            $p->update(['aktif' => true, 'notif_kadaluarsa' => false, 'notif_rusak' => false]);
+
+            $obatDrop = $this->buatObat([
+                'kode_obat'      => 'NTF-004',
+                'nama_obat'      => 'Tablet Drop',
+                'stok'           => 11,
+                'tgl_kadaluarsa' => Carbon::today()->addDays(60)->format('Y-m-d'),
+            ]);
+
+            KondisiStokService::catat([
+                'obat_id'  => $obatDrop->id,
+                'jenis'    => 'rusak',
+                'jumlah'   => 2,
+                'penyebab' => 'Kemasan penyok',
+            ], $owner->id);
+
+            // Hanya stok_menipis terkirim (9 <= 10), notif obat_rusak dilewati
+            $this->assertCount(1, $terkirim);
+            $this->assertSame('stok_menipis', $terkirim[0]['data']['jenis']);
         } finally {
             Carbon::setTestNow();
         }

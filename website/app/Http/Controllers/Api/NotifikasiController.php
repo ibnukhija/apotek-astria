@@ -17,9 +17,11 @@ class NotifikasiController extends Controller
         return response()->json([
             'success' => true,
             'data'    => [
-                'aktif'         => $p?->aktif ?? true,
-                'batas_stok'    => $p?->batas_stok ?? 10,
-                'jam_ringkasan' => $p?->jam_ringkasan ? substr($p->jam_ringkasan, 0, 5) : null,
+                'aktif'            => $p?->aktif ?? true,
+                'notif_kadaluarsa' => $p?->notif_kadaluarsa ?? true,
+                'notif_rusak'      => $p?->notif_rusak ?? true,
+                'batas_stok'       => $p?->batas_stok ?? 10,
+                'jam_ringkasan'    => $p?->jam_ringkasan ? substr($p->jam_ringkasan, 0, 5) : null,
             ],
         ]);
     }
@@ -29,20 +31,24 @@ class NotifikasiController extends Controller
     {
         $userId = $request->user()?->id;
         $v = $request->validate([
-            'user_id'       => $userId ? 'nullable|integer' : 'required|integer|exists:users,id',
-            'fcm_token'     => 'nullable|string',
-            'aktif'         => 'sometimes|boolean',
-            'batas_stok'    => 'sometimes|integer|min:0|max:100000',
-            'jam_ringkasan' => 'nullable|date_format:H:i',
+            'user_id'          => $userId ? 'nullable|integer' : 'required|integer|exists:users,id',
+            'fcm_token'        => 'nullable|string',
+            'aktif'            => 'sometimes|boolean',
+            'notif_kadaluarsa' => 'sometimes|boolean',
+            'notif_rusak'      => 'sometimes|boolean',
+            'batas_stok'       => 'sometimes|integer|min:0|max:100000',
+            'jam_ringkasan'    => 'nullable|date_format:H:i',
         ]);
 
         $targetUserId = (int) ($userId ?? $v['user_id']);
         $p = PengaturanNotifikasi::firstOrNew(['user_id' => $targetUserId]);
 
-        if ($request->has('fcm_token'))     $p->fcm_token = $v['fcm_token'];
-        if ($request->has('aktif'))         $p->aktif = $v['aktif'];
-        if ($request->has('batas_stok'))    $p->batas_stok = $v['batas_stok'];
-        if ($request->has('jam_ringkasan')) $p->jam_ringkasan = $v['jam_ringkasan'];
+        if ($request->has('fcm_token'))        $p->fcm_token = $v['fcm_token'];
+        if ($request->has('aktif'))            $p->aktif = $v['aktif'];
+        if ($request->has('notif_kadaluarsa')) $p->notif_kadaluarsa = $v['notif_kadaluarsa'];
+        if ($request->has('notif_rusak'))      $p->notif_rusak = $v['notif_rusak'];
+        if ($request->has('batas_stok'))       $p->batas_stok = $v['batas_stok'];
+        if ($request->has('jam_ringkasan'))    $p->jam_ringkasan = $v['jam_ringkasan'];
         $p->save();
 
         return response()->json(['success' => true, 'message' => 'Preferensi notifikasi disimpan']);

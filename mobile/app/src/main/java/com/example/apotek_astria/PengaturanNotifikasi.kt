@@ -13,6 +13,8 @@ import org.json.JSONObject
 
 data class PengaturanNotifikasi(
     val notifAktif: Boolean = true,
+    val notifKadaluarsa: Boolean = true,
+    val notifRusak: Boolean = true,
     val batasStok: Int = 10,
     val jam: String = "08:00"
 )
@@ -41,6 +43,8 @@ object PengaturanNotifikasiRepo {
                     val jamServer = if (data.isNull("jam_ringkasan")) "" else data.optString("jam_ringkasan", "")
                     val p = PengaturanNotifikasi(
                         notifAktif = data.optBoolean("aktif", lokal.notifAktif),
+                        notifKadaluarsa = data.optBoolean("notif_kadaluarsa", lokal.notifKadaluarsa),
+                        notifRusak = data.optBoolean("notif_rusak", lokal.notifRusak),
                         batasStok = data.optInt("batas_stok", lokal.batasStok),
                         jam = jamServer.ifBlank { lokal.jam }
                     )
@@ -75,6 +79,8 @@ object PengaturanNotifikasiRepo {
                 }
                 val p = PengaturanNotifikasi(
                     notifAktif = d.getBoolean("notif_aktif") ?: lokal.notifAktif,
+                    notifKadaluarsa = d.getBoolean("notif_kadaluarsa") ?: lokal.notifKadaluarsa,
+                    notifRusak = d.getBoolean("notif_rusak") ?: lokal.notifRusak,
                     batasStok = d.getLong("batas_stok")?.toInt() ?: lokal.batasStok,
                     jam = d.getString("jam_notifikasi") ?: lokal.jam
                 )
@@ -100,6 +106,8 @@ object PengaturanNotifikasiRepo {
             val dataFirestore = hashMapOf<String, Any>(
                 "user_id" to id,
                 "notif_aktif" to p.notifAktif,
+                "notif_kadaluarsa" to p.notifKadaluarsa,
+                "notif_rusak" to p.notifRusak,
                 "batas_stok" to p.batasStok,
                 "jam_notifikasi" to p.jam,
                 "updated_at" to Timestamp.now()
@@ -115,6 +123,8 @@ object PengaturanNotifikasiRepo {
 
             val body = JSONObject()
                 .put("aktif", p.notifAktif)
+                .put("notif_kadaluarsa", p.notifKadaluarsa)
+                .put("notif_rusak", p.notifRusak)
                 .put("batas_stok", p.batasStok)
                 .put("jam_ringkasan", p.jam)
             if (!fcmToken.isNullOrBlank()) {
@@ -134,6 +144,34 @@ object PengaturanNotifikasiRepo {
             )
             Volley.newRequestQueue(appCtx).add(req)
         }
+    }
+
+    fun kirimTes(ctx: Context, selesai: (Boolean, String) -> Unit) {
+        val appCtx = ctx.applicationContext
+        if (ApiConfig.ambilToken(appCtx).isNullOrBlank()) {
+            selesai(false, "Sesi login tidak valid")
+            return
+        }
+
+        val req = ApiRequest(
+            appCtx,
+            Request.Method.POST,
+            ApiConfig.URL_NOTIFIKASI_TES,
+            JSONObject(),
+            { res ->
+                val ok = res.optBoolean("success", false)
+                val msg = res.optString("message", if (ok) "Notifikasi uji dikirim" else "Gagal mengirim notifikasi uji")
+                selesai(ok, msg)
+            },
+            { error ->
+                if (ApiConfig.tanganiAuthError(appCtx, error)) {
+                    selesai(false, "Sesi berakhir")
+                    return@ApiRequest
+                }
+                selesai(false, ApiConfig.pesanError(error))
+            }
+        )
+        Volley.newRequestQueue(appCtx).add(req)
     }
 
     fun sinkronToken(ctx: Context) {
@@ -166,15 +204,19 @@ object PengaturanNotifikasiRepo {
     fun bacaLokal(ctx: Context): PengaturanNotifikasi {
         val p = pref(ctx)
         return PengaturanNotifikasi(
-            p.getBoolean("NOTIF_STOK", true),
-            p.getInt("BATAS_STOK", 10),
-            p.getString("JAM_NOTIF", "08:00") ?: "08:00"
+            notifAktif = p.getBoolean("NOTIF_STOK", true),
+            notifKadaluarsa = p.getBoolean("NOTIF_KADALUARSA", true),
+            notifRusak = p.getBoolean("NOTIF_RUSAK", true),
+            batasStok = p.getInt("BATAS_STOK", 10),
+            jam = p.getString("JAM_NOTIF", "08:00") ?: "08:00"
         )
     }
 
     private fun simpanLokal(ctx: Context, p: PengaturanNotifikasi) {
         pref(ctx).edit()
             .putBoolean("NOTIF_STOK", p.notifAktif)
+            .putBoolean("NOTIF_KADALUARSA", p.notifKadaluarsa)
+            .putBoolean("NOTIF_RUSAK", p.notifRusak)
             .putInt("BATAS_STOK", p.batasStok)
             .putString("JAM_NOTIF", p.jam)
             .apply()

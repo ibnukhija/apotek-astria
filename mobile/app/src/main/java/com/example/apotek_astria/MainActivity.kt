@@ -99,6 +99,22 @@ class MainActivity : AppCompatActivity() {
             }
             true
         }
+        tanganiTujuanIntent(intent, bottomNav)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        tanganiTujuanIntent(intent, findViewById(R.id.bottom_navigation))
+    }
+
+    private fun tanganiTujuanIntent(intent: Intent?, bottomNav: BottomNavigationView) {
+        val tujuan = intent?.getStringExtra("tujuan") ?: return
+        intent.removeExtra("tujuan")
+        when (tujuan) {
+            "stok" -> bottomNav.selectedItemId = R.id.nav_stok
+            "laporan" -> bukaLaporan()
+        }
     }
 
     private fun loadFragment(fragment: Fragment, title: String) {

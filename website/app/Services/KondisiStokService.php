@@ -40,7 +40,7 @@ class KondisiStokService
 
             $obat->update(['stok' => $stokSesudah]);
 
-            return KondisiStokObat::create([
+            $catat = KondisiStokObat::create([
                 'obat_id'      => $obat->id,
                 'user_id'      => $userId,
                 'jenis'        => $jenis,
@@ -50,6 +50,10 @@ class KondisiStokService
                 'penyebab'     => trim((string) $data['penyebab']),
                 'catatan'      => filled($data['catatan'] ?? null) ? trim((string) $data['catatan']) : null,
             ]);
+
+            DB::afterCommit(fn () => NotifikasiStokService::cekSetelahKondisiStok($catat, $stokSebelum));
+
+            return $catat;
         });
     }
 }

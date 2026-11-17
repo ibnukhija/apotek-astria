@@ -133,6 +133,7 @@ class ProfilFragment : Fragment() {
 
         binding.btnJamNotifikasi.setOnClickListener { pilihJam() }
         binding.btnSimpanNotifikasi.setOnClickListener { simpanNotifikasi() }
+        binding.btnTesNotifikasi.setOnClickListener { tesNotifikasi() }
 
         if (Build.VERSION.SDK_INT >= 33 &&
             ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.POST_NOTIFICATIONS)
@@ -144,6 +145,8 @@ class ProfilFragment : Fragment() {
 
     private fun terapkan(p: PengaturanNotifikasi) {
         binding.switchNotifikasi.isChecked = p.notifAktif
+        binding.switchNotifKadaluarsa.isChecked = p.notifKadaluarsa
+        binding.switchNotifRusak.isChecked = p.notifRusak
         binding.etBatasStok.setText(p.batasStok.toString())
         jamTerpilih = p.jam
         binding.btnJamNotifikasi.text = p.jam
@@ -161,18 +164,24 @@ class ProfilFragment : Fragment() {
         ).show()
     }
 
-    private fun simpanNotifikasi() {
+    private fun buatPreferensiDariForm(): PengaturanNotifikasi? {
         val batas = binding.etBatasStok.text.toString().trim().toIntOrNull()
         if (batas == null || batas < 0) {
             toast("Batas minimum stok harus berupa angka")
-            return
+            return null
         }
 
-        val p = PengaturanNotifikasi(
+        return PengaturanNotifikasi(
             notifAktif = binding.switchNotifikasi.isChecked,
+            notifKadaluarsa = binding.switchNotifKadaluarsa.isChecked,
+            notifRusak = binding.switchNotifRusak.isChecked,
             batasStok = batas,
             jam = jamTerpilih
         )
+    }
+
+    private fun simpanNotifikasi() {
+        val p = buatPreferensiDariForm() ?: return
 
         binding.btnSimpanNotifikasi.isEnabled = false
         PengaturanNotifikasiRepo.simpan(requireContext(), p) { berhasil ->
@@ -183,6 +192,21 @@ class ProfilFragment : Fragment() {
                 else "Tersimpan di perangkat, gagal sinkron ke server"
             )
             tampilkan(Halaman.MENU)
+        }
+    }
+
+    private fun tesNotifikasi() {
+        val p = buatPreferensiDariForm() ?: return
+        val ctx = requireContext()
+
+        binding.btnTesNotifikasi.isEnabled = false
+        PengaturanNotifikasiRepo.simpan(ctx, p) { _ ->
+            if (_binding == null) return@simpan
+            PengaturanNotifikasiRepo.kirimTes(ctx) { _, pesan ->
+                if (_binding == null) return@kirimTes
+                binding.btnTesNotifikasi.isEnabled = true
+                toast(pesan)
+            }
         }
     }
 
