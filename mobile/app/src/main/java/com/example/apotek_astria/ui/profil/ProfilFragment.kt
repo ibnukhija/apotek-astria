@@ -1,16 +1,23 @@
 package com.example.apotek_astria.ui.profil
 
+import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import com.android.volley.Request
 import com.android.volley.toolbox.Volley
+import com.example.apotek_astria.PengaturanNotifikasi
+import com.example.apotek_astria.PengaturanNotifikasiRepo
+import com.example.apotek_astria.StokMessagingService
 import com.example.apotek_astria.databinding.FragmentProfilBinding
 import com.example.apotek_astria.network.ApiConfig
 import com.example.apotek_astria.network.ApiRequest
@@ -121,8 +128,11 @@ class ProfilFragment : Fragment() {
         binding.btnJamNotifikasi.setOnClickListener { pilihJam() }
         binding.btnSimpanNotifikasi.setOnClickListener { simpanNotifikasi() }
 
-        if (android.os.Build.VERSION.SDK_INT >= 33) {
-            izinNotifikasi.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        if (Build.VERSION.SDK_INT >= 33 &&
+            ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.POST_NOTIFICATIONS)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            izinNotifikasi.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
     }
 

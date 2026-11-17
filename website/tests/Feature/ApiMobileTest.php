@@ -61,6 +61,9 @@ class ApiMobileTest extends TestCase
         $this->putJson('/api/profil', ['nama_apotek' => 'Tes', 'alamat' => 'Jl. Tes'])->assertStatus(401);
         $this->getJson('/api/karyawan')->assertStatus(401);
         $this->postJson('/api/karyawan', [])->assertStatus(401);
+        $this->getJson('/api/notifikasi')->assertStatus(401);
+        $this->putJson('/api/notifikasi', [])->assertStatus(401);
+        $this->postJson('/api/notifikasi/tes')->assertStatus(401);
         $this->postJson('/api/logout-mobile')->assertStatus(401);
     }
 
@@ -561,5 +564,47 @@ class ApiMobileTest extends TestCase
                 'kategoris'                  => ['Analgesik', 'Vitamin'],
             ]);
         $this->assertSame('VIT-001', $filterKat->json('data.0.kode_obat'));
+    }
+
+    public function test_preferensi_notifikasi_tersimpan_untuk_owner_yang_login(): void
+    {
+        $owner = $this->loginSebagaiOwner();
+
+        $this->getJson('/api/notifikasi')
+            ->assertOk()
+            ->assertJson([
+                'success' => true,
+                'data'    => [
+                    'aktif'         => true,
+                    'batas_stok'    => 10,
+                    'jam_ringkasan' => null,
+                ],
+            ]);
+
+        $this->putJson('/api/notifikasi', [
+            'aktif'         => false,
+            'batas_stok'    => 15,
+            'jam_ringkasan' => '09:30',
+            'fcm_token'     => 'token-fcm-contoh',
+        ])->assertOk()->assertJson(['success' => true]);
+
+        $this->assertDatabaseHas('pengaturan_notifikasi', [
+            'user_id'       => $owner->id,
+            'aktif'         => 0,
+            'batas_stok'    => 15,
+            'jam_ringkasan' => '09:30',
+            'fcm_token'     => 'token-fcm-contoh',
+        ]);
+
+        $this->getJson('/api/notifikasi')
+            ->assertOk()
+            ->assertJson([
+                'success' => true,
+                'data'    => [
+                    'aktif'         => false,
+                    'batas_stok'    => 15,
+                    'jam_ringkasan' => '09:30',
+                ],
+            ]);
     }
 }

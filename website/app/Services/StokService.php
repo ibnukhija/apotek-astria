@@ -36,6 +36,8 @@ class StokService
 
                 $obat->decrement('stok', $jumlah);
             }
+
+            DB::afterCommit(fn () => NotifikasiStokService::cekSetelahTransaksi($items));
         });
     }
 }

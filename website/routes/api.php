@@ -12,17 +12,6 @@ Route::post('/login-mobile', [AuthController::class, 'loginMobile']);
 // Endpoint Logout Mobile (cukup terautentikasi Sanctum)
 Route::post('/logout-mobile', [AuthController::class, 'logoutMobile'])->middleware('auth:sanctum');
 
-// Tambahan mobile owner: poin D (karyawan) dan E (simpan profil)
-Route::put('/profil', [OwnerController::class, 'updateProfil']);
-Route::get('/karyawan', [OwnerController::class, 'karyawanIndex']);
-Route::post('/karyawan', [OwnerController::class, 'karyawanStore']);
-Route::put('/karyawan/{id}', [OwnerController::class, 'karyawanUpdate']);
-Route::put('/karyawan/{id}/status', [OwnerController::class, 'karyawanToggleStatus']);
-
-// Notifikasi stok (Firebase Cloud Messaging)
-Route::get('/notifikasi', [NotifikasiController::class, 'show']);
-Route::put('/notifikasi', [NotifikasiController::class, 'update']);
-Route::post('/notifikasi/tes', [NotifikasiController::class, 'tes']);
 // Endpoint Data untuk Android Mobile Owner (wajib token Sanctum + role owner aktif)
 Route::middleware(['auth:sanctum', 'cekrole:owner'])->group(function () {
     Route::get('/dashboard', [ApiController::class, 'dashboard']);
@@ -37,4 +26,9 @@ Route::middleware(['auth:sanctum', 'cekrole:owner'])->group(function () {
     Route::post('/karyawan', [OwnerController::class, 'karyawanStore']);
     Route::put('/karyawan/{id}', [OwnerController::class, 'karyawanUpdate']);
     Route::put('/karyawan/{id}/status', [OwnerController::class, 'karyawanToggleStatus']);
+
+    // Notifikasi stok (Firebase Cloud Messaging)
+    Route::get('/notifikasi', [NotifikasiController::class, 'show']);
+    Route::put('/notifikasi', [NotifikasiController::class, 'update']);
+    Route::post('/notifikasi/tes', [NotifikasiController::class, 'tes']);
 });

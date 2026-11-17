@@ -14,8 +14,7 @@ import java.util.TimeZone
 
 object ApiConfig {
     // Ganti IP Sesuai dengan Laptop
-    const val BASE_URL = "http://192.168.110.211:8000/api"
-    const val BASE_URL = "http://192.168.0.107:8000/api"
+    const val BASE_URL = "http://192.168.0.10:8000/api"
 
     // Daftar endpoint API yang Anda perlukan
     const val URL_LOGIN = "$BASE_URL/login-mobile"
@@ -25,6 +24,7 @@ object ApiConfig {
     const val URL_RIWAYAT = "$BASE_URL/riwayat"
     const val URL_PROFIL = "$BASE_URL/profil"
     const val URL_KARYAWAN = "$BASE_URL/karyawan"
+    const val URL_NOTIFIKASI = "$BASE_URL/notifikasi"
 
     const val PREF_SESI = "SesiApotek"
     const val KEY_LOGGED_IN = "IS_LOGGED_IN"

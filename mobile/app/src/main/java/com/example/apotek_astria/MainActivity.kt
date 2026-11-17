@@ -29,6 +29,9 @@ class MainActivity : AppCompatActivity() {
         btnLogout = findViewById(R.id.btn_logout)
         val bottomNav = findViewById<BottomNavigationView>(R.id.bottom_navigation)
 
+        StokMessagingService.buatChannel(this)
+        PengaturanNotifikasiRepo.sinkronToken(this)
+
         btnLogout.setOnClickListener {
             // Cabut token Sanctum di server lalu bersihkan sesi lokal
             val logoutReq = ApiRequest(

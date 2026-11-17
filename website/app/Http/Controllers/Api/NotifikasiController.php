@@ -11,7 +11,8 @@ class NotifikasiController extends Controller
 {
     public function show(Request $request)
     {
-        $p = PengaturanNotifikasi::where('user_id', (int) $request->query('user_id'))->first();
+        $userId = (int) ($request->user()?->id ?? $request->query('user_id'));
+        $p = PengaturanNotifikasi::where('user_id', $userId)->first();
 
         return response()->json([
             'success' => true,
@@ -26,15 +27,17 @@ class NotifikasiController extends Controller
     // Upsert parsial: hanya field yang dikirim yang diubah (mis. hanya fcm_token)
     public function update(Request $request)
     {
+        $userId = $request->user()?->id;
         $v = $request->validate([
-            'user_id'       => 'required|integer|exists:users,id',
+            'user_id'       => $userId ? 'nullable|integer' : 'required|integer|exists:users,id',
             'fcm_token'     => 'nullable|string',
             'aktif'         => 'sometimes|boolean',
             'batas_stok'    => 'sometimes|integer|min:0|max:100000',
             'jam_ringkasan' => 'nullable|date_format:H:i',
         ]);
 
-        $p = PengaturanNotifikasi::firstOrNew(['user_id' => $v['user_id']]);
+        $targetUserId = (int) ($userId ?? $v['user_id']);
+        $p = PengaturanNotifikasi::firstOrNew(['user_id' => $targetUserId]);
 
         if ($request->has('fcm_token'))     $p->fcm_token = $v['fcm_token'];
         if ($request->has('aktif'))         $p->aktif = $v['aktif'];
@@ -47,9 +50,13 @@ class NotifikasiController extends Controller
 
     public function tes(Request $request)
     {
-        $v = $request->validate(['user_id' => 'required|integer|exists:users,id']);
+        $userId = $request->user()?->id;
+        $v = $request->validate([
+            'user_id' => $userId ? 'nullable|integer' : 'required|integer|exists:users,id',
+        ]);
 
-        $p = PengaturanNotifikasi::where('user_id', $v['user_id'])->first();
+        $targetUserId = (int) ($userId ?? $v['user_id']);
+        $p = PengaturanNotifikasi::where('user_id', $targetUserId)->first();
         if (!$p || !$p->fcm_token) {
             return response()->json([
                 'success' => false,
