@@ -119,8 +119,8 @@
         </div>
         <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
             <span class="font-bold text-gray-text uppercase text-[11px] tracking-wide">Info Kadaluarsa:</span>
-            <span class="inline-flex items-center gap-1.5 font-medium"><span class="w-2 h-2 rounded-full bg-green-500"></span>Aman (&gt; 30 hari)</span>
-            <span class="inline-flex items-center gap-1.5 font-medium"><span class="w-2 h-2 rounded-full bg-yellow-500"></span>Hampir kadaluarsa (&le; 30 hari)</span>
+            <span class="inline-flex items-center gap-1.5 font-medium"><span class="w-2 h-2 rounded-full bg-green-500"></span>Aman (&gt; 7 hari)</span>
+            <span class="inline-flex items-center gap-1.5 font-medium"><span class="w-2 h-2 rounded-full bg-yellow-500"></span>Hampir kadaluarsa (&le; 7 hari)</span>
             <span class="inline-flex items-center gap-1.5 font-medium"><span class="w-2 h-2 rounded-full bg-red-500"></span>Kadaluarsa (lewat tanggal)</span>
         </div>
     </div>
@@ -186,6 +186,11 @@
                                 class="text-soft-teal font-semibold mr-2.5 hover:underline">
                                 ✎ Edit
                             </button>
+
+                            <a href="{{ route('kondisi.index', ['obat_id' => $obat->id]) }}"
+                                class="text-amber-700 font-semibold mr-2.5 hover:underline">
+                                ⚠ Kondisi
+                            </a>
 
                             <form action="{{ route('obat.destroy', $obat->id) }}" method="POST" class="inline-block"
                                   onsubmit="return confirm('Apakah Anda yakin ingin menghapus produk {{ addslashes($obat->nama_obat) }}?');">

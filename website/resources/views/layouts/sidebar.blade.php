@@ -19,6 +19,7 @@
         <a href="{{ route('kasir.index') }}" class="block px-3 py-2.5 rounded-lg text-sm {{ request()->routeIs('kasir.index') ? 'font-bold bg-[#E8F4F2] text-soft-teal' : 'font-medium text-gray-text hover:bg-off-white' }} transition">Kasir</a>
         <a href="{{ route('kasir.riwayat') }}" class="block px-3 py-2.5 rounded-lg text-sm {{ request()->routeIs('kasir.riwayat') ? 'font-bold bg-[#E8F4F2] text-soft-teal' : 'font-medium text-gray-text hover:bg-off-white' }} transition">Riwayat Transaksi</a>
         <a href="{{ route('obat.index') }}" class="block px-3 py-2.5 rounded-lg text-sm {{ request()->routeIs('obat.*') ? 'font-bold bg-[#E8F4F2] text-soft-teal' : 'font-medium text-gray-text hover:bg-off-white' }} transition">Kelola Produk</a>
+        <a href="{{ route('kondisi.index') }}" class="block px-3 py-2.5 rounded-lg text-sm {{ request()->routeIs('kondisi.*') ? 'font-bold bg-[#E8F4F2] text-soft-teal' : 'font-medium text-gray-text hover:bg-off-white' }} transition">Kondisi &amp; Opname</a>
         <a href="{{ route('kategori.index') }}" class="block px-3 py-2.5 rounded-lg text-sm {{ request()->routeIs('kategori.*') ? 'font-bold bg-[#E8F4F2] text-soft-teal' : 'font-medium text-gray-text hover:bg-off-white' }} transition">Kelola Kategori</a>
         <a href="{{ route('profil.edit') }}" class="block px-3 py-2.5 rounded-lg text-sm {{ request()->routeIs('profil.*') ? 'font-bold bg-[#E8F4F2] text-soft-teal' : 'font-medium text-gray-text hover:bg-off-white' }} transition">Profil Saya</a>
     </nav>

@@ -5,6 +5,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ObatController;
 use App\Http\Controllers\KategoriController;
 use App\Http\Controllers\KasirController;
+use App\Http\Controllers\KondisiStokController;
 use App\Http\Controllers\ProfilKaryawanController;
 
 Route::get('/', [AuthController::class, 'showLogin'])->name('login');
@@ -13,6 +14,9 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 Route::middleware(['auth', 'cekrole:karyawan'])->group(function () {
     Route::resource('obat', ObatController::class)->only(['index', 'store', 'update', 'destroy']);
+
+    Route::get('/kondisi-stok', [KondisiStokController::class, 'index'])->name('kondisi.index');
+    Route::post('/kondisi-stok', [KondisiStokController::class, 'store'])->name('kondisi.store');
 
     Route::resource('kategori', KategoriController::class)->only(['index', 'store', 'update', 'destroy']);
 

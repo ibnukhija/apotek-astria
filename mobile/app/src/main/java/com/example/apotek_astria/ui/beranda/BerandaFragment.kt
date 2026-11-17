@@ -35,6 +35,7 @@ class BerandaFragment : Fragment() {
     private val daftarPeringatanStok = mutableListOf<String>()
     private val daftarNamaStokMenipis = mutableListOf<String>()
     private val daftarPeringatanKadaluarsa = mutableListOf<String>()
+    private val daftarPeringatanRusak = mutableListOf<String>()
     private val formatRupiah by lazy { NumberFormat.getNumberInstance(Locale.forLanguageTag("id-ID")) }
 
     override fun onCreateView(
@@ -95,9 +96,16 @@ class BerandaFragment : Fragment() {
         }
         binding.cardKadaluarsa.setOnClickListener {
             tampilkanDaftarPeringatan(
-                "Obat Kadaluarsa / Mau Kadaluarsa",
+                "Obat Kadaluarsa / Mendekati Expired (<= 7 Hari)",
                 daftarPeringatanKadaluarsa,
-                "Tidak ada obat yang kadaluarsa atau mendekati kadaluarsa (<= 30 hari)."
+                "Tidak ada obat yang kadaluarsa atau mendekati expired (<= 7 hari)."
+            )
+        }
+        binding.cardObatRusak.setOnClickListener {
+            tampilkanDaftarPeringatan(
+                "Catatan Obat Rusak & Penyebab",
+                daftarPeringatanRusak,
+                "Belum ada catatan obat rusak."
             )
         }
 
@@ -399,7 +407,7 @@ class BerandaFragment : Fragment() {
                     }
                     perbaruiBannerStok(daftarNamaStokMenipis)
 
-                    // 5. Bagian Stok: Ringkasan Mau Kadaluarsa
+                    // 5. Bagian Stok: Ringkasan Mau Kadaluarsa (<= 7 hari) & Obat Rusak
                     val peringatanKadaluarsaArray = data.optJSONArray("peringatan_kadaluarsa")
                     daftarPeringatanKadaluarsa.clear()
                     if (peringatanKadaluarsaArray != null && peringatanKadaluarsaArray.length() > 0) {
@@ -408,6 +416,7 @@ class BerandaFragment : Fragment() {
                         for (i in 0 until peringatanKadaluarsaArray.length()) {
                             val o = peringatanKadaluarsaArray.getJSONObject(i)
                             val statusKad = o.optString("status_kadaluarsa", "")
+                            val saran = o.optString("saran_tindakan", "")
                             val tglExp = ApiConfig.formatTanggal(
                                 if (o.isNull("tgl_kadaluarsa")) "" else o.optString("tgl_kadaluarsa", "")
                             )
@@ -416,12 +425,13 @@ class BerandaFragment : Fragment() {
                             } else {
                                 jumlahHampir++
                             }
-                            daftarPeringatanKadaluarsa.add("• ${o.optString("nama_obat")} ($tglExp • $statusKad)")
+                            val teksSaran = if (saran.isNotBlank()) " → $saran" else ""
+                            daftarPeringatanKadaluarsa.add("• ${o.optString("nama_obat")} ($tglExp • $statusKad$teksSaran)")
                         }
                         val subTeks = if (jumlahKadaluarsa > 0) {
-                            "$jumlahKadaluarsa lewat • $jumlahHampir < 30 hr"
+                            "$jumlahKadaluarsa exp • $jumlahHampir H-7"
                         } else {
-                            "<= 30 hari • Tap lihat"
+                            "<= 7 hr • Retur"
                         }
                         perbaruiKartuRingkasan(
                             binding.cardKadaluarsa, binding.tvLabelKadaluarsa,
@@ -434,6 +444,35 @@ class BerandaFragment : Fragment() {
                             binding.cardKadaluarsa, binding.tvLabelKadaluarsa,
                             binding.tvJumlahKadaluarsa, binding.tvSubKadaluarsa,
                             0, "Tanggal aman",
+                            "#F0FDF4", "#166534", "#15803D"
+                        )
+                    }
+
+                    // 6. Bagian Stok: Ringkasan Obat Rusak
+                    val peringatanRusakArray = data.optJSONArray("peringatan_rusak")
+                    val ringkasanRusak = data.optJSONObject("ringkasan_rusak")
+                    val totalUnitRusak = ringkasanRusak?.optInt("total_unit", 0) ?: 0
+                    daftarPeringatanRusak.clear()
+                    if (peringatanRusakArray != null && peringatanRusakArray.length() > 0) {
+                        for (i in 0 until peringatanRusakArray.length()) {
+                            val r = peringatanRusakArray.getJSONObject(i)
+                            val namaObat = r.optString("nama_obat", "-")
+                            val jml = r.optInt("jumlah", 0)
+                            val penyebab = r.optString("penyebab", "-")
+                            val tgl = r.optString("tanggal", "-")
+                            daftarPeringatanRusak.add("• $namaObat ($jml unit) — $penyebab [$tgl]")
+                        }
+                        perbaruiKartuRingkasan(
+                            binding.cardObatRusak, binding.tvLabelObatRusak,
+                            binding.tvJumlahObatRusak, binding.tvSubObatRusak,
+                            totalUnitRusak, "${daftarPeringatanRusak.size} kasus • Tap",
+                            "#FFEDD5", "#9A3412", "#EA580C"
+                        )
+                    } else {
+                        perbaruiKartuRingkasan(
+                            binding.cardObatRusak, binding.tvLabelObatRusak,
+                            binding.tvJumlahObatRusak, binding.tvSubObatRusak,
+                            0, "Tidak ada rusak",
                             "#F0FDF4", "#166534", "#15803D"
                         )
                     }

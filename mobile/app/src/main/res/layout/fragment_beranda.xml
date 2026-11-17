@@ -445,7 +445,7 @@
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
-            <!-- 2 Kotak Ringkasan Berjejer: Stok Menipis & Mau Kadaluarsa -->
+            <!-- 3 Kotak Ringkasan Berjejer: Stok Menipis, Expired (<= 7 hr), Obat Rusak -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -455,8 +455,8 @@
                 <androidx.cardview.widget.CardView
                     android:id="@+id/card_stok_menipis"
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="6dp"
+                    android:layout_height="match_parent"
+                    android:layout_marginEnd="4dp"
                     android:layout_weight="1"
                     android:clickable="true"
                     android:focusable="true"
@@ -469,7 +469,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
-                        android:padding="14dp">
+                        android:padding="11dp">
 
                         <TextView
                             android:id="@+id/tv_label_stok_menipis"
@@ -477,7 +477,7 @@
                             android:layout_height="wrap_content"
                             android:text="Stok Menipis"
                             android:textColor="#92400E"
-                            android:textSize="12sp"
+                            android:textSize="11sp"
                             android:textStyle="bold" />
 
                         <TextView
@@ -487,7 +487,7 @@
                             android:layout_marginTop="4dp"
                             android:text="0"
                             android:textColor="#B45309"
-                            android:textSize="24sp"
+                            android:textSize="22sp"
                             android:textStyle="bold" />
 
                         <TextView
@@ -495,17 +495,17 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
-                            android:text="Stok &lt; 10 • Tap lihat"
+                            android:text="Stok &lt; 10"
                             android:textColor="#92400E"
-                            android:textSize="11sp" />
+                            android:textSize="10sp" />
                     </LinearLayout>
                 </androidx.cardview.widget.CardView>
 
                 <androidx.cardview.widget.CardView
                     android:id="@+id/card_kadaluarsa"
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="6dp"
+                    android:layout_height="match_parent"
+                    android:layout_marginHorizontal="4dp"
                     android:layout_weight="1"
                     android:clickable="true"
                     android:focusable="true"
@@ -518,15 +518,15 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
-                        android:padding="14dp">
+                        android:padding="11dp">
 
                         <TextView
                             android:id="@+id/tv_label_kadaluarsa"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Mau Kadaluarsa"
+                            android:text="Expired (&lt;=7h)"
                             android:textColor="#991B1B"
-                            android:textSize="12sp"
+                            android:textSize="11sp"
                             android:textStyle="bold" />
 
                         <TextView
@@ -536,7 +536,7 @@
                             android:layout_marginTop="4dp"
                             android:text="0"
                             android:textColor="#DC2626"
-                            android:textSize="24sp"
+                            android:textSize="22sp"
                             android:textStyle="bold" />
 
                         <TextView
@@ -544,9 +544,58 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
-                            android:text="&lt;= 30 hari • Tap lihat"
+                            android:text="Retur / Musnah"
                             android:textColor="#991B1B"
-                            android:textSize="11sp" />
+                            android:textSize="10sp" />
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+
+                <androidx.cardview.widget.CardView
+                    android:id="@+id/card_obat_rusak"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_marginStart="4dp"
+                    android:layout_weight="1"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:foreground="?android:attr/selectableItemBackground"
+                    app:cardBackgroundColor="#FFEDD5"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="1dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="11dp">
+
+                        <TextView
+                            android:id="@+id/tv_label_obat_rusak"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Obat Rusak"
+                            android:textColor="#9A3412"
+                            android:textSize="11sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tv_jumlah_obat_rusak"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="0"
+                            android:textColor="#EA580C"
+                            android:textSize="22sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tv_sub_obat_rusak"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="Unit • Tap lihat"
+                            android:textColor="#9A3412"
+                            android:textSize="10sp" />
                     </LinearLayout>
                 </androidx.cardview.widget.CardView>
             </LinearLayout>

@@ -406,11 +406,11 @@ class ObatSeeder extends Seeder
                 $obat->kode_obat = Obat::buatKode();
             }
 
-            // Distribusi tanggal kadaluarsa agar status Merah, Kuning (<= 30 hari), dan Hijau terlihat di tabel
+            // Distribusi tanggal kadaluarsa agar status Merah, Kuning (<= 7 hari), dan Hijau terlihat di tabel
             if ($index % 60 === 12) {
                 $tglKadaluarsa = $hariIni->copy()->subDays(3 + ($index % 20));
             } elseif ($index % 20 === 5) {
-                $tglKadaluarsa = $hariIni->copy()->addDays(5 + ($index % 24));
+                $tglKadaluarsa = $hariIni->copy()->addDays(2 + ($index % 6));
             } else {
                 $tglKadaluarsa = $hariIni->copy()->addDays(90 + (($index * 29) % 640));
             }

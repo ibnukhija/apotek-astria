@@ -14,7 +14,9 @@ data class ObatModel(
     val status: String,           // "tersedia" / "tidak"
     val statusStok: String,       // "Cukup" / "Menipis" / "Hampir habis" (dari server)
     val tglKadaluarsa: String = "",
-    val statusKadaluarsa: String = ""
+    val statusKadaluarsa: String = "",
+    val totalRusak: Int = 0,
+    val opnameTerakhir: String = ""
 )
 
 data class KaryawanModel(

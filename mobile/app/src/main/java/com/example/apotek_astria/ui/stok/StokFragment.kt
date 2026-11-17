@@ -198,7 +198,9 @@ class StokFragment : Fragment() {
                             status = o.optString("status", "tersedia"),
                             statusStok = o.optString("status_stok", "Cukup"),
                             tglKadaluarsa = rawExp,
-                            statusKadaluarsa = o.optString("status_kadaluarsa", "Belum diatur")
+                            statusKadaluarsa = o.optString("status_kadaluarsa", "Belum diatur"),
+                            totalRusak = o.optInt("total_rusak", 0),
+                            opnameTerakhir = o.optString("opname_terakhir", "")
                         )
                     )
                 }
@@ -280,12 +282,19 @@ class StokFragment : Fragment() {
         val tglExp = ApiConfig.formatTanggal(obat.tglKadaluarsa)
         val statusExp = obat.statusKadaluarsa.ifBlank { "Belum diatur" }
         val infoExp = if (tglExp.isNotBlank()) "$tglExp ($statusExp)" else statusExp
+        val saranExp = when {
+            statusExp.equals("Kadaluarsa", ignoreCase = true) -> "\nTindakan   : Harus dimusnahkan"
+            statusExp.equals("Hampir kadaluarsa", ignoreCase = true) -> "\nTindakan   : Bisa diretur ke supplier"
+            else -> ""
+        }
+        val infoRusak = if (obat.totalRusak > 0) "\nUnit Rusak : ${obat.totalRusak}" else ""
+        val infoOpname = if (obat.opnameTerakhir.isNotBlank()) "\nStok Opname: ${obat.opnameTerakhir}" else ""
 
         val pesan = "Kode       : ${obat.kodeObat}\n" +
                 "Kategori   : ${obat.kategori}\n" +
                 "Satuan     : ${obat.satuan}\n" +
                 "Stok       : ${obat.stok} (${obat.statusStok})\n" +
-                "Kadaluarsa : $infoExp\n" +
+                "Kadaluarsa : $infoExp$saranExp$infoRusak$infoOpname\n" +
                 "Status     : ${if (obat.status == "tersedia") "Tersedia" else "Tidak tersedia"}\n" +
                 "Harga      : Rp ${rupiah.format(obat.hargaJual)}"
         AlertDialog.Builder(requireContext())

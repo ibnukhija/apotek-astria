@@ -6,6 +6,7 @@ use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Obat extends Model
 {
@@ -15,8 +16,8 @@ class Obat extends Model
     /** Stok mulai angka ini = "Cukup" (hijau). Di antaranya = "Menipis" (kuning). */
     public const BATAS_CUKUP = 25;
 
-    /** Sisa hari maksimal (inklusif) untuk status "Hampir kadaluarsa" (kuning). */
-    public const BATAS_HAMPIR_KADALUARSA = 30;
+    /** Sisa hari maksimal (inklusif) untuk status "Hampir kadaluarsa" (kuning, ~1 minggu sebelum expired). */
+    public const BATAS_HAMPIR_KADALUARSA = 7;
 
     // Awalan Kode Obat
     public const PREFIX_KODE = 'OBT';
@@ -38,6 +39,11 @@ class Obat extends Model
     public function kategori(): BelongsTo
     {
         return $this->belongsTo(Kategori::class, 'kategori_id');
+    }
+
+    public function kondisiStok(): HasMany
+    {
+        return $this->hasMany(KondisiStokObat::class, 'obat_id');
     }
 
     /**
@@ -94,8 +100,8 @@ class Obat extends Model
     /**
      * Label dan warna status tanggal kadaluarsa.
      *   lewat hari ini => Kadaluarsa         (merah)
-     *   0 <= sisa <= 30 hari => Hampir kadaluarsa (kuning)
-     *   > 30 hari      => Aman               (hijau)
+     *   0 <= sisa <= 7 hari => Hampir kadaluarsa (kuning)
+     *   > 7 hari       => Aman               (hijau)
      */
     public static function infoKadaluarsa(CarbonInterface|string|null $tanggal): array
     {

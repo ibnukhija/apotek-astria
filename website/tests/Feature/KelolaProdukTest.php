@@ -157,8 +157,8 @@ class KelolaProdukTest extends TestCase
     {
         $this->assertSame('Kadaluarsa', Obat::infoKadaluarsa(now()->subDay()->format('Y-m-d'))['label']);
         $this->assertSame('Hampir kadaluarsa', Obat::infoKadaluarsa(now()->format('Y-m-d'))['label']);
-        $this->assertSame('Hampir kadaluarsa', Obat::infoKadaluarsa(now()->addDays(30)->format('Y-m-d'))['label']);
-        $this->assertSame('Aman', Obat::infoKadaluarsa(now()->addDays(31)->format('Y-m-d'))['label']);
+        $this->assertSame('Hampir kadaluarsa', Obat::infoKadaluarsa(now()->addDays(7)->format('Y-m-d'))['label']);
+        $this->assertSame('Aman', Obat::infoKadaluarsa(now()->addDays(8)->format('Y-m-d'))['label']);
     }
 
     public function test_validasi_dan_simpan_tgl_kadaluarsa(): void
@@ -188,7 +188,7 @@ class KelolaProdukTest extends TestCase
         $this->login();
         foreach ([
             ['A', 50, now()->addDays(90)],
-            ['B', 24, now()->addDays(15)],
+            ['B', 24, now()->addDays(5)],
             ['C', 10, now()->subDays(2)],
             ['D', 7,  now()->addDays(60)],
         ] as [$kode, $stok, $tgl]) {

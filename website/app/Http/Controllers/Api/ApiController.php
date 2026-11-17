@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Kategori;
+use App\Models\KondisiStokObat;
 use App\Models\Obat;
 use App\Models\Transaksi;
 use App\Models\ProfilApotek;
@@ -42,7 +43,7 @@ class ApiController extends Controller
             ->orderBy('nama_obat')
             ->get();
 
-        // Obat tersedia yang sudah kadaluarsa atau hampir kadaluarsa (<= 30 hari)
+        // Obat tersedia yang sudah kadaluarsa atau hampir kadaluarsa (<= 7 hari)
         $batasKadaluarsa = $hariIni->copy()->addDays(Obat::BATAS_HAMPIR_KADALUARSA);
         $obatKadaluarsa = Obat::whereNotNull('tgl_kadaluarsa')
             ->whereDate('tgl_kadaluarsa', '<=', $batasKadaluarsa)
@@ -51,9 +52,38 @@ class ApiController extends Controller
             ->orderBy('nama_obat')
             ->get()
             ->map(function ($obat) {
-                $obat->status_kadaluarsa = Obat::infoKadaluarsa($obat->tgl_kadaluarsa)['label'];
+                $statusKad = Obat::infoKadaluarsa($obat->tgl_kadaluarsa)['label'];
+                $obat->status_kadaluarsa = $statusKad;
+                $obat->saran_tindakan = $statusKad === 'Kadaluarsa'
+                    ? 'Musnahkan'
+                    : 'Retur ke supplier';
                 return $obat;
             });
+
+        // Catatan obat rusak terbaru beserta penyebabnya
+        $daftarRusak = KondisiStokObat::with('obat')
+            ->where('jenis', KondisiStokObat::JENIS_RUSAK)
+            ->latest()
+            ->orderByDesc('id')
+            ->limit(30)
+            ->get()
+            ->map(fn (KondisiStokObat $item) => [
+                'id'        => $item->id,
+                'obat_id'   => $item->obat_id,
+                'kode_obat' => $item->obat?->kode_obat ?? '-',
+                'nama_obat' => $item->obat?->nama_obat ?? '-',
+                'satuan'    => $item->obat?->satuan ?? '-',
+                'jumlah'    => (int) $item->jumlah,
+                'penyebab'  => $item->penyebab,
+                'catatan'   => $item->catatan,
+                'tanggal'   => $item->created_at?->format('d/m/Y') ?? '-',
+            ])
+            ->values();
+
+        $ringkasanRusak = [
+            'total_unit'     => (int) KondisiStokObat::where('jenis', KondisiStokObat::JENIS_RUSAK)->sum('jumlah'),
+            'jumlah_catatan' => KondisiStokObat::where('jenis', KondisiStokObat::JENIS_RUSAK)->count(),
+        ];
 
         $grafikPenjualan = $this->hitungGrafikPenjualan($periodeGrafik, $hariIni);
         $obatTerlaris = $this->hitungObatTerlaris();
@@ -70,6 +100,8 @@ class ApiController extends Controller
                 'jumlah_transaksi'      => $jumlahTransaksi,
                 'peringatan_obat'       => $obatMenipis,
                 'peringatan_kadaluarsa' => $obatKadaluarsa,
+                'peringatan_rusak'      => $daftarRusak,
+                'ringkasan_rusak'       => $ringkasanRusak,
                 'grafik_penjualan'      => $grafikPenjualan,
                 'obat_terlaris'         => $obatTerlaris,
                 'transaksi_terbaru'     => $transaksiTerbaru,
@@ -247,9 +279,29 @@ class ApiController extends Controller
 
         $paginated = $query->orderBy('nama_obat')->orderBy('id')->paginate(50);
 
-        $obats = collect($paginated->items())->map(function ($obat) {
+        $obatIds = collect($paginated->items())->pluck('id')->all();
+        $rusakPerObat = KondisiStokObat::where('jenis', KondisiStokObat::JENIS_RUSAK)
+            ->whereIn('obat_id', $obatIds)
+            ->selectRaw('obat_id, SUM(jumlah) as total_rusak')
+            ->groupBy('obat_id')
+            ->pluck('total_rusak', 'obat_id');
+
+        $opnameTerakhir = KondisiStokObat::where('jenis', KondisiStokObat::JENIS_OPNAME)
+            ->whereIn('obat_id', $obatIds)
+            ->latest()
+            ->orderByDesc('id')
+            ->get(['obat_id', 'stok_sesudah', 'created_at'])
+            ->unique('obat_id')
+            ->keyBy('obat_id');
+
+        $obats = collect($paginated->items())->map(function ($obat) use ($rusakPerObat, $opnameTerakhir) {
             $obat->status_stok = Obat::infoStok((int) $obat->stok)['label'];
             $obat->status_kadaluarsa = Obat::infoKadaluarsa($obat->tgl_kadaluarsa)['label'];
+            $obat->total_rusak = (int) ($rusakPerObat[$obat->id] ?? 0);
+            $opname = $opnameTerakhir->get($obat->id);
+            $obat->opname_terakhir = $opname
+                ? ($opname->created_at?->format('d/m/Y') . ' (Fisik: ' . $opname->stok_sesudah . ')')
+                : '';
             return $obat;
         })->values();
 
@@ -261,6 +313,7 @@ class ApiController extends Controller
             'total'                      => $paginated->total(),
             'hampir_habis_total'         => $hampirHabisTotal,
             'perhatian_kadaluarsa_total' => $perhatianKadaluarsaTotal,
+            'total_unit_rusak'           => (int) KondisiStokObat::where('jenis', KondisiStokObat::JENIS_RUSAK)->sum('jumlah'),
             'kategoris'                  => Kategori::orderBy('nama_kategori')->pluck('nama_kategori'),
         ]);
     }

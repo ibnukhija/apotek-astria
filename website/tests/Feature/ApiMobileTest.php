@@ -343,7 +343,7 @@ class ApiMobileTest extends TestCase
         $this->buatObat([
             'kode_obat'      => 'OBT-EXP2',
             'nama_obat'      => 'Obat Hampir Kadaluarsa',
-            'tgl_kadaluarsa' => now()->addDays(15)->format('Y-m-d'),
+            'tgl_kadaluarsa' => now()->addDays(5)->format('Y-m-d'),
             'status'         => 'tersedia',
         ]);
         $this->buatObat([
