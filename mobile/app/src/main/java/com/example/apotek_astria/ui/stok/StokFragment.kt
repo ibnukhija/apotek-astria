@@ -1,5 +1,6 @@
 package com.example.apotek_astria.ui.stok
 
+import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -16,10 +17,12 @@ import com.android.volley.Request
 import com.android.volley.toolbox.Volley
 import com.example.apotek_astria.R
 import com.example.apotek_astria.databinding.FragmentStokBinding
+import com.example.apotek_astria.model.ObatModel
 import com.example.apotek_astria.network.ApiConfig
 import com.example.apotek_astria.network.ApiRequest
-import com.example.apotek_astria.model.ObatModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -31,8 +34,7 @@ class StokFragment : Fragment() {
     private var _binding: FragmentStokBinding? = null
     private val binding get() = _binding!!
 
-    private val semuaObat = mutableListOf<ObatModel>()   // data lengkap dari server
-    private val tampilObat = mutableListOf<ObatModel>()  // data setelah difilter
+    private val tampilObat = mutableListOf<ObatModel>()
     private val daftarKategori = mutableListOf<String>()
 
     private lateinit var adapter: StokAdapter
@@ -40,6 +42,13 @@ class StokFragment : Fragment() {
     private lateinit var cariAdapter: ArrayAdapter<String>
 
     private val semuaKategori = "Semua Kategori"
+    private var kategoriDipilih = semuaKategori
+    private var kataCari = ""
+    private var currentPage = 1
+    private var lastPage = 1
+    private var requestToken = 0
+    private var searchJob: Job? = null
+
     private val rupiah = NumberFormat.getNumberInstance(Locale.forLanguageTag("id-ID"))
 
     override fun onCreateView(
@@ -52,34 +61,70 @@ class StokFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        currentPage = 1
+        kategoriDipilih = semuaKategori
+        kataCari = ""
+
         // ListView
         adapter = StokAdapter(requireContext(), tampilObat) { obat, anchor ->
-            tampilkanPopupMenu(obat, anchor)   // PopupMenu
+            tampilkanPopupMenu(obat, anchor)
         }
         binding.lvStok.adapter = adapter
         binding.lvStok.setOnItemClickListener { _, _, position, _ ->
             tampilkanDetail(tampilObat[position])
         }
 
-        // Spinner kategori
+        // Spinner kategori (inisialisasi dengan "Semua Kategori" agar tidak memicu muat ulang ganda)
+        daftarKategori.clear()
+        daftarKategori.add(semuaKategori)
         kategoriAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_dropdown_item, daftarKategori)
         binding.spKategori.adapter = kategoriAdapter
         binding.spKategori.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, v: View?, pos: Int, id: Long) {
-                terapkanFilter()
+                val pilihan = daftarKategori.getOrNull(pos) ?: semuaKategori
+                if (pilihan != kategoriDipilih) {
+                    kategoriDipilih = pilihan
+                    currentPage = 1
+                    muatObat()
+                }
             }
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
 
-        // AutoCompleteTextView nama obat
+        // AutoCompleteTextView nama/kode obat dengan debounce ke server
         cariAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, mutableListOf<String>())
         binding.actvCari.setAdapter(cariAdapter)
         binding.actvCari.threshold = 1
-        binding.actvCari.doAfterTextChanged { terapkanFilter() }
+        binding.actvCari.doAfterTextChanged {
+            val kataBaru = it?.toString()?.trim().orEmpty()
+            if (kataBaru == kataCari) return@doAfterTextChanged
+            searchJob?.cancel()
+            searchJob = viewLifecycleOwner.lifecycleScope.launch {
+                delay(350L)
+                kataCari = kataBaru
+                currentPage = 1
+                muatObat()
+            }
+        }
 
         // Setup SwipeRefreshLayout
         binding.swipeRefreshLayout.setOnRefreshListener {
+            currentPage = 1
             muatObat()
+        }
+
+        // Tombol Pagination
+        binding.btnPrevPage.setOnClickListener {
+            if (currentPage > 1) {
+                currentPage--
+                muatObat()
+            }
+        }
+        binding.btnNextPage.setOnClickListener {
+            if (currentPage < lastPage) {
+                currentPage++
+                muatObat()
+            }
         }
 
         muatObat()
@@ -87,11 +132,27 @@ class StokFragment : Fragment() {
 
     private fun muatObat() {
         binding.swipeRefreshLayout.isRefreshing = true
+        binding.tvEmpty.visibility = View.GONE
+        val token = ++requestToken
 
-        val request = ApiRequest(requireContext(), Request.Method.GET, ApiConfig.URL_STOK, null,
-            { response -> if (isAdded && _binding != null) olahResponse(response) },
+        val builder = Uri.parse(ApiConfig.URL_STOK).buildUpon()
+            .appendQueryParameter("page", currentPage.toString())
+        if (kategoriDipilih != semuaKategori) {
+            builder.appendQueryParameter("kategori", kategoriDipilih)
+        }
+        if (kataCari.isNotEmpty()) {
+            builder.appendQueryParameter("search", kataCari)
+        }
+        val url = builder.build().toString()
+
+        val request = ApiRequest(requireContext(), Request.Method.GET, url, null,
+            { response ->
+                if (isAdded && _binding != null && token == requestToken) {
+                    olahResponse(response, token)
+                }
+            },
             { error ->
-                if (!isAdded || _binding == null) return@ApiRequest
+                if (!isAdded || _binding == null || token != requestToken) return@ApiRequest
                 binding.swipeRefreshLayout.isRefreshing = false
                 if (!ApiConfig.tanganiAuthError(context, error)) {
                     toast(ApiConfig.pesanError(error))
@@ -101,15 +162,21 @@ class StokFragment : Fragment() {
         Volley.newRequestQueue(requireContext()).add(request)
     }
 
-    private fun olahResponse(response: JSONObject) {
+    private fun olahResponse(response: JSONObject, token: Int) {
         if (!response.optBoolean("success", false)) {
             binding.swipeRefreshLayout.isRefreshing = false
             return
         }
 
         val arr = response.optJSONArray("data")
+        val katArr = response.optJSONArray("kategoris")
+        val halamanSekarang = response.optInt("current_page", 1)
+        val halamanTerakhir = response.optInt("last_page", 1)
+        val totalObat = response.optInt("total", arr?.length() ?: 0)
+        val hampirHabisTotal = response.optInt("hampir_habis_total", 0)
+        val perhatianExpTotal = response.optInt("perhatian_kadaluarsa_total", 0)
 
-        // Proses parsing ratusan data obat di background thread (Coroutine) agar UI tetap responsif
+        // Proses parsing data obat di background thread (Coroutine) agar UI tetap responsif
         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Default) {
             val temporaryList = mutableListOf<ObatModel>()
             if (arr != null) {
@@ -137,55 +204,63 @@ class StokFragment : Fragment() {
                 }
             }
 
-            val kategoriBaru = temporaryList.map { it.kategori }.distinct().sorted()
+            val kategoriServer = mutableListOf<String>()
+            if (katArr != null) {
+                for (i in 0 until katArr.length()) {
+                    val namaKat = katArr.optString(i)
+                    if (namaKat.isNotBlank()) kategoriServer.add(namaKat)
+                }
+            }
+            val kategoriBaru = if (kategoriServer.isNotEmpty()) {
+                kategoriServer
+            } else {
+                temporaryList.map { it.kategori }.distinct().sorted()
+            }
             val saranNama = temporaryList.map { it.namaObat }
 
             withContext(Dispatchers.Main) {
-                if (!isAdded || _binding == null) return@withContext
+                if (!isAdded || _binding == null || token != requestToken) return@withContext
 
                 binding.swipeRefreshLayout.isRefreshing = false
-                semuaObat.clear()
-                semuaObat.addAll(temporaryList)
+                currentPage = halamanSekarang
+                lastPage = halamanTerakhir
 
-                // Isi Spinner (pertahankan pilihan sebelumnya)
-                val sebelumnya = binding.spKategori.selectedItem as? String
+                tampilObat.clear()
+                tampilObat.addAll(temporaryList)
+                adapter.notifyDataSetChanged()
+                if (tampilObat.isNotEmpty()) {
+                    binding.lvStok.setSelection(0)
+                }
+
+                // Perbarui UI Pagination
+                binding.tvPageInfo.text = "Halaman $currentPage dari $lastPage"
+                binding.layoutPagination.visibility = if (lastPage > 1) View.VISIBLE else View.GONE
+                binding.btnPrevPage.isEnabled = currentPage > 1
+                binding.btnNextPage.isEnabled = currentPage < lastPage
+
+                // Perbarui ringkasan total sesuai hasil filter
+                val infoExp = if (perhatianExpTotal > 0) " • $perhatianExpTotal kadaluarsa/hampir" else ""
+                binding.tvRingkasan.text = "$totalObat obat • $hampirHabisTotal hampir habis$infoExp"
+                binding.tvEmpty.visibility = if (tampilObat.isEmpty()) View.VISIBLE else View.GONE
+
+                // Isi Spinner kategori (pertahankan pilihan tanpa memicu muat ulang)
                 daftarKategori.clear()
                 daftarKategori.add(semuaKategori)
                 daftarKategori.addAll(kategoriBaru)
                 kategoriAdapter.notifyDataSetChanged()
-                val idx = daftarKategori.indexOf(sebelumnya)
-                binding.spKategori.setSelection(if (idx >= 0) idx else 0)
+                val idx = daftarKategori.indexOf(kategoriDipilih)
+                if (idx >= 0) {
+                    binding.spKategori.setSelection(idx)
+                } else {
+                    kategoriDipilih = semuaKategori
+                    binding.spKategori.setSelection(0)
+                }
 
                 // Isi saran AutoComplete
                 cariAdapter.clear()
                 cariAdapter.addAll(saranNama)
-
-                terapkanFilter()
             }
         }
-    }
-
-    private fun terapkanFilter() {
-        if (_binding == null) return
-        val kategori = binding.spKategori.selectedItem as? String ?: semuaKategori
-        val kata = binding.actvCari.text.toString().trim()
-
-        tampilObat.clear()
-        tampilObat.addAll(semuaObat.filter {
-            (kategori == semuaKategori || it.kategori == kategori) &&
-                    (it.namaObat.contains(kata, ignoreCase = true) ||
-                            it.kodeObat.contains(kata, ignoreCase = true))
-        })
-        adapter.notifyDataSetChanged()
-
-        val hampirHabis = tampilObat.count { it.statusStok.equals("Hampir habis", ignoreCase = true) }
-        val perhatianExp = tampilObat.count {
-            it.statusKadaluarsa.equals("Kadaluarsa", ignoreCase = true) ||
-                    it.statusKadaluarsa.equals("Hampir kadaluarsa", ignoreCase = true)
-        }
-        val infoExp = if (perhatianExp > 0) " • $perhatianExp kadaluarsa/hampir" else ""
-        binding.tvRingkasan.text = "${tampilObat.size} obat • $hampirHabis hampir habis$infoExp"
-        binding.tvEmpty.visibility = if (tampilObat.isEmpty()) View.VISIBLE else View.GONE
     }
 
     private fun tampilkanPopupMenu(obat: ObatModel, anchor: View) {
@@ -242,6 +317,7 @@ class StokFragment : Fragment() {
     }
 
     override fun onDestroyView() {
+        searchJob?.cancel()
         super.onDestroyView()
         _binding = null
     }

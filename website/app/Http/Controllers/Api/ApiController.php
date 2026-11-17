@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Kategori;
 use App\Models\Obat;
 use App\Models\Transaksi;
 use App\Models\ProfilApotek;
@@ -166,15 +167,40 @@ class ApiController extends Controller
             });
         }
 
-        $obats = $query->orderBy('nama_obat')->get()->map(function ($obat) {
+        if ($request->filled('kategori')) {
+            $kategoriNama = trim($request->kategori);
+            $query->whereHas('kategori', function ($q) use ($kategoriNama) {
+                $q->where('nama_kategori', $kategoriNama);
+            });
+        }
+
+        $ringkasanQuery = clone $query;
+        $hampirHabisTotal = (clone $ringkasanQuery)
+            ->where('stok', '<', Obat::BATAS_HAMPIR_HABIS)
+            ->count();
+        $batasKadaluarsa = Carbon::today()->addDays(Obat::BATAS_HAMPIR_KADALUARSA);
+        $perhatianKadaluarsaTotal = (clone $ringkasanQuery)
+            ->whereNotNull('tgl_kadaluarsa')
+            ->whereDate('tgl_kadaluarsa', '<=', $batasKadaluarsa)
+            ->count();
+
+        $paginated = $query->orderBy('nama_obat')->orderBy('id')->paginate(50);
+
+        $obats = collect($paginated->items())->map(function ($obat) {
             $obat->status_stok = Obat::infoStok((int) $obat->stok)['label'];
             $obat->status_kadaluarsa = Obat::infoKadaluarsa($obat->tgl_kadaluarsa)['label'];
             return $obat;
-        });
+        })->values();
 
         return response()->json([
-            'success' => true,
-            'data' => $obats
+            'success'                    => true,
+            'data'                       => $obats,
+            'current_page'               => $paginated->currentPage(),
+            'last_page'                  => $paginated->lastPage(),
+            'total'                      => $paginated->total(),
+            'hampir_habis_total'         => $hampirHabisTotal,
+            'perhatian_kadaluarsa_total' => $perhatianKadaluarsaTotal,
+            'kategoris'                  => Kategori::orderBy('nama_kategori')->pluck('nama_kategori'),
         ]);
     }
 
@@ -230,7 +256,7 @@ class ApiController extends Controller
             $query->where('created_at', '<=', Carbon::parse($request->tanggal_selesai)->endOfDay());
         }
 
-        $riwayat = $query->paginate(100);
+        $riwayat = $query->paginate(50);
 
         return response()->json([
             'success'      => true,

@@ -503,4 +503,63 @@ class ApiMobileTest extends TestCase
             Carbon::setTestNow();
         }
     }
+
+    public function test_stok_mendukung_paginasi_dan_filter_kategori(): void
+    {
+        $this->loginSebagaiOwner();
+
+        $katA = Kategori::create(['nama_kategori' => 'Analgesik']);
+        $katB = Kategori::create(['nama_kategori' => 'Vitamin']);
+
+        for ($i = 1; $i <= 52; $i++) {
+            $this->buatObat([
+                'kategori_id'    => $katA->id,
+                'kode_obat'      => sprintf('OBT-%03d', $i),
+                'nama_obat'      => sprintf('Obat %03d', $i),
+                'stok'           => $i <= 3 ? 5 : 30,
+                'tgl_kadaluarsa' => ($i === 1 ? now()->subDay() : now()->addMonths(6))->format('Y-m-d'),
+            ]);
+        }
+
+        $this->buatObat([
+            'kategori_id' => $katB->id,
+            'kode_obat'   => 'VIT-001',
+            'nama_obat'   => 'Vitamin C 500mg',
+            'stok'        => 40,
+        ]);
+
+        // Total 53 obat -> halaman 1 berisi 50, halaman 2 berisi 3
+        $hal1 = $this->getJson('/api/stok?page=1')
+            ->assertOk()
+            ->assertJson([
+                'success'                    => true,
+                'current_page'               => 1,
+                'last_page'                  => 2,
+                'total'                      => 53,
+                'hampir_habis_total'         => 3,
+                'perhatian_kadaluarsa_total' => 1,
+                'kategoris'                  => ['Analgesik', 'Vitamin'],
+            ]);
+        $this->assertCount(50, $hal1->json('data'));
+
+        $hal2 = $this->getJson('/api/stok?page=2')
+            ->assertOk()
+            ->assertJson([
+                'current_page' => 2,
+                'last_page'    => 2,
+            ]);
+        $this->assertCount(3, $hal2->json('data'));
+
+        // Filter kategori Vitamin tetap mengembalikan daftar kategori lengkap
+        $filterKat = $this->getJson('/api/stok?kategori=Vitamin')
+            ->assertOk()
+            ->assertJson([
+                'total'                      => 1,
+                'last_page'                  => 1,
+                'hampir_habis_total'         => 0,
+                'perhatian_kadaluarsa_total' => 0,
+                'kategoris'                  => ['Analgesik', 'Vitamin'],
+            ]);
+        $this->assertSame('VIT-001', $filterKat->json('data.0.kode_obat'));
+    }
 }
