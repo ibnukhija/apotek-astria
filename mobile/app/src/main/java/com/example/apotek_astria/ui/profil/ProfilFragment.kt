@@ -99,38 +99,75 @@ class ProfilFragment : Fragment() {
     }
 
     // ---------------------------------------------------------------
-    // Preferensi notifikasi stok (disimpan lokal)
+    // Preferensi notifikasi stok (Firestore: pengaturan_notifikasi)
     // ---------------------------------------------------------------
 
-    private fun prefPengaturan() = requireContext().getSharedPreferences(
-        "PengaturanApotek",
-        Context.MODE_PRIVATE
-    )
+    private var jamTerpilih = "08:00"
+
+    private val izinNotifikasi = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { diberi ->
+        if (!diberi) toast("Izin notifikasi ditolak, notifikasi tidak akan tampil")
+    }
 
     private fun siapkanNotifikasi() {
-        val pref = prefPengaturan()
+        StokMessagingService.buatChannel(requireContext())
 
-        binding.switchNotifikasi.isChecked = pref.getBoolean("NOTIF_STOK", true)
-        binding.etBatasStok.setText(pref.getInt("BATAS_STOK", 10).toString())
+        terapkan(PengaturanNotifikasiRepo.bacaLokal(requireContext()))
+        PengaturanNotifikasiRepo.muat(requireContext()) { p ->
+            if (_binding != null) terapkan(p)
+        }
 
+        binding.btnJamNotifikasi.setOnClickListener { pilihJam() }
         binding.btnSimpanNotifikasi.setOnClickListener { simpanNotifikasi() }
+
+        if (android.os.Build.VERSION.SDK_INT >= 33) {
+            izinNotifikasi.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+
+    private fun terapkan(p: PengaturanNotifikasi) {
+        binding.switchNotifikasi.isChecked = p.notifAktif
+        binding.etBatasStok.setText(p.batasStok.toString())
+        jamTerpilih = p.jam
+        binding.btnJamNotifikasi.text = p.jam
+    }
+
+    private fun pilihJam() {
+        val (h, m) = jamTerpilih.split(":").map { it.toIntOrNull() ?: 0 }
+        android.app.TimePickerDialog(
+            requireContext(),
+            { _, jam, menit ->
+                jamTerpilih = String.format(java.util.Locale.US, "%02d:%02d", jam, menit)
+                binding.btnJamNotifikasi.text = jamTerpilih
+            },
+            h, m, true
+        ).show()
     }
 
     private fun simpanNotifikasi() {
         val batas = binding.etBatasStok.text.toString().trim().toIntOrNull()
-
         if (batas == null || batas < 0) {
             toast("Batas minimum stok harus berupa angka")
             return
         }
 
-        prefPengaturan().edit()
-            .putBoolean("NOTIF_STOK", binding.switchNotifikasi.isChecked)
-            .putInt("BATAS_STOK", batas)
-            .apply()
+        val p = PengaturanNotifikasi(
+            notifAktif = binding.switchNotifikasi.isChecked,
+            batasStok = batas,
+            jam = jamTerpilih
+        )
 
-        toast("Preferensi notifikasi disimpan")
-        tampilkan(Halaman.MENU)
+        binding.btnSimpanNotifikasi.isEnabled = false
+        PengaturanNotifikasiRepo.simpan(requireContext(), p) { berhasil ->
+            if (_binding == null) return@simpan
+            binding.btnSimpanNotifikasi.isEnabled = true
+            toast(
+                if (berhasil) "Preferensi notifikasi disimpan"
+                else "Tersimpan di perangkat, gagal sinkron ke server"
+            )
+            tampilkan(Halaman.MENU)
+        }
     }
 
     // ---------------------------------------------------------------

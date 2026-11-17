@@ -1,0 +1,67 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Models\PengaturanNotifikasi;
+use App\Services\NotifikasiStokService;
+use Illuminate\Http\Request;
+
+class NotifikasiController extends Controller
+{
+    public function show(Request $request)
+    {
+        $p = PengaturanNotifikasi::where('user_id', (int) $request->query('user_id'))->first();
+
+        return response()->json([
+            'success' => true,
+            'data'    => [
+                'aktif'         => $p?->aktif ?? true,
+                'batas_stok'    => $p?->batas_stok ?? 10,
+                'jam_ringkasan' => $p?->jam_ringkasan ? substr($p->jam_ringkasan, 0, 5) : null,
+            ],
+        ]);
+    }
+
+    // Upsert parsial: hanya field yang dikirim yang diubah (mis. hanya fcm_token)
+    public function update(Request $request)
+    {
+        $v = $request->validate([
+            'user_id'       => 'required|integer|exists:users,id',
+            'fcm_token'     => 'nullable|string',
+            'aktif'         => 'sometimes|boolean',
+            'batas_stok'    => 'sometimes|integer|min:0|max:100000',
+            'jam_ringkasan' => 'nullable|date_format:H:i',
+        ]);
+
+        $p = PengaturanNotifikasi::firstOrNew(['user_id' => $v['user_id']]);
+
+        if ($request->has('fcm_token'))     $p->fcm_token = $v['fcm_token'];
+        if ($request->has('aktif'))         $p->aktif = $v['aktif'];
+        if ($request->has('batas_stok'))    $p->batas_stok = $v['batas_stok'];
+        if ($request->has('jam_ringkasan')) $p->jam_ringkasan = $v['jam_ringkasan'];
+        $p->save();
+
+        return response()->json(['success' => true, 'message' => 'Preferensi notifikasi disimpan']);
+    }
+
+    public function tes(Request $request)
+    {
+        $v = $request->validate(['user_id' => 'required|integer|exists:users,id']);
+
+        $p = PengaturanNotifikasi::where('user_id', $v['user_id'])->first();
+        if (!$p || !$p->fcm_token) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Perangkat belum terdaftar. Tutup dan buka ulang aplikasi, lalu coba lagi.',
+            ], 422);
+        }
+
+        $ok = NotifikasiStokService::kirimRingkasan($p, true);
+
+        return response()->json([
+            'success' => $ok,
+            'message' => $ok ? 'Notifikasi uji dikirim' : 'Gagal mengirim. Cek file kredensial Firebase di server.',
+        ], $ok ? 200 : 500);
+    }
+}

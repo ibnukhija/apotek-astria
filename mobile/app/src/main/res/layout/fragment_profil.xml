@@ -281,6 +281,25 @@
                     android:padding="12dp"
                     android:textSize="14sp" />
 
+                <!-- BARU: jam pengingat harian (TimePickerDialog) -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"
+                    android:text="Jam pengingat harian"
+                    android:textColor="#555555"
+                    android:textSize="12sp" />
+
+                <Button
+                    android:id="@+id/btnJamNotifikasi"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:layout_marginTop="8dp"
+                    android:backgroundTint="#E0F2EF"
+                    android:text="08:00"
+                    android:textColor="#20796F"
+                    android:textStyle="bold" />
+
                 <Button
                     android:id="@+id/btnSimpanNotifikasi"
                     android:layout_width="match_parent"

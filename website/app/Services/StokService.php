@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Obat;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use App\Services\NotifikasiStokService;
 
 class StokService
 {
