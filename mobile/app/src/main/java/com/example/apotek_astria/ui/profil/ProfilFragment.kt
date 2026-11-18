@@ -28,6 +28,7 @@ import com.example.apotek_astria.network.ApiRequest
 import com.example.apotek_astria.ui.karyawan.KaryawanActivity
 import org.json.JSONArray
 import org.json.JSONObject
+import com.example.apotek_astria.ui.chat.ChatActivity
 
 class ProfilFragment : Fragment() {
 
@@ -77,7 +78,17 @@ class ProfilFragment : Fragment() {
                 Intent(requireContext(), KaryawanActivity::class.java)
             )
         }
+        binding.btnKelolaKaryawan.setOnClickListener {
+            startActivity(
+                Intent(requireContext(), KaryawanActivity::class.java)
+            )
+        }
 
+        binding.btnBukaChatbot.setOnClickListener {
+            startActivity(
+                Intent(requireContext(), ChatActivity::class.java)
+            )
+        }
         tampilkan(Halaman.MENU)
         muatProfil()
     }
