@@ -13,6 +13,7 @@ import android.view.inputmethod.EditorInfo
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.LinearLayout
+import android.widget.RadioButton
 import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
@@ -58,8 +59,6 @@ class RiwayatFragment : Fragment() {
     private var lastPage = 1
 
     // State Laporan
-    private val daftarPeriodeLabel = listOf("Bulan Ini", "Hari Ini", "Minggu Ini", "Tahun Ini", "Semua", "Kustom")
-    private val daftarPeriodeNilai = listOf("bulan_ini", "hari_ini", "minggu_ini", "tahun_ini", "semua", "kustom")
     private val daftarKategori = mutableListOf("Semua Kategori")
     private val daftarSaranObat = mutableListOf<String>()
     private lateinit var kategoriAdapter: ArrayAdapter<String>
@@ -69,6 +68,7 @@ class RiwayatFragment : Fragment() {
     private var lapCurrentPage = 1
     private var lapLastPage = 1
     private var sedangAturSpinner = false
+    private var urlSupabaseTerakhir = ""
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -311,15 +311,36 @@ class RiwayatFragment : Fragment() {
     }
 
     // ==================== BAGIAN LAPORAN ====================
-    private fun setupPanelLaporan() {
-        val periodeAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, daftarPeriodeLabel).apply {
-            setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+    private fun semuaRadioPeriode(): List<Pair<RadioButton, String>> = listOf(
+        binding.rbPeriodeHariIni to "hari_ini",
+        binding.rbPeriodeMingguIni to "minggu_ini",
+        binding.rbPeriodeBulanIni to "bulan_ini",
+        binding.rbPeriodeTahunIni to "tahun_ini",
+        binding.rbPeriodeSemua to "semua",
+        binding.rbPeriodeKustom to "kustom"
+    )
+
+    private fun pilihPeriodeRadio(nilaiBaru: String, muatUlang: Boolean) {
+        periodeLaporan = nilaiBaru
+        for ((rb, kode) in semuaRadioPeriode()) {
+            rb.isChecked = (kode == nilaiBaru)
         }
-        binding.spPeriodeLaporan.adapter = periodeAdapter
-        sedangAturSpinner = true
-        binding.spPeriodeLaporan.setSelection(0, false) // Bulan Ini
-        isiTanggalSesuaiPeriode("bulan_ini")
-        sedangAturSpinner = false
+        if (nilaiBaru != "kustom") {
+            isiTanggalSesuaiPeriode(nilaiBaru)
+            if (muatUlang) {
+                lapCurrentPage = 1
+                if (laporanSudahDimuat) loadLaporan()
+            }
+        } else if (muatUlang) {
+            Toast.makeText(requireContext(), "Pilih rentang tanggal lalu tekan Terapkan Filter", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun setupPanelLaporan() {
+        pilihPeriodeRadio("bulan_ini", muatUlang = false)
+        for ((rb, kode) in semuaRadioPeriode()) {
+            rb.setOnClickListener { pilihPeriodeRadio(kode, muatUlang = true) }
+        }
 
         kategoriAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, daftarKategori).apply {
             setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
@@ -328,20 +349,6 @@ class RiwayatFragment : Fragment() {
 
         saranObatAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, daftarSaranObat)
         binding.actvLapNamaObat.setAdapter(saranObatAdapter)
-
-        binding.spPeriodeLaporan.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                if (sedangAturSpinner) return
-                val baru = daftarPeriodeNilai[position]
-                periodeLaporan = baru
-                if (baru != "kustom") {
-                    isiTanggalSesuaiPeriode(baru)
-                    lapCurrentPage = 1
-                    if (laporanSudahDimuat) loadLaporan()
-                }
-            }
-            override fun onNothingSelected(parent: AdapterView<*>?) {}
-        }
 
         binding.spKategoriLaporan.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
@@ -354,10 +361,7 @@ class RiwayatFragment : Fragment() {
         }
 
         val saatTanggalManualDipilih = {
-            periodeLaporan = "kustom"
-            sedangAturSpinner = true
-            binding.spPeriodeLaporan.setSelection(daftarPeriodeNilai.indexOf("kustom"))
-            sedangAturSpinner = false
+            pilihPeriodeRadio("kustom", muatUlang = false)
         }
         pasangDatePicker(binding.etLapTanggalMulai) { saatTanggalManualDipilih() }
         pasangDatePicker(binding.etLapTanggalSelesai) { saatTanggalManualDipilih() }
@@ -379,15 +383,21 @@ class RiwayatFragment : Fragment() {
 
         binding.btnLapReset.setOnClickListener {
             sedangAturSpinner = true
-            periodeLaporan = "bulan_ini"
             kategoriLaporan = ""
-            binding.spPeriodeLaporan.setSelection(0)
             binding.spKategoriLaporan.setSelection(0)
-            isiTanggalSesuaiPeriode("bulan_ini")
             binding.actvLapNamaObat.setText("")
             sedangAturSpinner = false
+            pilihPeriodeRadio("bulan_ini", muatUlang = false)
             lapCurrentPage = 1
             loadLaporan()
+        }
+
+        binding.btnBukaSupabase.setOnClickListener {
+            LaporanExportHelper.bukaUrlSupabase(requireContext(), urlSupabaseTerakhir)
+        }
+
+        binding.btnSalinLinkSupabase.setOnClickListener {
+            LaporanExportHelper.salinLinkSupabase(requireContext(), urlSupabaseTerakhir)
         }
 
         binding.swipeRefreshLaporan.setOnRefreshListener {
@@ -627,12 +637,14 @@ class RiwayatFragment : Fragment() {
 
         val ctx = requireContext().applicationContext
         val labelFormat = if (format == "excel") "Excel (.xlsx)" else "PDF"
+        urlSupabaseTerakhir = ""
+        binding.layoutAksiSupabase.visibility = View.GONE
         binding.btnUnduhLaporan.isEnabled = false
         binding.btnUnduhLaporan.text = "Mengunduh..."
         binding.layoutProgressUnduh.visibility = View.VISIBLE
         binding.pbUnduhLaporan.visibility = View.VISIBLE
         binding.tvStatusUnduh.setTextColor(Color.parseColor("#1F7A6F"))
-        binding.tvStatusUnduh.text = "Sedang mengunduh laporan $labelFormat..."
+        binding.tvStatusUnduh.text = "Membuat laporan $labelFormat & mengunggah ke Supabase Storage..."
 
         Toast.makeText(requireContext(), "Mengunduh laporan $labelFormat...", Toast.LENGTH_SHORT).show()
         LaporanExportHelper.tampilkanNotifMulai(ctx, format)
@@ -654,18 +666,28 @@ class RiwayatFragment : Fragment() {
             binding.pbUnduhLaporan.visibility = View.GONE
 
             hasilRes.onSuccess { hasil ->
-                binding.tvStatusUnduh.setTextColor(Color.parseColor("#166534"))
-                binding.tvStatusUnduh.text = "Tersimpan: ${hasil.lokasiSimpan}"
+                urlSupabaseTerakhir = hasil.supabaseUrl
+                val ketSupabase = if (hasil.supabaseUploaded) {
+                    "Supabase Storage: Berhasil diunggah (${hasil.supabasePath})"
+                } else {
+                    "Supabase Storage: ${hasil.supabaseStatus.ifBlank { "Belum dikonfigurasi di server" }}"
+                }
+
+                binding.tvStatusUnduh.setTextColor(Color.parseColor(if (hasil.supabaseUploaded) "#166534" else "#B45309"))
+                binding.tvStatusUnduh.text = "Perangkat: ${hasil.lokasiSimpan}\n$ketSupabase"
+                binding.layoutAksiSupabase.visibility = if (hasil.supabaseUrl.isNotBlank()) View.VISIBLE else View.GONE
+
                 Toast.makeText(
                     requireContext(),
-                    "Laporan berhasil disimpan ke ${hasil.lokasiSimpan}",
+                    if (hasil.supabaseUploaded) "Tersimpan di perangkat & Supabase Storage"
+                    else "Laporan tersimpan ke ${hasil.lokasiSimpan}",
                     Toast.LENGTH_LONG
                 ).show()
 
                 val builder = AlertDialog.Builder(requireContext())
                 if (hasil.isPdf) {
                     builder.setTitle("Laporan PDF Siap")
-                        .setMessage("Laporan tersimpan di:\n${hasil.lokasiSimpan}\n\nAnda dapat langsung mencetak atau membuka file PDF.")
+                        .setMessage("Perangkat:\n${hasil.lokasiSimpan}\n\n$ketSupabase")
                         .setPositiveButton("Cetak / Simpan PDF") { _, _ ->
                             LaporanExportHelper.cetakPdf(requireContext(), hasil)
                         }
@@ -675,7 +697,7 @@ class RiwayatFragment : Fragment() {
                         .setNegativeButton("Tutup", null)
                 } else {
                     builder.setTitle("Laporan Excel Siap")
-                        .setMessage("Laporan tersimpan di:\n${hasil.lokasiSimpan}")
+                        .setMessage("Perangkat:\n${hasil.lokasiSimpan}\n\n$ketSupabase")
                         .setPositiveButton("Buka Excel") { _, _ ->
                             LaporanExportHelper.bukaFile(requireContext(), hasil)
                         }
@@ -686,6 +708,7 @@ class RiwayatFragment : Fragment() {
                 }
                 builder.show()
             }.onFailure { err ->
+                binding.layoutAksiSupabase.visibility = View.GONE
                 binding.tvStatusUnduh.setTextColor(Color.parseColor("#DC2626"))
                 binding.tvStatusUnduh.text = err.message ?: "Gagal mengunduh laporan"
                 Toast.makeText(

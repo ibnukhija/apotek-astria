@@ -13,6 +13,7 @@ use App\Services\NotifikasiStokService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Kreait\Firebase\Messaging\CloudMessage;
 use Kreait\Laravel\Firebase\Facades\Firebase;
 use Laravel\Sanctum\Sanctum;
@@ -1014,6 +1015,110 @@ class ApiMobileTest extends TestCase
             // Hanya stok_menipis terkirim (9 <= 10), notif obat_rusak dilewati
             $this->assertCount(1, $terkirim);
             $this->assertSame('stok_menipis', $terkirim[0]['data']['jenis']);
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
+
+    public function test_ekspor_laporan_menyimpan_file_ke_supabase_storage(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-11-18 09:00:00', 'Asia/Jakarta'));
+
+        try {
+            $this->loginSebagaiOwner();
+
+            $trx = Transaksi::create([
+                'user_id'      => User::first()->id,
+                'no_transaksi' => 'TRX-SUPA-01',
+                'total_harga'  => 20000,
+                'total_bayar'  => 20000,
+                'kembalian'    => 0,
+                'metode_bayar' => 'cash',
+            ]);
+            $obat = $this->buatObat(['nama_obat' => 'Antasida Doen', 'harga_jual' => 10000]);
+            DetailTransaksi::create([
+                'transaksi_id' => $trx->id,
+                'obat_id'      => $obat->id,
+                'qty'          => 2,
+                'harga_satuan' => 10000,
+                'subtotal'     => 20000,
+            ]);
+
+            // 1. Jika Supabase belum dikonfigurasi, ekspor lokal tetap sukses
+            config()->set('services.supabase', [
+                'url'         => '',
+                'service_key' => '',
+                'bucket'      => 'laporan-penjualan',
+                'public'      => true,
+            ]);
+
+            $resTanpaConfig = $this->get('/api/laporan/export?format=pdf&periode=bulan_ini')->assertOk();
+            $this->assertSame('0', $resTanpaConfig->headers->get('X-Supabase-Uploaded'));
+            $this->assertStringStartsWith('%PDF-1.4', $resTanpaConfig->getContent());
+
+            // 2. Jika bucket public dikonfigurasi, file otomatis diunggah & mengembalikan public URL
+            config()->set('services.supabase', [
+                'url'         => 'https://demo.supabase.co',
+                'service_key' => 'srv-secret-key',
+                'bucket'      => 'laporan-penjualan',
+                'public'      => true,
+            ]);
+
+            Http::fake(function ($req) {
+                if (str_contains($req->url(), '/storage/v1/object/sign/')) {
+                    return Http::response([
+                        'signedURL' => '/object/sign/laporan-penjualan/laporan/2026/11/file.xlsx?token=abc',
+                    ], 200);
+                }
+
+                return Http::response(['Key' => 'laporan-penjualan/ok'], 200);
+            });
+
+            $resPublic = $this->get('/api/laporan/export?format=pdf&periode=bulan_ini')->assertOk();
+            $this->assertSame('1', $resPublic->headers->get('X-Supabase-Uploaded'));
+            $this->assertSame(
+                'laporan/2026/11/Laporan_Penjualan_20261118_090000.pdf',
+                $resPublic->headers->get('X-Supabase-Path')
+            );
+            $this->assertSame(
+                'https://demo.supabase.co/storage/v1/object/public/laporan-penjualan/laporan/2026/11/Laporan_Penjualan_20261118_090000.pdf',
+                $resPublic->headers->get('X-Supabase-Url')
+            );
+
+            Http::assertSent(function ($req) {
+                return str_starts_with($req->url(), 'https://demo.supabase.co/storage/v1/object/laporan-penjualan/laporan/2026/11/')
+                    && $req->hasHeader('Authorization', 'Bearer srv-secret-key')
+                    && $req->hasHeader('x-upsert', 'true');
+            });
+
+            // 3. Jika bucket private, sistem meminta signed URL
+            config()->set('services.supabase.public', false);
+
+            $resPrivate = $this->get('/api/laporan/export?format=excel&periode=hari_ini&hanya_upload=1')
+                ->assertOk()
+                ->assertJsonPath('success', true)
+                ->assertJsonPath('supabase.diunggah', true)
+                ->assertJsonPath(
+                    'supabase.url',
+                    'https://demo.supabase.co/storage/v1/object/sign/laporan-penjualan/laporan/2026/11/file.xlsx?token=abc'
+                );
+            $this->assertStringEndsWith('.xlsx', (string) $resPrivate->json('nama_file'));
+
+            // 4. Key baru Supabase (sb_secret_...) hanya mengirim header apikey tanpa Bearer
+            //    dan URL Data API (/rest/v1/) otomatis dinormalisasi ke root host
+            config()->set('services.supabase', [
+                'url'         => 'https://demo.supabase.co/rest/v1/',
+                'service_key' => 'sb_secret_contoh123',
+                'bucket'      => 'laporan-penjualan',
+                'public'      => true,
+            ]);
+
+            $this->get('/api/laporan/export?format=pdf&hanya_upload=1')->assertOk();
+            Http::assertSent(function ($req) {
+                return str_starts_with($req->url(), 'https://demo.supabase.co/storage/v1/object/')
+                    && $req->hasHeader('apikey', 'sb_secret_contoh123')
+                    && ! $req->hasHeader('Authorization');
+            });
         } finally {
             Carbon::setTestNow();
         }

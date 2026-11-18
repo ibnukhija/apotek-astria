@@ -6,6 +6,8 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.ActivityNotFoundException
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
@@ -45,7 +47,20 @@ data class HasilEkspor(
     val uriBagikan: Uri,
     val lokasiSimpan: String,
     val mimeType: String,
-    val isPdf: Boolean
+    val isPdf: Boolean,
+    val supabaseUploaded: Boolean = false,
+    val supabaseUrl: String = "",
+    val supabasePath: String = "",
+    val supabaseStatus: String = ""
+)
+
+private data class UnduhanServer(
+    val bytes: ByteArray,
+    val namaFile: String?,
+    val supabaseUploaded: Boolean,
+    val supabaseUrl: String,
+    val supabasePath: String,
+    val supabaseStatus: String
 )
 
 object LaporanExportHelper {
@@ -88,7 +103,7 @@ object LaporanExportHelper {
             setRequestProperty("Accept", "*/*")
         }
 
-        val bytes = try {
+        val unduhan = try {
             val code = conn.responseCode
             if (code != HttpURLConnection.HTTP_OK) {
                 val errBody = conn.errorStream?.bufferedReader()?.use { it.readText() }.orEmpty()
@@ -99,7 +114,15 @@ object LaporanExportHelper {
                 }
                 throw IllegalStateException(pesan)
             }
-            conn.inputStream.use { it.readBytes() }
+
+            val serverNama = conn.getHeaderField("X-Nama-File")?.trim()?.takeIf { it.isNotBlank() }
+            val supaUploaded = conn.getHeaderField("X-Supabase-Uploaded") == "1"
+            val supaUrl = conn.getHeaderField("X-Supabase-Url").orEmpty().trim()
+            val supaPath = conn.getHeaderField("X-Supabase-Path").orEmpty().trim()
+            val supaStatus = conn.getHeaderField("X-Supabase-Status").orEmpty().trim()
+            val rawBytes = conn.inputStream.use { it.readBytes() }
+
+            UnduhanServer(rawBytes, serverNama, supaUploaded, supaUrl, supaPath, supaStatus)
         } finally {
             conn.disconnect()
         }
@@ -112,11 +135,11 @@ object LaporanExportHelper {
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         }
         val capWaktu = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-        val namaFile = "Laporan_Penjualan_$capWaktu.$ekstensi"
+        val namaFile = unduhan.namaFile ?: "Laporan_Penjualan_$capWaktu.$ekstensi"
 
         val cacheDir = File(context.cacheDir, "laporan").apply { mkdirs() }
         val fileCache = File(cacheDir, namaFile)
-        fileCache.writeBytes(bytes)
+        fileCache.writeBytes(unduhan.bytes)
 
         val uriBagikan = FileProvider.getUriForFile(
             context,
@@ -124,7 +147,7 @@ object LaporanExportHelper {
             fileCache
         )
 
-        val lokasiSimpan = simpanKeDownloads(context, namaFile, mimeType, bytes)
+        val lokasiSimpan = simpanKeDownloads(context, namaFile, mimeType, unduhan.bytes)
 
         return HasilEkspor(
             namaFile = namaFile,
@@ -132,7 +155,11 @@ object LaporanExportHelper {
             uriBagikan = uriBagikan,
             lokasiSimpan = lokasiSimpan,
             mimeType = mimeType,
-            isPdf = isPdf
+            isPdf = isPdf,
+            supabaseUploaded = unduhan.supabaseUploaded,
+            supabaseUrl = unduhan.supabaseUrl,
+            supabasePath = unduhan.supabasePath,
+            supabaseStatus = unduhan.supabaseStatus
         )
     }
 
@@ -186,7 +213,8 @@ object LaporanExportHelper {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
-        val teks = "${hasil.namaFile} tersimpan di ${hasil.lokasiSimpan}"
+        val infoCloud = if (hasil.supabaseUploaded) " & Supabase Storage" else ""
+        val teks = "${hasil.namaFile} tersimpan di ${hasil.lokasiSimpan}$infoCloud"
         val notif = NotificationCompat.Builder(context, CHANNEL_ID_UNDUH)
             .setSmallIcon(android.R.drawable.stat_sys_download_done)
             .setContentTitle("Unduhan Laporan Selesai")
@@ -264,6 +292,26 @@ object LaporanExportHelper {
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
         context.startActivity(Intent.createChooser(intent, "Bagikan Laporan"))
+    }
+
+    fun bukaUrlSupabase(context: Context, url: String) {
+        if (url.isBlank()) {
+            Toast.makeText(context, "Tautan Supabase belum tersedia", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+        try {
+            context.startActivity(intent)
+        } catch (_: ActivityNotFoundException) {
+            Toast.makeText(context, "Tidak ada browser untuk membuka tautan", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun salinLinkSupabase(context: Context, url: String) {
+        if (url.isBlank()) return
+        val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+        cm?.setPrimaryClip(ClipData.newPlainText("Tautan Laporan Supabase", url))
+        Toast.makeText(context, "Tautan Supabase disalin ke clipboard", Toast.LENGTH_SHORT).show()
     }
 
     fun cetakPdf(context: Context, hasil: HasilEkspor) {

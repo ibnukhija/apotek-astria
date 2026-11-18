@@ -11,6 +11,7 @@ use App\Models\ProfilApotek;
 use App\Services\LaporanExcelService;
 use App\Services\LaporanPdfService;
 use App\Services\LaporanPenjualanService;
+use App\Services\SupabaseStorageService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -421,12 +422,13 @@ class ApiController extends Controller
         ]);
     }
 
-    // 3c. Ekspor Laporan Penjualan ke PDF atau Excel (XLSX)
+    // 3c. Ekspor Laporan Penjualan ke PDF atau Excel (XLSX) + arsip ke Supabase Storage
     public function exportLaporan(
         Request $request,
         LaporanPenjualanService $service,
         LaporanExcelService $excel,
-        LaporanPdfService $pdf
+        LaporanPdfService $pdf,
+        SupabaseStorageService $supabase
     ) {
         $request->validate([
             'format' => 'required|in:pdf,excel',
@@ -439,19 +441,32 @@ class ApiController extends Controller
         if ($request->input('format') === 'excel') {
             $konten = $excel->buatXlsx($dataEkspor);
             $namaFile = "Laporan_Penjualan_{$capWaktu}.xlsx";
-
-            return response($konten, 200, [
-                'Content-Type'        => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                'Content-Disposition' => "attachment; filename=\"{$namaFile}\"",
-            ]);
+            $mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+        } else {
+            $konten = $pdf->buatPdf($dataEkspor);
+            $namaFile = "Laporan_Penjualan_{$capWaktu}.pdf";
+            $mimeType = 'application/pdf';
         }
 
-        $konten = $pdf->buatPdf($dataEkspor);
-        $namaFile = "Laporan_Penjualan_{$capWaktu}.pdf";
+        $hasilSupabase = $supabase->simpanLaporan($namaFile, $konten, $mimeType);
+
+        if ($request->boolean('hanya_upload')) {
+            return response()->json([
+                'success'   => $hasilSupabase['diunggah'],
+                'nama_file' => $namaFile,
+                'supabase'  => $hasilSupabase,
+            ], $hasilSupabase['diunggah'] ? 200 : 422);
+        }
 
         return response($konten, 200, [
-            'Content-Type'        => 'application/pdf',
+            'Content-Type'        => $mimeType,
             'Content-Disposition' => "attachment; filename=\"{$namaFile}\"",
+            'X-Nama-File'         => $namaFile,
+            'X-Supabase-Uploaded' => $hasilSupabase['diunggah'] ? '1' : '0',
+            'X-Supabase-Bucket'   => (string) ($hasilSupabase['bucket'] ?? ''),
+            'X-Supabase-Path'     => (string) ($hasilSupabase['path'] ?? ''),
+            'X-Supabase-Url'      => (string) ($hasilSupabase['url'] ?? ''),
+            'X-Supabase-Status'   => (string) ($hasilSupabase['status'] ?? ''),
         ]);
     }
 

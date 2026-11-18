@@ -35,4 +35,11 @@ return [
         ],
     ],
 
+    'supabase' => [
+        'url'         => rtrim((string) env('SUPABASE_URL', ''), '/'),
+        'service_key' => (string) env('SUPABASE_SERVICE_KEY', env('SUPABASE_KEY', '')),
+        'bucket'      => (string) env('SUPABASE_BUCKET', 'laporan-penjualan'),
+        'public'      => filter_var(env('SUPABASE_BUCKET_PUBLIC', true), FILTER_VALIDATE_BOOL),
+    ],
+
 ];
