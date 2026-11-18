@@ -7,7 +7,11 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
+import android.widget.EditText
 import android.widget.PopupMenu
+import android.widget.RadioButton
+import android.widget.RadioGroup
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.core.widget.doAfterTextChanged
@@ -272,6 +276,7 @@ class StokFragment : Fragment() {
             when (item.itemId) {
                 R.id.menu_detail_obat -> tampilkanDetail(obat)
                 R.id.menu_rincian_harga -> tampilkanRincianHarga(obat)
+                R.id.menu_ubah_cepat -> tampilkanDialogUbahCepat(obat)
             }
             true
         }
@@ -319,6 +324,67 @@ class StokFragment : Fragment() {
             .setMessage(pesan)
             .setPositiveButton("Tutup", null)
             .show()
+    }
+
+    private fun tampilkanDialogUbahCepat(obat: ObatModel) {
+        val dialogView = LayoutInflater.from(requireContext())
+            .inflate(R.layout.dialog_ubah_cepat_obat, null)
+
+        val tvNama       = dialogView.findViewById<TextView>(R.id.tvNamaObatDialog)
+        val etHarga      = dialogView.findViewById<EditText>(R.id.etHargaJual)
+        val rgStatus     = dialogView.findViewById<RadioGroup>(R.id.rgStatus)
+        val rbTersedia   = dialogView.findViewById<RadioButton>(R.id.rbTersedia)
+        val rbTidak      = dialogView.findViewById<RadioButton>(R.id.rbTidakTersedia)
+
+        // Isi nilai awal
+        tvNama.text = obat.namaObat
+        etHarga.setText(obat.hargaJual.toString())
+        etHarga.setSelection(etHarga.text.length) // cursor di akhir
+        if (obat.status == "tersedia") rbTersedia.isChecked = true else rbTidak.isChecked = true
+
+        AlertDialog.Builder(requireContext())
+            .setTitle("Ubah Cepat Obat")
+            .setView(dialogView)
+            .setPositiveButton("Simpan") { _, _ ->
+                val hargaBaru = etHarga.text.toString().trim().toLongOrNull()
+                if (hargaBaru == null || hargaBaru <= 0) {
+                    toast("Harga jual tidak valid")
+                    return@setPositiveButton
+                }
+                val statusBaru = if (rbTersedia.isChecked) "tersedia" else "tidak"
+                kirimUbahCepat(obat, hargaBaru.toInt(), statusBaru)
+            }
+            .setNegativeButton("Batal", null)
+            .show()
+    }
+
+    private fun kirimUbahCepat(obat: ObatModel, hargaJualBaru: Int, statusBaru: String) {
+        val url = "${ApiConfig.URL_OBAT}/${obat.id}"
+        val body = JSONObject().apply {
+            put("harga_jual", hargaJualBaru)
+            put("status", statusBaru)
+        }
+
+        val request = ApiRequest(requireContext(), Request.Method.PUT, url, body,
+            { response ->
+                if (!isAdded) return@ApiRequest
+                val sukses = response.optBoolean("success", false)
+                val pesan  = response.optString("message", "")
+                if (sukses) {
+                    toast("✓ ${obat.namaObat} berhasil diperbarui")
+                    muatObat() // refresh list
+                } else {
+                    toast(pesan.ifBlank { "Gagal memperbarui obat" })
+                }
+            },
+            { error ->
+                if (!isAdded) return@ApiRequest
+                if (!ApiConfig.tanganiAuthError(context, error)) {
+                    toast(ApiConfig.pesanError(error))
+                }
+            }
+        )
+        Volley.newRequestQueue(requireContext()).add(request)
     }
 
     private fun toast(pesan: String) {

@@ -2,4 +2,5 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:id="@+id/menu_detail_obat" android:title="Lihat Detail" />
     <item android:id="@+id/menu_rincian_harga" android:title="Rincian Harga &amp; Margin" />
+    <item android:id="@+id/menu_ubah_cepat" android:title="Ubah Cepat Harga &amp; Status" />
 </menu>

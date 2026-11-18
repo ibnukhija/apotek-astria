@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <!-- Nama obat (info saja, tidak bisa diedit) -->
+    <TextView
+        android:id="@+id/tvNamaObatDialog"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="13sp"
+        android:textColor="#757575"
+        android:layout_marginBottom="16dp"
+        android:text="Nama Obat" />
+
+    <!-- Input Harga Jual -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Harga Jual Baru (Rp)"
+        android:textSize="12sp"
+        android:textColor="#424242"
+        android:layout_marginBottom="4dp" />
+
+    <EditText
+        android:id="@+id/etHargaJual"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:inputType="numberDecimal"
+        android:hint="Contoh: 5000"
+        android:textSize="14sp"
+        android:padding="10dp"
+        android:background="@android:drawable/edit_text"
+        android:layout_marginBottom="20dp" />
+
+    <!-- Toggle Status Ketersediaan -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Status Ketersediaan"
+        android:textSize="12sp"
+        android:textColor="#424242"
+        android:layout_marginBottom="8dp" />
+
+    <RadioGroup
+        android:id="@+id/rgStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <RadioButton
+            android:id="@+id/rbTersedia"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Tersedia"
+            android:textSize="13sp"
+            android:buttonTint="#208B7A" />
+
+        <RadioButton
+            android:id="@+id/rbTidakTersedia"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Tidak Tersedia"
+            android:textSize="13sp"
+            android:buttonTint="#208B7A" />
+    </RadioGroup>
+
+</LinearLayout>
