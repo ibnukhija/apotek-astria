@@ -33,4 +33,5 @@ Route::middleware(['auth:sanctum', 'cekrole:owner'])->group(function () {
     Route::get('/notifikasi', [NotifikasiController::class, 'show']);
     Route::put('/notifikasi', [NotifikasiController::class, 'update']);
     Route::post('/notifikasi/tes', [NotifikasiController::class, 'tes']);
+    Route::post('/chatbot', [\App\Http\Controllers\Api\ChatbotController::class, 'kirim']);
 });

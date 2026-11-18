@@ -42,4 +42,9 @@ return [
         'public'      => filter_var(env('SUPABASE_BUCKET_PUBLIC', true), FILTER_VALIDATE_BOOL),
     ],
 
+    'groq' => [
+        'key'   => (string) env('GROQ_API_KEY', ''),
+        'model' => (string) env('GROQ_MODEL', 'llama-3.3-70b-versatile'),
+    ],
+
 ];

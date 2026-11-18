@@ -35,6 +35,7 @@ object ApiConfig {
     const val KEY_USER_ID = "USER_ID"
     const val KEY_USER_NAMA = "USER_NAMA"
     const val KEY_TOKEN = "AUTH_TOKEN"
+    const val URL_CHATBOT = "$BASE_URL/chatbot"
 
     fun sesiPref(context: Context) =
         context.applicationContext.getSharedPreferences(PREF_SESI, Context.MODE_PRIVATE)

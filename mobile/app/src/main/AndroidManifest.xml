@@ -25,6 +25,10 @@
         <activity
             android:name=".ui.karyawan.KaryawanActivity"
             android:exported="false" />
+        <activity
+            android:name=".ui.chat.ChatActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
 
         <!-- Menerima push notifikasi stok menipis dari FCM -->
         <service

@@ -700,6 +700,12 @@
                 android:backgroundTint="#2A9D8F"
                 android:text="+ Kelola Akun Karyawan"
                 android:textColor="#FFFFFF" />
+            <Button
+                android:id="@+id/btnBukaChatbot"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="Asisten AI (Chatbot)" />
         </LinearLayout>
 
     </LinearLayout>
