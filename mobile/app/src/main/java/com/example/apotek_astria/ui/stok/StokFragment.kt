@@ -48,12 +48,19 @@ class StokFragment : Fragment() {
     private val semuaKategori = "Semua Kategori"
     private var kategoriDipilih = semuaKategori
     private var kataCari = ""
+    private var statusFilterKhusus: String? = null
     private var currentPage = 1
     private var lastPage = 1
     private var requestToken = 0
     private var searchJob: Job? = null
 
     private val rupiah = NumberFormat.getNumberInstance(Locale.forLanguageTag("id-ID"))
+
+    companion object {
+        const val ARG_FILTER_STATUS = "arg_filter_status"
+        const val STATUS_MENIPIS = "menipis"
+        const val STATUS_KADALUARSA = "kadaluarsa"
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -68,6 +75,18 @@ class StokFragment : Fragment() {
         currentPage = 1
         kategoriDipilih = semuaKategori
         kataCari = ""
+
+        // Tangani filter khusus dari Beranda / Notifikasi jika ada
+        statusFilterKhusus = arguments?.getString(ARG_FILTER_STATUS)
+        perbaruiTampilanFilterKhusus()
+
+        binding.btnResetFilterKhusus.setOnClickListener {
+            statusFilterKhusus = null
+            arguments?.remove(ARG_FILTER_STATUS)
+            perbaruiTampilanFilterKhusus()
+            currentPage = 1
+            muatObat()
+        }
 
         // ListView
         adapter = StokAdapter(requireContext(), tampilObat) { obat, anchor ->
@@ -134,6 +153,22 @@ class StokFragment : Fragment() {
         muatObat()
     }
 
+    private fun perbaruiTampilanFilterKhusus() {
+        when (statusFilterKhusus) {
+            STATUS_MENIPIS -> {
+                binding.layoutFilterKhusus.visibility = View.VISIBLE
+                binding.tvLabelFilterKhusus.text = "Filter: Stok Menipis (< 10)"
+            }
+            STATUS_KADALUARSA -> {
+                binding.layoutFilterKhusus.visibility = View.VISIBLE
+                binding.tvLabelFilterKhusus.text = "Filter: Hampir / Sudah Kadaluarsa (≤ 7 hari)"
+            }
+            else -> {
+                binding.layoutFilterKhusus.visibility = View.GONE
+            }
+        }
+    }
+
     private fun muatObat() {
         binding.swipeRefreshLayout.isRefreshing = true
         binding.tvEmpty.visibility = View.GONE
@@ -146,6 +181,11 @@ class StokFragment : Fragment() {
         }
         if (kataCari.isNotEmpty()) {
             builder.appendQueryParameter("search", kataCari)
+        }
+        if (statusFilterKhusus == STATUS_MENIPIS) {
+            builder.appendQueryParameter("status_stok", "menipis")
+        } else if (statusFilterKhusus == STATUS_KADALUARSA) {
+            builder.appendQueryParameter("status_kadaluarsa", "perhatian")
         }
         val url = builder.build().toString()
 

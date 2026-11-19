@@ -606,6 +606,21 @@ class ApiMobileTest extends TestCase
                 ->assertOk()
                 ->json('data.obat_terlaris');
             $this->assertSame($topDariHarian, $topDariBulanan);
+
+            // Response dashboard juga menyertakan daftar kategori
+            $resDashboard = $this->getJson('/api/dashboard')->assertOk()->json('data');
+            $this->assertArrayHasKey('kategoris', $resDashboard);
+
+            // Filter obat terlaris per kategori: obat A berada di kategori baru
+            $katKhusus = Kategori::create(['nama_kategori' => 'Kategori Khusus Terlaris']);
+            $daftarObat['A']->update(['kategori_id' => $katKhusus->id]);
+
+            $topPerKategori = $this->getJson('/api/dashboard?kategori_id=' . $katKhusus->id)
+                ->assertOk()
+                ->json('data.obat_terlaris');
+            $this->assertCount(1, $topPerKategori);
+            $this->assertSame('Obat A', $topPerKategori[0]['nama_obat']);
+            $this->assertSame(3, $topPerKategori[0]['total_terjual']);
         } finally {
             Carbon::setTestNow();
         }

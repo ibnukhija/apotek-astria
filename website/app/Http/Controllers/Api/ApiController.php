@@ -24,11 +24,13 @@ class ApiController extends Controller
         $request->validate([
             'periode'        => 'nullable|in:harian,mingguan,bulanan,keseluruhan',
             'periode_grafik' => 'nullable|in:harian,mingguan,bulanan,tahunan',
+            'kategori_id'    => 'nullable|integer',
         ]);
 
         $periode = $request->input('periode', 'harian');
         $defaultGrafik = in_array($periode, ['harian', 'mingguan', 'bulanan'], true) ? $periode : 'harian';
         $periodeGrafik = $request->input('periode_grafik', $defaultGrafik);
+        $kategoriId = $request->filled('kategori_id') ? (int) $request->input('kategori_id') : null;
         $hariIni = Carbon::today();
 
         $transaksiQuery = Transaksi::query();
@@ -87,7 +89,8 @@ class ApiController extends Controller
         ];
 
         $grafikPenjualan = $this->hitungGrafikPenjualan($periodeGrafik, $hariIni);
-        $obatTerlaris = $this->hitungObatTerlaris();
+        $obatTerlaris = $this->hitungObatTerlaris($kategoriId);
+        $daftarKategori = Kategori::orderBy('nama_kategori')->get(['id', 'nama_kategori']);
 
         // 5 transaksi terbaru (disertakan untuk kompatibilitas API)
         $transaksiTerbaru = Transaksi::with('user')->latest()->orderByDesc('id')->limit(5)->get();
@@ -97,6 +100,8 @@ class ApiController extends Controller
             'data' => [
                 'periode'               => $periode,
                 'periode_grafik'        => $periodeGrafik,
+                'kategori_id'           => $kategoriId,
+                'kategoris'             => $daftarKategori,
                 'total_penjualan'       => (int) $totalPenjualan,
                 'jumlah_transaksi'      => $jumlahTransaksi,
                 'peringatan_obat'       => $obatMenipis,
@@ -132,11 +137,11 @@ class ApiController extends Controller
     }
 
     /**
-     * Top 5 obat paling laku berdasarkan total unit terjual keseluruhan.
+     * Top 5 obat paling laku berdasarkan total unit terjual keseluruhan (opsional filter per kategori).
      */
-    private function hitungObatTerlaris(): array
+    private function hitungObatTerlaris(?int $kategoriId = null): array
     {
-        return DB::table('detail_transaksi')
+        $query = DB::table('detail_transaksi')
             ->join('obat', 'obat.id', '=', 'detail_transaksi.obat_id')
             ->select(
                 'obat.id as obat_id',
@@ -145,8 +150,13 @@ class ApiController extends Controller
                 'obat.satuan',
                 DB::raw('SUM(detail_transaksi.qty) as total_terjual'),
                 DB::raw('SUM(detail_transaksi.subtotal) as total_pendapatan')
-            )
-            ->groupBy('obat.id', 'obat.kode_obat', 'obat.nama_obat', 'obat.satuan')
+            );
+
+        if ($kategoriId) {
+            $query->where('obat.kategori_id', $kategoriId);
+        }
+
+        return $query->groupBy('obat.id', 'obat.kode_obat', 'obat.nama_obat', 'obat.satuan')
             ->orderByDesc('total_terjual')
             ->orderByDesc('total_pendapatan')
             ->orderBy('obat.nama_obat')
@@ -266,6 +276,22 @@ class ApiController extends Controller
             $query->whereHas('kategori', function ($q) use ($kategoriNama) {
                 $q->where('nama_kategori', $kategoriNama);
             });
+        }
+
+        if ($request->filled('status_stok')) {
+            $valStok = strtolower(trim($request->status_stok));
+            if (in_array($valStok, ['menipis', 'hampir_habis', 'kurang_dari_10'], true)) {
+                $query->where('stok', '<', Obat::BATAS_HAMPIR_HABIS);
+            }
+        }
+
+        if ($request->filled('status_kadaluarsa')) {
+            $valKad = strtolower(trim($request->status_kadaluarsa));
+            if (in_array($valKad, ['perhatian', 'kadaluarsa', 'hampir_kadaluarsa'], true)) {
+                $batasKad = Carbon::today()->addDays(Obat::BATAS_HAMPIR_KADALUARSA);
+                $query->whereNotNull('tgl_kadaluarsa')
+                      ->whereDate('tgl_kadaluarsa', '<=', $batasKad);
+            }
         }
 
         $ringkasanQuery = clone $query;

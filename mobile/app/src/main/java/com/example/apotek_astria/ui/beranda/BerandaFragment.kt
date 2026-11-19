@@ -2,11 +2,14 @@ package com.example.apotek_astria.ui.beranda
 
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
+import android.net.Uri
 import android.os.Bundle
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
 import android.widget.LinearLayout
 import android.widget.PopupMenu
 import android.widget.TextView
@@ -20,6 +23,7 @@ import com.example.apotek_astria.R
 import com.example.apotek_astria.databinding.FragmentBerandaBinding
 import com.example.apotek_astria.network.ApiConfig
 import com.example.apotek_astria.network.ApiRequest
+import com.example.apotek_astria.ui.stok.StokFragment
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import org.json.JSONArray
 import java.text.NumberFormat
@@ -37,6 +41,11 @@ class BerandaFragment : Fragment() {
     private val daftarPeringatanKadaluarsa = mutableListOf<String>()
     private val daftarPeringatanRusak = mutableListOf<String>()
     private val formatRupiah by lazy { NumberFormat.getNumberInstance(Locale.forLanguageTag("id-ID")) }
+
+    // Filter kategori untuk Top 5 Obat Terlaris
+    private val daftarKategoriTerlaris = mutableListOf<Pair<Int?, String>>() // Pair(id, nama)
+    private lateinit var kategoriTerlarisAdapter: ArrayAdapter<String>
+    private var kategoriTerlarisDipilihId: Int? = null
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -74,32 +83,25 @@ class BerandaFragment : Fragment() {
             bukaTabNavigasi(R.id.nav_profil)
         }
 
-        // Banner pemberitahuan stok menipis & 2 kotak ringkasan stok
-        val bukaDialogStokMenipis: (View) -> Unit = {
-            if (daftarPeringatanStok.isEmpty()) {
-                bukaTabNavigasi(R.id.nav_stok)
+        // Banner pemberitahuan stok menipis & 2 kotak ringkasan stok (Drill-down ke Stok terfilter)
+        val bukaStokMenipis: (View) -> Unit = {
+            val mainActivity = activity as? MainActivity
+            if (mainActivity != null) {
+                mainActivity.bukaStok(StokFragment.STATUS_MENIPIS)
             } else {
-                tampilkanDaftarPeringatan(
-                    "Obat Stok Menipis (Stok < 10)",
-                    daftarPeringatanStok,
-                    "Semua stok obat dalam batas aman (>= 10)."
-                )
+                bukaTabNavigasi(R.id.nav_stok)
             }
         }
-        binding.cardBannerStok.setOnClickListener(bukaDialogStokMenipis)
-        binding.cardStokMenipis.setOnClickListener {
-            tampilkanDaftarPeringatan(
-                "Obat Stok Menipis (Stok < 10)",
-                daftarPeringatanStok,
-                "Semua stok obat dalam batas aman (>= 10)."
-            )
-        }
+        binding.cardBannerStok.setOnClickListener(bukaStokMenipis)
+        binding.cardStokMenipis.setOnClickListener(bukaStokMenipis)
+
         binding.cardKadaluarsa.setOnClickListener {
-            tampilkanDaftarPeringatan(
-                "Obat Kadaluarsa / Mendekati Expired (<= 7 Hari)",
-                daftarPeringatanKadaluarsa,
-                "Tidak ada obat yang kadaluarsa atau mendekati expired (<= 7 hari)."
-            )
+            val mainActivity = activity as? MainActivity
+            if (mainActivity != null) {
+                mainActivity.bukaStok(StokFragment.STATUS_KADALUARSA)
+            } else {
+                bukaTabNavigasi(R.id.nav_stok)
+            }
         }
         binding.cardObatRusak.setOnClickListener {
             tampilkanDaftarPeringatan(
@@ -107,6 +109,28 @@ class BerandaFragment : Fragment() {
                 daftarPeringatanRusak,
                 "Belum ada catatan obat rusak."
             )
+        }
+
+        // Filter kategori pada Top 5 Obat Terlaris
+        daftarKategoriTerlaris.clear()
+        daftarKategoriTerlaris.add(Pair(null, "Semua Kategori"))
+        kategoriTerlarisAdapter = ArrayAdapter(
+            requireContext(),
+            android.R.layout.simple_spinner_dropdown_item,
+            mutableListOf("Semua Kategori")
+        )
+        binding.spKategoriTerlaris.adapter = kategoriTerlarisAdapter
+        binding.spKategoriTerlaris.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, v: View?, pos: Int, id: Long) {
+                val itemDipilih = daftarKategoriTerlaris.getOrNull(pos)
+                val idBaru = itemDipilih?.first
+                if (idBaru != kategoriTerlarisDipilihId) {
+                    kategoriTerlarisDipilihId = idBaru
+                    binding.swipeRefreshLayout.isRefreshing = true
+                    loadDashboardData()
+                }
+            }
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
 
         // 4 Tab periode grafik penjualan (Harian, Mingguan, Bulanan, Tahunan)

@@ -21,6 +21,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvHeaderTitle: TextView
     private lateinit var btnLogout: ImageView
     private var pendingBukaLaporan = false
+    private var pendingFilterStok: String? = null
 
     fun bukaLaporan() {
         pendingBukaLaporan = true
@@ -30,6 +31,28 @@ class MainActivity : AppCompatActivity() {
         } else {
             bottomNav.selectedItemId = R.id.nav_riwayat
         }
+    }
+
+    fun bukaStok(filterStatus: String? = null) {
+        pendingFilterStok = filterStatus
+        val bottomNav = findViewById<BottomNavigationView>(R.id.bottom_navigation)
+        if (bottomNav.selectedItemId == R.id.nav_stok) {
+            loadFragment(buatStokFragment(), "Stok Obat")
+        } else {
+            bottomNav.selectedItemId = R.id.nav_stok
+        }
+    }
+
+    private fun buatStokFragment(): StokFragment {
+        val fragment = StokFragment()
+        if (pendingFilterStok != null) {
+            val status = pendingFilterStok
+            pendingFilterStok = null
+            fragment.arguments = Bundle().apply {
+                putString(StokFragment.ARG_FILTER_STATUS, status)
+            }
+        }
+        return fragment
     }
 
     private fun buatRiwayatFragment(): RiwayatFragment {
@@ -86,7 +109,7 @@ class MainActivity : AppCompatActivity() {
                     title = "Riwayat & Laporan"
                 }
                 R.id.nav_stok -> {
-                    selectedFragment = StokFragment()
+                    selectedFragment = buatStokFragment()
                     title = "Stok Obat"
                 }
                 R.id.nav_profil -> {
