@@ -26,6 +26,17 @@
 
     <!-- Link Navigasi -->
     <nav class="flex-1 overflow-y-auto space-y-1">
+        <a href="{{ route('dashboard') }}"
+            title="Dashboard"
+            class="sidebar-nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm {{ request()->routeIs('dashboard') ? 'font-bold bg-[#E8F4F2] text-soft-teal' : 'font-medium text-gray-text hover:bg-off-white' }} transition">
+            <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="7" height="7"></rect>
+                <rect x="14" y="3" width="7" height="7"></rect>
+                <rect x="14" y="14" width="7" height="7"></rect>
+                <rect x="3" y="14" width="7" height="7"></rect>
+            </svg>
+            <span class="sidebar-hide-on-collapse truncate">Dashboard</span>
+        </a>
         <a href="{{ route('kasir.index') }}"
             title="Kasir"
             class="sidebar-nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm {{ request()->routeIs('kasir.index') ? 'font-bold bg-[#E8F4F2] text-soft-teal' : 'font-medium text-gray-text hover:bg-off-white' }} transition">

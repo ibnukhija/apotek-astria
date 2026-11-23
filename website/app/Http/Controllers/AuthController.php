@@ -19,7 +19,7 @@ class AuthController extends Controller
 
         if (Auth::attempt($credentials + ['status' => 'aktif'])) {
             $request->session()->regenerate();
-            return redirect()->intended('/obat'); //jika berhasil akan diarhkan ke hlman kelola produk
+            return redirect()->intended('/dashboard'); // Diarahkan ke Dashboard Operasional
         }
 
         return back()->withErrors([
