@@ -90,6 +90,7 @@ class ApiController extends Controller
 
         $grafikPenjualan = $this->hitungGrafikPenjualan($periodeGrafik, $hariIni);
         $obatTerlaris = $this->hitungObatTerlaris($kategoriId, $periode, $hariIni);
+        $kategoriTerlaris = $this->hitungKategoriTerlaris($periode, $hariIni);
         $daftarKategori = Kategori::orderBy('nama_kategori')->get(['id', 'nama_kategori']);
 
         // 5 transaksi terbaru (disertakan untuk kompatibilitas API)
@@ -110,6 +111,7 @@ class ApiController extends Controller
                 'ringkasan_rusak'       => $ringkasanRusak,
                 'grafik_penjualan'      => $grafikPenjualan,
                 'obat_terlaris'         => $obatTerlaris,
+                'kategori_terlaris'     => $kategoriTerlaris,
                 'transaksi_terbaru'     => $transaksiTerbaru,
                 'profil_apotek'         => ProfilApotek::ambilAtauDefault()->terserialisasi(),
             ]
@@ -172,6 +174,42 @@ class ApiController extends Controller
                 'kode_obat'        => $row->kode_obat,
                 'nama_obat'        => $row->nama_obat,
                 'satuan'           => $row->satuan,
+                'total_terjual'    => (int) $row->total_terjual,
+                'total_pendapatan' => (int) $row->total_pendapatan,
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Top 5 kategori obat paling laku berdasarkan total unit terjual (mengikuti periode).
+     */
+    private function hitungKategoriTerlaris(string $periode = 'keseluruhan', ?Carbon $hariIni = null): array
+    {
+        $query = DB::table('detail_transaksi')
+            ->join('transaksi', 'transaksi.id', '=', 'detail_transaksi.transaksi_id')
+            ->join('obat', 'obat.id', '=', 'detail_transaksi.obat_id')
+            ->leftJoin('kategori', 'kategori.id', '=', 'obat.kategori_id')
+            ->select(
+                'kategori.id as kategori_id',
+                DB::raw("COALESCE(kategori.nama_kategori, 'Tanpa Kategori') as nama_kategori"),
+                DB::raw('SUM(detail_transaksi.qty) as total_terjual'),
+                DB::raw('SUM(detail_transaksi.subtotal) as total_pendapatan')
+            );
+
+        if ($hariIni && $periode !== 'keseluruhan') {
+            $this->terapkanFilterPeriode($query, $periode, $hariIni, 'transaksi.created_at');
+        }
+
+        return $query->groupBy('kategori.id', 'kategori.nama_kategori')
+            ->orderByDesc('total_terjual')
+            ->orderByDesc('total_pendapatan')
+            ->orderBy(DB::raw("COALESCE(kategori.nama_kategori, 'Tanpa Kategori')"))
+            ->limit(5)
+            ->get()
+            ->map(fn ($row) => [
+                'kategori_id'      => $row->kategori_id !== null ? (int) $row->kategori_id : null,
+                'nama_kategori'    => $row->nama_kategori,
                 'total_terjual'    => (int) $row->total_terjual,
                 'total_pendapatan' => (int) $row->total_pendapatan,
             ])
@@ -445,9 +483,11 @@ class ApiController extends Controller
                 'nama_obat'       => $filter['nama_obat'],
                 'metode_bayar'    => $filter['metode_bayar'],
             ],
-            'ringkasan'    => $hasil['ringkasan'],
-            'data'         => $hasil['items'],
-            'current_page' => $hasil['current_page'],
+            'ringkasan'         => $hasil['ringkasan'],
+            'data'              => $hasil['items'],
+            'produk_terlaris'   => $hasil['produk_terlaris'],
+            'kategori_terlaris' => $hasil['kategori_terlaris'],
+            'current_page'      => $hasil['current_page'],
             'last_page'    => $hasil['last_page'],
             'total'        => $hasil['total'],
             'kategoris'    => $hasil['kategoris'],

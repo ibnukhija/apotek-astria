@@ -48,6 +48,10 @@ class BerandaFragment : Fragment() {
     private lateinit var kategoriTerlarisAdapter: ArrayAdapter<String>
     private var kategoriTerlarisDipilihId: Int? = null
     private var sedangMemperbaruiSpinner = false
+    private var modeTerlaris = "produk" // "produk" | "kategori"
+    private var cacheObatTerlaris: JSONArray? = null
+    private var cacheKategoriTerlaris: JSONArray? = null
+    private var cachePeriodeTerlaris = "harian"
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -137,6 +141,11 @@ class BerandaFragment : Fragment() {
             }
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
+
+        // Switch mode Produk Terlaris vs Kategori Terlaris
+        binding.tvTabTerlarisProduk.setOnClickListener { pilihModeTerlaris("produk") }
+        binding.tvTabTerlarisKategori.setOnClickListener { pilihModeTerlaris("kategori") }
+        perbaruiTampilanTabTerlaris()
 
         // 4 Tab periode grafik penjualan (Harian, Mingguan, Bulanan, Tahunan)
         binding.tvGrafikHarian.setOnClickListener { pilihPeriodeGrafik("harian") }
@@ -290,18 +299,64 @@ class BerandaFragment : Fragment() {
         }
     }
 
+    private fun pilihModeTerlaris(modeBaru: String) {
+        if (modeBaru == modeTerlaris) return
+        modeTerlaris = modeBaru
+        perbaruiTampilanTabTerlaris()
+        tampilkanTerlarisAktif()
+    }
+
+    private fun perbaruiTampilanTabTerlaris() {
+        val isKategori = modeTerlaris == "kategori"
+        binding.tvJudulTerlaris.text = if (isKategori) "Kategori Paling Laku" else "Obat Paling Laku"
+        binding.tvSubjudulTerlaris.text = if (isKategori) {
+            "Top 5 kategori dengan penjualan terbanyak (tap untuk lihat obatnya)"
+        } else {
+            "Top 5 produk dengan jumlah terjual terbanyak"
+        }
+        binding.layoutFilterKategoriTerlaris.visibility = if (isKategori) View.GONE else View.VISIBLE
+
+        val tabs = listOf(
+            binding.tvTabTerlarisProduk to !isKategori,
+            binding.tvTabTerlarisKategori to isKategori
+        )
+        val radius = 8f * resources.displayMetrics.density
+        for ((tab, aktif) in tabs) {
+            if (aktif) {
+                tab.background = GradientDrawable().apply {
+                    setColor(Color.parseColor("#2A9D8F"))
+                    cornerRadius = radius
+                }
+                tab.setTextColor(Color.WHITE)
+            } else {
+                tab.background = null
+                tab.setTextColor(Color.parseColor("#475569"))
+            }
+        }
+    }
+
+    private fun tampilkanTerlarisAktif() {
+        if (modeTerlaris == "kategori") {
+            tampilkanKategoriTerlaris(cacheKategoriTerlaris, cachePeriodeTerlaris)
+        } else {
+            tampilkanObatTerlaris(cacheObatTerlaris, cachePeriodeTerlaris)
+        }
+    }
+
+    private fun labelPeriodeJudul(periode: String): String = when (periode) {
+        "mingguan" -> "Minggu Ini"
+        "bulanan" -> "Bulan Ini"
+        "keseluruhan" -> "Keseluruhan"
+        else -> "Hari Ini"
+    }
+
     private fun tampilkanObatTerlaris(arrayTerlaris: JSONArray?, periode: String = periodeAktif) {
         val namaKategoriDipilih = if (kategoriTerlarisDipilihId != null) {
             daftarKategoriTerlaris.firstOrNull { it.first == kategoriTerlarisDipilihId }?.second
         } else {
             null
         }
-        val labelPeriode = when (periode) {
-            "mingguan" -> "Minggu Ini"
-            "bulanan" -> "Bulan Ini"
-            "keseluruhan" -> "Keseluruhan"
-            else -> "Hari Ini"
-        }
+        val labelPeriode = labelPeriodeJudul(periode)
         binding.tvPeriodeTerlaris.text = if (!namaKategoriDipilih.isNullOrBlank()) {
             "$labelPeriode • $namaKategoriDipilih"
         } else {
@@ -328,34 +383,93 @@ class BerandaFragment : Fragment() {
             val obj = arrayTerlaris.getJSONObject(i)
             val itemView = layoutInflater.inflate(R.layout.item_obat_terlaris, binding.layoutObatTerlaris, false)
 
-            val tvPeringkat = itemView.findViewById<TextView>(R.id.tv_peringkat_terlaris)
-            val tvNama = itemView.findViewById<TextView>(R.id.tv_nama_obat_terlaris)
-            val tvQty = itemView.findViewById<TextView>(R.id.tv_qty_terlaris)
-
-            val peringkat = i + 1
-            tvPeringkat.text = peringkat.toString()
-            tvPeringkat.background = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-                setColor(Color.parseColor(if (peringkat <= 3) "#E8F4F2" else "#F1F5F9"))
-            }
-            tvPeringkat.setTextColor(Color.parseColor(if (peringkat <= 3) "#1F7A6F" else "#64748B"))
-
-            tvNama.text = obj.optString("nama_obat", "-")
-            tvQty.text = "${obj.optInt("total_terjual", 0)} terjual"
+            hiasiPeringkatRow(
+                itemView,
+                i + 1,
+                obj.optString("nama_obat", "-"),
+                "${obj.optInt("total_terjual", 0)} terjual"
+            )
 
             binding.layoutObatTerlaris.addView(itemView)
 
             if (i < maxItems - 1) {
-                val divider = View(requireContext()).apply {
-                    layoutParams = LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        maxOf(1, density.toInt())
-                    )
-                    setBackgroundColor(Color.parseColor("#F1F5F9"))
-                }
-                binding.layoutObatTerlaris.addView(divider)
+                binding.layoutObatTerlaris.addView(buatPemisahBaris(density))
             }
         }
+    }
+
+    private fun tampilkanKategoriTerlaris(arrayKategori: JSONArray?, periode: String = periodeAktif) {
+        binding.tvPeriodeTerlaris.text = labelPeriodeJudul(periode)
+        binding.layoutObatTerlaris.removeAllViews()
+
+        if (arrayKategori == null || arrayKategori.length() == 0) {
+            val emptyText = TextView(requireContext()).apply {
+                text = "Belum ada penjualan kategori (${labelWaktuPeriode(periode)})"
+                setTextColor(Color.parseColor("#94A3B8"))
+                textSize = 12f
+                setPadding(0, 24, 0, 12)
+                gravity = Gravity.CENTER
+            }
+            binding.layoutObatTerlaris.addView(emptyText)
+            return
+        }
+
+        val density = resources.displayMetrics.density
+        val maxItems = minOf(arrayKategori.length(), 5)
+        for (i in 0 until maxItems) {
+            val obj = arrayKategori.getJSONObject(i)
+            val katId = if (obj.isNull("kategori_id")) null else obj.optInt("kategori_id")
+            val namaKat = obj.optString("nama_kategori", "Tanpa Kategori")
+            val totalQty = obj.optInt("total_terjual", 0)
+
+            val itemView = layoutInflater.inflate(R.layout.item_obat_terlaris, binding.layoutObatTerlaris, false)
+            hiasiPeringkatRow(itemView, i + 1, namaKat, "$totalQty terjual")
+
+            if (katId != null) {
+                itemView.setOnClickListener {
+                    val idx = daftarKategoriTerlaris.indexOfFirst { it.first == katId }
+                    if (idx >= 0) {
+                        sedangMemperbaruiSpinner = true
+                        kategoriTerlarisDipilihId = katId
+                        binding.spKategoriTerlaris.setSelection(idx, false)
+                        sedangMemperbaruiSpinner = false
+                        modeTerlaris = "produk"
+                        perbaruiTampilanTabTerlaris()
+                        binding.swipeRefreshLayout.isRefreshing = true
+                        loadDashboardData()
+                    }
+                }
+            }
+
+            binding.layoutObatTerlaris.addView(itemView)
+
+            if (i < maxItems - 1) {
+                binding.layoutObatTerlaris.addView(buatPemisahBaris(density))
+            }
+        }
+    }
+
+    private fun hiasiPeringkatRow(itemView: View, peringkat: Int, judul: String, nilai: String) {
+        val tvPeringkat = itemView.findViewById<TextView>(R.id.tv_peringkat_terlaris)
+        val tvNama = itemView.findViewById<TextView>(R.id.tv_nama_obat_terlaris)
+        val tvQty = itemView.findViewById<TextView>(R.id.tv_qty_terlaris)
+
+        tvPeringkat.text = peringkat.toString()
+        tvPeringkat.background = GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            setColor(Color.parseColor(if (peringkat <= 3) "#E8F4F2" else "#F1F5F9"))
+        }
+        tvPeringkat.setTextColor(Color.parseColor(if (peringkat <= 3) "#1F7A6F" else "#64748B"))
+        tvNama.text = judul
+        tvQty.text = nilai
+    }
+
+    private fun buatPemisahBaris(density: Float): View = View(requireContext()).apply {
+        layoutParams = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            maxOf(1, density.toInt())
+        )
+        setBackgroundColor(Color.parseColor("#F1F5F9"))
     }
 
     private fun loadDashboardData() {
@@ -459,8 +573,11 @@ class BerandaFragment : Fragment() {
                         binding.tvInfoGrafik.text = "Belum ada penjualan pada rentang ${labelChipPeriode(periodeGrafik).lowercase(Locale.ROOT)}"
                     }
 
-                    // 3. Bagian Penjualan: Top 5 Obat Paling Laku (mengikuti periode & kategori)
-                    tampilkanObatTerlaris(data.optJSONArray("obat_terlaris"), periodeRespon)
+                    // 3. Bagian Penjualan: Top 5 Obat & Kategori Paling Laku (mengikuti periode & kategori)
+                    cacheObatTerlaris = data.optJSONArray("obat_terlaris")
+                    cacheKategoriTerlaris = data.optJSONArray("kategori_terlaris")
+                    cachePeriodeTerlaris = periodeRespon
+                    tampilkanTerlarisAktif()
 
                     // 4. Bagian Stok: Banner & Ringkasan Stok Menipis (< 10)
                     val peringatanObatArray = data.optJSONArray("peringatan_obat")

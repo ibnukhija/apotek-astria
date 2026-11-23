@@ -77,14 +77,68 @@ class LaporanPenjualanService
             ->values()
             ->all();
 
+        $produkTerlaris = (clone $baseQuery)
+            ->select(
+                'obat.id as obat_id',
+                'obat.kode_obat',
+                'obat.nama_obat',
+                'obat.satuan',
+                DB::raw("COALESCE(kategori.nama_kategori, '-') as nama_kategori"),
+                DB::raw('SUM(detail_transaksi.qty) as total_terjual'),
+                DB::raw('SUM(detail_transaksi.subtotal) as total_pendapatan')
+            )
+            ->groupBy('obat.id', 'obat.kode_obat', 'obat.nama_obat', 'obat.satuan', 'kategori.nama_kategori')
+            ->orderByDesc('total_terjual')
+            ->orderByDesc('total_pendapatan')
+            ->orderBy('obat.nama_obat')
+            ->limit(25)
+            ->get()
+            ->map(fn ($row) => [
+                'obat_id'          => (int) $row->obat_id,
+                'kode_obat'        => $row->kode_obat,
+                'nama_obat'        => $row->nama_obat,
+                'satuan'           => $row->satuan ?: 'unit',
+                'nama_kategori'    => $row->nama_kategori,
+                'total_terjual'    => (int) $row->total_terjual,
+                'total_pendapatan' => (int) $row->total_pendapatan,
+            ])
+            ->values()
+            ->all();
+
+        $kategoriTerlaris = (clone $baseQuery)
+            ->select(
+                'kategori.id as kategori_id',
+                DB::raw("COALESCE(kategori.nama_kategori, 'Tanpa Kategori') as nama_kategori"),
+                DB::raw('COUNT(DISTINCT obat.id) as jumlah_produk'),
+                DB::raw('SUM(detail_transaksi.qty) as total_terjual'),
+                DB::raw('SUM(detail_transaksi.subtotal) as total_pendapatan')
+            )
+            ->groupBy('kategori.id', 'kategori.nama_kategori')
+            ->orderByDesc('total_terjual')
+            ->orderByDesc('total_pendapatan')
+            ->orderBy(DB::raw("COALESCE(kategori.nama_kategori, 'Tanpa Kategori')"))
+            ->limit(25)
+            ->get()
+            ->map(fn ($row) => [
+                'kategori_id'      => $row->kategori_id !== null ? (int) $row->kategori_id : null,
+                'nama_kategori'    => $row->nama_kategori,
+                'jumlah_produk'    => (int) $row->jumlah_produk,
+                'total_terjual'    => (int) $row->total_terjual,
+                'total_pendapatan' => (int) $row->total_pendapatan,
+            ])
+            ->values()
+            ->all();
+
         return [
-            'items'        => $items,
-            'ringkasan'    => $ringkasan,
-            'current_page' => $paginated->currentPage(),
-            'last_page'    => $paginated->lastPage(),
-            'total'        => $paginated->total(),
-            'kategoris'    => Kategori::orderBy('nama_kategori')->pluck('nama_kategori')->values()->all(),
-            'daftar_obat'  => Obat::orderBy('nama_obat')->pluck('nama_obat')->values()->all(),
+            'items'             => $items,
+            'ringkasan'         => $ringkasan,
+            'produk_terlaris'   => $produkTerlaris,
+            'kategori_terlaris' => $kategoriTerlaris,
+            'current_page'      => $paginated->currentPage(),
+            'last_page'         => $paginated->lastPage(),
+            'total'             => $paginated->total(),
+            'kategoris'         => Kategori::orderBy('nama_kategori')->pluck('nama_kategori')->values()->all(),
+            'daftar_obat'       => Obat::orderBy('nama_obat')->pluck('nama_obat')->values()->all(),
         ];
     }
 

@@ -30,6 +30,7 @@ import com.example.apotek_astria.network.ApiRequest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -69,6 +70,12 @@ class RiwayatFragment : Fragment() {
     private var lapLastPage = 1
     private var sedangAturSpinner = false
     private var urlSupabaseTerakhir = ""
+    private var filterLaporanTerbuka = false
+    private var modeTampilLaporan = "rincian" // "rincian" | "produk_terlaris" | "kategori_terlaris"
+    private var lapItemsCache: List<LaporanItemModel> = emptyList()
+    private var lapTotalItemsCache = 0
+    private var lapProdukTerlarisCache: JSONArray? = null
+    private var lapKategoriTerlarisCache: JSONArray? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -349,8 +356,41 @@ class RiwayatFragment : Fragment() {
         }
     }
 
+    private fun aturPanelFilterLaporan(terbuka: Boolean) {
+        filterLaporanTerbuka = terbuka
+        binding.layoutIsiFilterLaporan.visibility = if (terbuka) View.VISIBLE else View.GONE
+        binding.tvToggleFilterLap.text = if (terbuka) "Tutup ▴" else "Atur Filter ▾"
+    }
+
+    private fun perbaruiRingkasanFilterLap() {
+        val labelPeriode = when (periodeLaporan) {
+            "semua" -> "Semua Periode"
+            "kustom" -> {
+                val m = binding.etLapTanggalMulai.text.toString().trim()
+                val s = binding.etLapTanggalSelesai.text.toString().trim()
+                when {
+                    m.isNotEmpty() && s.isNotEmpty() -> "${ApiConfig.formatTanggal(m)} - ${ApiConfig.formatTanggal(s)}"
+                    m.isNotEmpty() -> "Mulai ${ApiConfig.formatTanggal(m)}"
+                    s.isNotEmpty() -> "Sampai ${ApiConfig.formatTanggal(s)}"
+                    else -> "Kustom"
+                }
+            }
+            else -> "Hari Ini"
+        }
+        val bagian = mutableListOf(labelPeriode)
+        bagian.add(if (kategoriLaporan.isNotBlank()) kategoriLaporan else "Semua Kategori")
+        val obatCari = binding.actvLapNamaObat.text.toString().trim()
+        if (obatCari.isNotBlank()) bagian.add("\"$obatCari\"")
+        binding.tvRingkasanFilterLap.text = bagian.joinToString(" • ")
+    }
+
     private fun setupPanelLaporan() {
+        aturPanelFilterLaporan(false)
+        binding.headerFilterLaporan.setOnClickListener {
+            aturPanelFilterLaporan(!filterLaporanTerbuka)
+        }
         pilihPeriodeRadio("hari_ini", muatUlang = false)
+        perbaruiRingkasanFilterLap()
         for ((rb, kode) in semuaRadioPeriode()) {
             rb.setOnClickListener { pilihPeriodeRadio(kode, muatUlang = true) }
         }
@@ -381,6 +421,7 @@ class RiwayatFragment : Fragment() {
 
         binding.actvLapNamaObat.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_SEARCH || actionId == EditorInfo.IME_ACTION_DONE) {
+                aturPanelFilterLaporan(false)
                 lapCurrentPage = 1
                 loadLaporan()
                 true
@@ -390,6 +431,7 @@ class RiwayatFragment : Fragment() {
         }
 
         binding.btnLapTerapkan.setOnClickListener {
+            aturPanelFilterLaporan(false)
             lapCurrentPage = 1
             loadLaporan()
         }
@@ -401,6 +443,7 @@ class RiwayatFragment : Fragment() {
             binding.actvLapNamaObat.setText("")
             sedangAturSpinner = false
             pilihPeriodeRadio("hari_ini", muatUlang = false)
+            perbaruiRingkasanFilterLap()
             lapCurrentPage = 1
             loadLaporan()
         }
@@ -435,6 +478,40 @@ class RiwayatFragment : Fragment() {
         binding.btnUnduhLaporan.setOnClickListener {
             unduhLaporanAktif()
         }
+
+        binding.tvLapTabRincian.setOnClickListener { pilihModeLaporan("rincian") }
+        binding.tvLapTabProdukTerlaris.setOnClickListener { pilihModeLaporan("produk_terlaris") }
+        binding.tvLapTabKategoriTerlaris.setOnClickListener { pilihModeLaporan("kategori_terlaris") }
+        perbaruiTabModeLaporan()
+    }
+
+    private fun pilihModeLaporan(modeBaru: String) {
+        if (modeBaru == modeTampilLaporan) return
+        modeTampilLaporan = modeBaru
+        perbaruiTabModeLaporan()
+        tampilkanTampilanLaporanAktif()
+    }
+
+    private fun perbaruiTabModeLaporan() {
+        val tabs = listOf(
+            binding.tvLapTabRincian to "rincian",
+            binding.tvLapTabProdukTerlaris to "produk_terlaris",
+            binding.tvLapTabKategoriTerlaris to "kategori_terlaris"
+        )
+        val radius = 8f * resources.displayMetrics.density
+        for ((tab, mode) in tabs) {
+            val aktif = mode == modeTampilLaporan
+            if (aktif) {
+                tab.background = GradientDrawable().apply {
+                    setColor(Color.parseColor("#2A9D8F"))
+                    cornerRadius = radius
+                }
+                tab.setTextColor(Color.WHITE)
+            } else {
+                tab.background = null
+                tab.setTextColor(Color.parseColor("#475569"))
+            }
+        }
     }
 
     private fun isiTanggalSesuaiPeriode(periode: String) {
@@ -453,6 +530,7 @@ class RiwayatFragment : Fragment() {
     }
 
     private fun loadLaporan() {
+        perbaruiRingkasanFilterLap()
         val tglMulai = binding.etLapTanggalMulai.text.toString().trim()
         val tglSelesai = binding.etLapTanggalSelesai.text.toString().trim()
         val namaObat = binding.actvLapNamaObat.text.toString().trim()
@@ -481,12 +559,17 @@ class RiwayatFragment : Fragment() {
                 val filterObj = response.optJSONObject("filter")
                 val ringkasanObj = response.optJSONObject("ringkasan")
                 val dataArr = response.optJSONArray("data")
+                val produkTerlarisArr = response.optJSONArray("produk_terlaris")
+                val kategoriTerlarisArr = response.optJSONArray("kategori_terlaris")
                 val katArr = response.optJSONArray("kategoris")
                 val obatArr = response.optJSONArray("daftar_obat")
 
                 lapCurrentPage = response.optInt("current_page", 1)
                 lapLastPage = response.optInt("last_page", 1)
                 val totalData = response.optInt("total", 0)
+                lapTotalItemsCache = totalData
+                lapProdukTerlarisCache = produkTerlarisArr
+                lapKategoriTerlarisCache = kategoriTerlarisArr
 
                 binding.tvLapPeriodeLabel.text = filterObj?.optString("periode_label", "Laporan Penjualan") ?: "Laporan Penjualan"
                 val totalPendapatan = ringkasanObj?.optLong("total_pendapatan", 0L) ?: 0L
@@ -499,10 +582,8 @@ class RiwayatFragment : Fragment() {
                 binding.tvLapRingkasanDetail.text = "$totalQty unit terjual • $jmlTrx transaksi"
                 binding.tvLapMetodeRingkas.text =
                     "Cash: Rp ${formatRupiah.format(totalCash)} • QRIS: Rp ${formatRupiah.format(totalQris)}"
-                binding.tvLapJumlahData.text = "$totalData baris"
 
                 binding.tvLapPageInfo.text = "Hal $lapCurrentPage / $lapLastPage"
-                binding.layoutLapPagination.visibility = if (lapLastPage > 1) View.VISIBLE else View.GONE
                 binding.btnLapPrev.isEnabled = lapCurrentPage > 1
                 binding.btnLapNext.isEnabled = lapCurrentPage < lapLastPage
 
@@ -561,7 +642,8 @@ class RiwayatFragment : Fragment() {
 
                     withContext(Dispatchers.Main) {
                         if (!isAdded || _binding == null) return@withContext
-                        tampilkanDaftarLaporan(items)
+                        lapItemsCache = items
+                        tampilkanTampilanLaporanAktif()
                     }
                 }
             },
@@ -574,6 +656,102 @@ class RiwayatFragment : Fragment() {
             }
         )
         Volley.newRequestQueue(requireContext()).add(request)
+    }
+
+    private fun tampilkanTampilanLaporanAktif() {
+        when (modeTampilLaporan) {
+            "produk_terlaris" -> {
+                binding.tvLapJudulDaftar.text = "Produk Terlaris"
+                binding.layoutLapPagination.visibility = View.GONE
+                tampilkanPeringkatLaporan(lapProdukTerlarisCache, isKategori = false)
+            }
+            "kategori_terlaris" -> {
+                binding.tvLapJudulDaftar.text = "Kategori Terlaris"
+                binding.layoutLapPagination.visibility = View.GONE
+                tampilkanPeringkatLaporan(lapKategoriTerlarisCache, isKategori = true)
+            }
+            else -> {
+                binding.tvLapJudulDaftar.text = "Rincian Penjualan"
+                binding.tvLapJumlahData.text = "$lapTotalItemsCache baris"
+                binding.layoutLapPagination.visibility = if (lapLastPage > 1) View.VISIBLE else View.GONE
+                tampilkanDaftarLaporan(lapItemsCache)
+            }
+        }
+    }
+
+    private fun tampilkanPeringkatLaporan(arr: JSONArray?, isKategori: Boolean) {
+        binding.layoutLapDaftar.removeAllViews()
+        val jumlah = arr?.length() ?: 0
+        binding.tvLapJumlahData.text = if (isKategori) "$jumlah kategori" else "$jumlah produk"
+        binding.tvLapEmpty.text = "Tidak ada data penjualan pada filter ini"
+        binding.tvLapEmpty.visibility = if (jumlah == 0) View.VISIBLE else View.GONE
+        if (arr == null || jumlah == 0) return
+
+        val density = resources.displayMetrics.density
+        for (i in 0 until jumlah) {
+            val o = arr.getJSONObject(i)
+            val peringkat = i + 1
+            val rowView = layoutInflater.inflate(R.layout.item_laporan, binding.layoutLapDaftar, false)
+
+            if (isKategori) {
+                val namaKat = o.optString("nama_kategori", "Tanpa Kategori")
+                val jmlProduk = o.optInt("jumlah_produk", 0)
+                val totalTerjual = o.optInt("total_terjual", 0)
+                val totalPendapatan = o.optLong("total_pendapatan", 0L)
+
+                rowView.findViewById<TextView>(R.id.tvLapNamaObat).text = namaKat
+                rowView.findViewById<TextView>(R.id.tvLapKategoriNota).text = "$jmlProduk jenis produk terjual"
+                rowView.findViewById<TextView>(R.id.tvLapQtyHarga).text = "$totalTerjual unit terjual • Tap lihat produk"
+                rowView.findViewById<TextView>(R.id.tvLapSubtotal).text = "Rp ${formatRupiah.format(totalPendapatan)}"
+
+                rowView.setOnClickListener {
+                    val idxKat = daftarKategori.indexOf(namaKat)
+                    if (idxKat > 0) {
+                        sedangAturSpinner = true
+                        kategoriLaporan = namaKat
+                        binding.spKategoriLaporan.setSelection(idxKat)
+                        sedangAturSpinner = false
+                        modeTampilLaporan = "produk_terlaris"
+                        perbaruiTabModeLaporan()
+                        lapCurrentPage = 1
+                        loadLaporan()
+                    }
+                }
+            } else {
+                val namaObat = o.optString("nama_obat", "-")
+                val kodeObat = o.optString("kode_obat", "-")
+                val namaKat = o.optString("nama_kategori", "-")
+                val satuan = o.optString("satuan", "unit")
+                val totalTerjual = o.optInt("total_terjual", 0)
+                val totalPendapatan = o.optLong("total_pendapatan", 0L)
+
+                rowView.findViewById<TextView>(R.id.tvLapNamaObat).text = namaObat
+                rowView.findViewById<TextView>(R.id.tvLapKategoriNota).text = "$namaKat • $kodeObat"
+                rowView.findViewById<TextView>(R.id.tvLapQtyHarga).text = "$totalTerjual $satuan terjual"
+                rowView.findViewById<TextView>(R.id.tvLapSubtotal).text = "Rp ${formatRupiah.format(totalPendapatan)}"
+            }
+
+            val tvBadge = rowView.findViewById<TextView>(R.id.tvLapMetode)
+            tvBadge.text = "#$peringkat"
+            tvBadge.setTextColor(Color.parseColor(if (peringkat <= 3) "#1F7A6F" else "#64748B"))
+            tvBadge.background = GradientDrawable().apply {
+                setColor(Color.parseColor(if (peringkat <= 3) "#E8F4F2" else "#F1F5F9"))
+                cornerRadius = 10f * density
+            }
+
+            binding.layoutLapDaftar.addView(rowView)
+            if (i < jumlah - 1) {
+                binding.layoutLapDaftar.addView(buatPemisahLapBaris(density))
+            }
+        }
+    }
+
+    private fun buatPemisahLapBaris(density: Float): View = View(requireContext()).apply {
+        layoutParams = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            maxOf(1, density.toInt())
+        )
+        setBackgroundColor(Color.parseColor("#F1F5F9"))
     }
 
     private fun tampilkanDaftarLaporan(items: List<LaporanItemModel>) {
@@ -603,14 +781,7 @@ class RiwayatFragment : Fragment() {
             binding.layoutLapDaftar.addView(rowView)
 
             if (idx < items.lastIndex) {
-                val divider = View(requireContext()).apply {
-                    layoutParams = LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        maxOf(1, density.toInt())
-                    )
-                    setBackgroundColor(Color.parseColor("#F1F5F9"))
-                }
-                binding.layoutLapDaftar.addView(divider)
+                binding.layoutLapDaftar.addView(buatPemisahLapBaris(density))
             }
         }
     }

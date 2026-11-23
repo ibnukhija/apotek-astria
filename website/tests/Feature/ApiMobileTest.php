@@ -634,6 +634,22 @@ class ApiMobileTest extends TestCase
                 ->json('data.obat_terlaris');
             $this->assertCount(1, $topPerKategoriSemua);
             $this->assertSame(3, $topPerKategoriSemua[0]['total_terjual']);
+
+            // Kategori terlaris di dashboard ikut terfilter periode
+            $katTerlarisHarian = $this->getJson('/api/dashboard?periode=harian')
+                ->assertOk()
+                ->json('data.kategori_terlaris');
+            $this->assertNotEmpty($katTerlarisHarian);
+            $this->assertSame('Analgesik', $katTerlarisHarian[0]['nama_kategori']);
+            $this->assertSame(4, $katTerlarisHarian[0]['total_terjual']);
+
+            $katTerlarisSemua = $this->getJson('/api/dashboard?periode=keseluruhan')
+                ->assertOk()
+                ->json('data.kategori_terlaris');
+            $this->assertSame('Analgesik', $katTerlarisSemua[0]['nama_kategori']);
+            $this->assertSame(33, $katTerlarisSemua[0]['total_terjual']);
+            $this->assertSame('Kategori Khusus Terlaris', $katTerlarisSemua[1]['nama_kategori']);
+            $this->assertSame(3, $katTerlarisSemua[1]['total_terjual']);
         } finally {
             Carbon::setTestNow();
         }
@@ -823,14 +839,26 @@ class ApiMobileTest extends TestCase
                 ->assertJsonPath('data.1.metode_bayar', 'qris')
                 ->assertJsonPath('data.1.metode_bayar_label', 'QRIS');
 
-            // 2. /api/laporan filter periode hari_ini hanya mengambil TRX-CASH-01
+            // 2. /api/laporan filter periode hari_ini hanya mengambil TRX-CASH-01 + ringkasan terlaris
             $this->getJson('/api/laporan?periode=hari_ini')
                 ->assertOk()
                 ->assertJsonPath('total', 1)
                 ->assertJsonPath('ringkasan.total_pendapatan', 30000)
                 ->assertJsonPath('ringkasan.total_cash', 30000)
                 ->assertJsonPath('ringkasan.total_qris', 0)
-                ->assertJsonPath('data.0.nama_obat', 'Paracetamol Forte');
+                ->assertJsonPath('data.0.nama_obat', 'Paracetamol Forte')
+                ->assertJsonPath('produk_terlaris.0.nama_obat', 'Paracetamol Forte')
+                ->assertJsonPath('produk_terlaris.0.total_terjual', 3)
+                ->assertJsonPath('kategori_terlaris.0.nama_kategori', 'Analgesik')
+                ->assertJsonPath('kategori_terlaris.0.total_terjual', 3);
+
+            // /api/laporan semua periode mengembalikan peringkat produk & kategori terlaris lengkap
+            $this->getJson('/api/laporan?periode=semua')
+                ->assertOk()
+                ->assertJsonPath('produk_terlaris.0.nama_obat', 'Paracetamol Forte')
+                ->assertJsonPath('produk_terlaris.1.nama_obat', 'Vitamin C 500mg')
+                ->assertJsonPath('kategori_terlaris.0.nama_kategori', 'Analgesik')
+                ->assertJsonPath('kategori_terlaris.1.nama_kategori', 'Vitamin');
 
             // 3. /api/laporan filter kategori + rentang tanggal + nama obat
             $this->getJson('/api/laporan?periode=bulan_ini&kategori=Vitamin&nama_obat=Vitamin%20C')
