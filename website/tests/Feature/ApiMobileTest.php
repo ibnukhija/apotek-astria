@@ -1179,4 +1179,64 @@ class ApiMobileTest extends TestCase
             Carbon::setTestNow();
         }
     }
+
+    public function test_drilldown_stok_mobile_sinkron_dengan_kartu_dashboard(): void
+    {
+        $this->loginSebagaiOwner();
+
+        // Obat menipis aktif -> harus ikut terhitung & tampil di drill-down
+        $menipisAktif = $this->buatObat([
+            'kode_obat'      => 'DRL-001',
+            'nama_obat'      => 'Obat Menipis Aktif',
+            'stok'           => 4,
+            'status'         => 'tersedia',
+            'tgl_kadaluarsa' => Carbon::today()->addDays(60)->format('Y-m-d'),
+        ]);
+
+        // Obat menipis & hampir expired berstatus NONAKTIF ('tidak') -> tidak boleh muncul di kartu maupun drill-down
+        $this->buatObat([
+            'kode_obat'      => 'DRL-002',
+            'nama_obat'      => 'Obat Menipis Nonaktif',
+            'stok'           => 2,
+            'status'         => 'tidak',
+            'tgl_kadaluarsa' => Carbon::today()->addDays(3)->format('Y-m-d'),
+        ]);
+
+        // Obat mendekati kadaluarsa aktif
+        $expAktif = $this->buatObat([
+            'kode_obat'      => 'DRL-003',
+            'nama_obat'      => 'Obat Hampir Exp Aktif',
+            'stok'           => 30,
+            'status'         => 'tersedia',
+            'tgl_kadaluarsa' => Carbon::today()->addDays(4)->format('Y-m-d'),
+        ]);
+
+        // Catat obat rusak
+        KondisiStokService::catat([
+            'obat_id'  => $expAktif->id,
+            'jenis'    => 'rusak',
+            'jumlah'   => 2,
+            'penyebab' => 'Kemasan penyok',
+        ]);
+
+        $dashboard = $this->getJson('/api/dashboard')->assertOk()->json('data');
+        $this->assertCount(1, $dashboard['peringatan_obat']);
+        $this->assertCount(1, $dashboard['peringatan_kadaluarsa']);
+
+        $drillMenipis = $this->getJson('/api/stok?status_stok=menipis')->assertOk()->json('data');
+        $this->assertCount(count($dashboard['peringatan_obat']), $drillMenipis);
+        $this->assertSame($menipisAktif->kode_obat, $drillMenipis[0]['kode_obat']);
+
+        $drillHampirHabis = $this->getJson('/api/stok?status_stok=hampir_habis')->assertOk()->json('data');
+        $this->assertCount(count($dashboard['peringatan_obat']), $drillHampirHabis);
+        $this->assertSame($menipisAktif->kode_obat, $drillHampirHabis[0]['kode_obat']);
+
+        $drillKadaluarsa = $this->getJson('/api/stok?status_kadaluarsa=perhatian')->assertOk()->json('data');
+        $this->assertCount(count($dashboard['peringatan_kadaluarsa']), $drillKadaluarsa);
+        $this->assertSame($expAktif->kode_obat, $drillKadaluarsa[0]['kode_obat']);
+
+        $drillRusak = $this->getJson('/api/stok?status_rusak=1')->assertOk()->json('data');
+        $this->assertCount(1, $drillRusak);
+        $this->assertSame($expAktif->kode_obat, $drillRusak[0]['kode_obat']);
+    }
 }

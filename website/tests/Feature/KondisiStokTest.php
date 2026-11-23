@@ -63,6 +63,7 @@ class KondisiStokTest extends TestCase
         $this->actingAs($this->karyawan)->get('/kondisi-stok')
             ->assertOk()
             ->assertSee('Kondisi Obat')
+            ->assertSee('Stok Hampir Habis (&lt; 10)', false)
             ->assertSee('f_obat_search', false)
             ->assertSee('chkFilterEd', false)
             ->assertSee('Amoxicillin 500mg')

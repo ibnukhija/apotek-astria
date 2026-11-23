@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Kategori;
 use App\Models\Obat;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
@@ -20,6 +21,30 @@ class ObatController extends Controller
                 });
             })
             ->when($request->filled('kategori'), fn($query) => $query->where('kategori_id', $request->kategori))
+            ->when($request->filled('status_stok'), function ($query) use ($request) {
+                $statusStok = strtolower(trim((string) $request->status_stok));
+                if ($statusStok === 'tersedia') {
+                    $query->where('status', 'tersedia');
+                } elseif ($statusStok === 'cukup') {
+                    $query->where('status', 'tersedia')->where('stok', '>=', Obat::BATAS_CUKUP);
+                } elseif ($statusStok === 'menipis') {
+                    $query->where('status', 'tersedia')
+                          ->where('stok', '>=', Obat::BATAS_HAMPIR_HABIS)
+                          ->where('stok', '<', Obat::BATAS_CUKUP);
+                } elseif ($statusStok === 'hampir_habis') {
+                    $query->where('status', 'tersedia')->where('stok', '<', Obat::BATAS_HAMPIR_HABIS);
+                } elseif ($statusStok === 'perlu_restok') {
+                    $query->where('status', 'tersedia')->where('stok', '<', Obat::BATAS_CUKUP);
+                }
+            })
+            ->when($request->filled('status_kadaluarsa'), function ($query) use ($request) {
+                if (strtolower(trim((string) $request->status_kadaluarsa)) === 'perhatian') {
+                    $batas = Carbon::today()->addDays(Obat::BATAS_HAMPIR_KADALUARSA);
+                    $query->where('status', 'tersedia')
+                          ->whereNotNull('tgl_kadaluarsa')
+                          ->whereDate('tgl_kadaluarsa', '<=', $batas);
+                }
+            })
             ->orderBy('kode_obat')
             ->paginate(10)
             ->withQueryString();

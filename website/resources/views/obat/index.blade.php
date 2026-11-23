@@ -42,9 +42,15 @@
     </div>
 @endif
 
-{{-- ================= KOTAK RINGKASAN ================= --}}
-<div class="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-4 shrink-0">
-    <div class="bg-pure-white border border-border-color rounded-xl p-3 flex items-center gap-3 shadow-sm">
+{{-- ================= KOTAK RINGKASAN (KLIK UNTUK FILTER) ================= --}}
+@php
+    $aktifStok = strtolower((string) request('status_stok'));
+    $aktifKad  = strtolower((string) request('status_kadaluarsa'));
+@endphp
+<div class="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-4 shrink-0" id="ringkasanObatGrid">
+    <a href="{{ route('obat.index', array_filter(['q' => request('q'), 'kategori' => request('kategori'), 'status_stok' => 'tersedia'])) }}"
+       data-status-stok="tersedia" onclick="return pilihFilterRingkasan('tersedia')"
+       class="kartu-ringkasan bg-pure-white border {{ $aktifStok === 'tersedia' ? 'border-soft-teal ring-2 ring-soft-teal/20' : 'border-border-color hover:border-soft-teal' }} rounded-xl p-3 flex items-center gap-3 shadow-sm hover:shadow-md transition">
         <div class="w-10 h-10 rounded-lg bg-[#E8F4F2] flex items-center justify-center shrink-0">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2A9D8F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>
         </div>
@@ -52,9 +58,11 @@
             <div class="text-xs text-gray-text truncate">Total produk aktif</div>
             <div class="leading-tight"><span class="text-xl lg:text-2xl font-bold">{{ $ringkasan['total'] ?? 0 }}</span> <span class="text-xs text-gray-text whitespace-nowrap">{{ $ringkasan['kategori'] ?? 0 }} kategori</span></div>
         </div>
-    </div>
+    </a>
 
-    <div class="bg-pure-white border border-border-color rounded-xl p-3 flex items-center gap-3 shadow-sm">
+    <a href="{{ route('obat.index', array_filter(['q' => request('q'), 'kategori' => request('kategori'), 'status_stok' => 'cukup'])) }}"
+       data-status-stok="cukup" onclick="return pilihFilterRingkasan('cukup')"
+       class="kartu-ringkasan bg-pure-white border {{ $aktifStok === 'cukup' ? 'border-green-500 ring-2 ring-green-200' : 'border-border-color hover:border-green-400' }} rounded-xl p-3 flex items-center gap-3 shadow-sm hover:shadow-md transition">
         <div class="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center shrink-0">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#15803D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></svg>
         </div>
@@ -62,9 +70,11 @@
             <div class="text-xs text-gray-text truncate">Stok cukup</div>
             <div class="leading-tight"><span class="text-xl lg:text-2xl font-bold">{{ $ringkasan['cukup'] ?? 0 }}</span> <span class="text-xs text-green-700">aman</span></div>
         </div>
-    </div>
+    </a>
 
-    <div class="bg-pure-white border border-border-color rounded-xl p-3 flex items-center gap-3 shadow-sm">
+    <a href="{{ route('obat.index', array_filter(['q' => request('q'), 'kategori' => request('kategori'), 'status_stok' => 'menipis'])) }}"
+       data-status-stok="menipis" onclick="return pilihFilterRingkasan('menipis')"
+       class="kartu-ringkasan bg-pure-white border {{ $aktifStok === 'menipis' ? 'border-amber-500 ring-2 ring-amber-200' : 'border-border-color hover:border-amber-400' }} rounded-xl p-3 flex items-center gap-3 shadow-sm hover:shadow-md transition">
         <div class="w-10 h-10 rounded-lg bg-yellow-100 flex items-center justify-center shrink-0">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l10 18H2L12 3z"/><path d="M12 10v5M12 18v.5"/></svg>
         </div>
@@ -72,9 +82,11 @@
             <div class="text-xs text-gray-text truncate">Stok menipis</div>
             <div class="leading-tight"><span class="text-xl lg:text-2xl font-bold">{{ $ringkasan['menipis'] ?? 0 }}</span> <span class="text-xs text-yellow-700 whitespace-nowrap">perlu restok</span></div>
         </div>
-    </div>
+    </a>
 
-    <div class="bg-pure-white border border-border-color rounded-xl p-3 flex items-center gap-3 shadow-sm">
+    <a href="{{ route('obat.index', array_filter(['q' => request('q'), 'kategori' => request('kategori'), 'status_stok' => 'hampir_habis'])) }}"
+       data-status-stok="hampir_habis" onclick="return pilihFilterRingkasan('hampir_habis')"
+       class="kartu-ringkasan bg-pure-white border {{ $aktifStok === 'hampir_habis' ? 'border-red-500 ring-2 ring-red-200' : 'border-border-color hover:border-red-400' }} rounded-xl p-3 flex items-center gap-3 shadow-sm hover:shadow-md transition">
         <div class="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center shrink-0">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#B91C1C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5v.5"/></svg>
         </div>
@@ -82,7 +94,7 @@
             <div class="text-xs text-gray-text truncate">Hampir habis</div>
             <div class="leading-tight"><span class="text-xl lg:text-2xl font-bold">{{ $ringkasan['hampir_habis'] ?? 0 }}</span> <span class="text-xs text-red-700 whitespace-nowrap">segera restok</span></div>
         </div>
-    </div>
+    </a>
 </div>
 
 {{-- ================= AREA KONTEN UTAMA (TABEL & SEARCH) ================= --}}
@@ -91,6 +103,8 @@
     {{-- Pencarian & Filter --}}
     <form method="GET" action="{{ route('obat.index') }}" id="filterForm"
           class="flex flex-col sm:flex-row gap-2.5 sm:gap-3 items-stretch sm:items-center p-3 px-4 border-b border-border-color bg-pure-white shrink-0">
+        <input type="hidden" name="status_stok" id="filterStatusStok" value="{{ request('status_stok') }}">
+        <input type="hidden" name="status_kadaluarsa" id="filterStatusKadaluarsa" value="{{ request('status_kadaluarsa') }}">
         <div class="flex-1 relative">
             <span class="absolute left-3 top-2 text-gray-text text-sm">🔍</span>
             <input type="text" name="q" id="searchProduct" value="{{ request('q') }}"
@@ -123,6 +137,26 @@
             <span class="inline-flex items-center gap-1.5 font-medium"><span class="w-2 h-2 rounded-full bg-yellow-500"></span>Hampir kadaluarsa (&le; 7 hari)</span>
             <span class="inline-flex items-center gap-1.5 font-medium"><span class="w-2 h-2 rounded-full bg-red-500"></span>Kadaluarsa (lewat tanggal)</span>
         </div>
+    </div>
+
+    {{-- Penanda Filter Status Aktif (Drill-down dari Dashboard / Kotak Ringkasan) --}}
+    @php
+        $labelFilterKhusus = match (true) {
+            $aktifKad === 'perhatian'     => 'Obat Kadaluarsa / Mendekati Expired (≤ 7 hari)',
+            $aktifStok === 'tersedia'     => 'Total Produk Aktif (Tersedia)',
+            $aktifStok === 'cukup'        => 'Stok Cukup (≥ 25)',
+            $aktifStok === 'menipis'      => 'Stok Menipis (10 – 24)',
+            $aktifStok === 'hampir_habis' => 'Stok Hampir Habis (< 10)',
+            $aktifStok === 'perlu_restok' => 'Stok Perlu Restok (< 25)',
+            default                       => null,
+        };
+    @endphp
+    <div id="bannerFilterStatus"
+         class="{{ $labelFilterKhusus ? 'flex' : 'hidden' }} px-4 py-2 bg-amber-50 border-b border-amber-200 shrink-0 items-center justify-between gap-2 text-xs text-amber-900">
+        <span>Filter aktif: <strong>{{ $labelFilterKhusus }}</strong> ({{ $obats->total() }} produk)</span>
+        <a href="{{ route('obat.index', array_filter(['q' => request('q'), 'kategori' => request('kategori')])) }}"
+           onclick="return resetFilterStatus()"
+           class="font-bold text-amber-800 hover:underline whitespace-nowrap">✕ Hapus Filter</a>
     </div>
 
     {{-- Tabel Produk (area yang diganti lewat AJAX) --}}
@@ -386,18 +420,44 @@ async function muatTabel(url) {
         const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
         const tabelBaru  = doc.getElementById('areaTabel');
         const footerBaru = doc.getElementById('areaFooter');
+        const bannerBaru = doc.getElementById('bannerFilterStatus');
+        const gridBaru   = doc.getElementById('ringkasanObatGrid');
 
         // Kalau bukan halaman yang diharapkan (misal sesi habis -> redirect login), muat biasa
         if (!tabelBaru || !footerBaru) { window.location.href = url; return; }
 
         $('areaTabel').innerHTML  = tabelBaru.innerHTML;
         $('areaFooter').innerHTML = footerBaru.innerHTML;
+        if (bannerBaru && $('bannerFilterStatus')) {
+            $('bannerFilterStatus').className = bannerBaru.className;
+            $('bannerFilterStatus').innerHTML = bannerBaru.innerHTML;
+        }
+        if (gridBaru && $('ringkasanObatGrid')) {
+            $('ringkasanObatGrid').innerHTML = gridBaru.innerHTML;
+        }
         history.replaceState(null, '', url);  // URL ikut berubah, bisa di-refresh/dibagikan
     } catch (err) {
         if (err.name !== 'AbortError') console.error('Gagal memuat tabel:', err);
     } finally {
         if (kontrolCari === kontrol) area.classList.remove('opacity-50');
     }
+}
+
+function pilihFilterRingkasan(status) {
+    const inputStok = $('filterStatusStok');
+    const inputKad  = $('filterStatusKadaluarsa');
+    if (!inputStok) return true;
+    inputStok.value = (inputStok.value === status) ? '' : status;
+    if (inputKad) inputKad.value = '';
+    muatTabel(buatUrl());
+    return false;
+}
+
+function resetFilterStatus() {
+    if ($('filterStatusStok')) $('filterStatusStok').value = '';
+    if ($('filterStatusKadaluarsa')) $('filterStatusKadaluarsa').value = '';
+    muatTabel(buatUrl());
+    return false;
 }
 
 // Ketik -> tunggu 300 ms -> ambil data

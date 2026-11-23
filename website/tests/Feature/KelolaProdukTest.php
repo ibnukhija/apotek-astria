@@ -219,12 +219,59 @@ class KelolaProdukTest extends TestCase
     {
         $this->login();
         $vit = Kategori::create(['nama_kategori' => 'Vitamin']);
-        $this->post('/obat', $this->dataObat());
-        $this->post('/obat', $this->dataObat(['kode_obat' => 'OBT-002', 'nama_obat' => 'Vitamin C', 'kategori_id' => $vit->id]));
+        $this->post('/obat', $this->dataObat(['stok' => 30, 'tgl_kadaluarsa' => now()->addDays(45)->format('Y-m-d')]));
+        $this->post('/obat', $this->dataObat([
+            'kode_obat'      => 'OBT-002',
+            'nama_obat'      => 'Vitamin C',
+            'kategori_id'    => $vit->id,
+            'stok'           => 5,
+            'tgl_kadaluarsa' => now()->addDays(3)->format('Y-m-d'),
+        ]));
+        $this->post('/obat', $this->dataObat([
+            'kode_obat'      => 'OBT-003',
+            'nama_obat'      => 'Tablet Menipis',
+            'kategori_id'    => $vit->id,
+            'stok'           => 15,
+            'tgl_kadaluarsa' => now()->addDays(45)->format('Y-m-d'),
+        ]));
 
         $this->get('/obat?q=vitamin')->assertSee('Vitamin C')->assertDontSee('Paracetamol 500mg', false);
         $this->get('/obat?kategori=' . $vit->id)->assertSee('Vitamin C')->assertDontSee('Paracetamol 500mg', false);
         $this->get('/obat?q=OBT-001')->assertSee('Paracetamol 500mg', false)->assertDontSee('Vitamin C');
+
+        // Drill-down filter status stok & kadaluarsa pada Kelola Produk dan Dashboard Web
+        $this->get('/obat?status_stok=cukup')
+            ->assertOk()
+            ->assertSee('Paracetamol 500mg')
+            ->assertDontSee('Vitamin C')
+            ->assertDontSee('Tablet Menipis');
+
+        $this->get('/obat?status_stok=menipis')
+            ->assertOk()
+            ->assertSee('Tablet Menipis')
+            ->assertDontSee('Paracetamol 500mg')
+            ->assertDontSee('Vitamin C');
+
+        $this->get('/obat?status_stok=hampir_habis')
+            ->assertOk()
+            ->assertSee('Vitamin C')
+            ->assertDontSee('Tablet Menipis');
+
+        $this->get('/obat?status_stok=perlu_restok')
+            ->assertOk()
+            ->assertSee('Vitamin C')
+            ->assertSee('Tablet Menipis')
+            ->assertDontSee('Paracetamol 500mg');
+
+        $this->get('/obat?status_kadaluarsa=perhatian')
+            ->assertOk()
+            ->assertSee('Vitamin C')
+            ->assertDontSee('Paracetamol 500mg');
+
+        $this->get('/dashboard')
+            ->assertOk()
+            ->assertSee('Dashboard Operasional')
+            ->assertSee('status_stok=perlu_restok', false);
     }
 
     public function test_halaman_kelola_kategori(): void

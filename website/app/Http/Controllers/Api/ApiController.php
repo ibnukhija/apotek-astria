@@ -324,7 +324,8 @@ class ApiController extends Controller
         if ($request->filled('status_stok')) {
             $valStok = strtolower(trim($request->status_stok));
             if (in_array($valStok, ['menipis', 'hampir_habis', 'kurang_dari_10'], true)) {
-                $query->where('stok', '<', Obat::BATAS_HAMPIR_HABIS);
+                $query->where('status', 'tersedia')
+                      ->where('stok', '<', Obat::BATAS_HAMPIR_HABIS);
             }
         }
 
@@ -332,17 +333,26 @@ class ApiController extends Controller
             $valKad = strtolower(trim($request->status_kadaluarsa));
             if (in_array($valKad, ['perhatian', 'kadaluarsa', 'hampir_kadaluarsa'], true)) {
                 $batasKad = Carbon::today()->addDays(Obat::BATAS_HAMPIR_KADALUARSA);
-                $query->whereNotNull('tgl_kadaluarsa')
+                $query->where('status', 'tersedia')
+                      ->whereNotNull('tgl_kadaluarsa')
                       ->whereDate('tgl_kadaluarsa', '<=', $batasKad);
             }
         }
 
+        if ($request->boolean('status_rusak')) {
+            $query->whereHas('kondisiStok', function ($q) {
+                $q->where('jenis', KondisiStokObat::JENIS_RUSAK);
+            });
+        }
+
         $ringkasanQuery = clone $query;
         $hampirHabisTotal = (clone $ringkasanQuery)
+            ->where('status', 'tersedia')
             ->where('stok', '<', Obat::BATAS_HAMPIR_HABIS)
             ->count();
         $batasKadaluarsa = Carbon::today()->addDays(Obat::BATAS_HAMPIR_KADALUARSA);
         $perhatianKadaluarsaTotal = (clone $ringkasanQuery)
+            ->where('status', 'tersedia')
             ->whereNotNull('tgl_kadaluarsa')
             ->whereDate('tgl_kadaluarsa', '<=', $batasKadaluarsa)
             ->count();

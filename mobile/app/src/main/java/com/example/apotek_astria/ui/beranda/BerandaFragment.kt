@@ -14,7 +14,6 @@ import android.widget.LinearLayout
 import android.widget.PopupMenu
 import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import com.android.volley.Request
 import com.android.volley.toolbox.Volley
@@ -73,8 +72,8 @@ class BerandaFragment : Fragment() {
             tampilkanMenuPeriode(it)
         }
 
-        // Tautan langsung dari Penjualan ke Laporan dan dari Stok Obat ke halaman Stok
-        binding.tvLihatLaporan.setOnClickListener {
+        // Tautan langsung dari kartu Total Penjualan ke Laporan dan dari Stok Obat ke halaman Stok
+        val bukaLaporanBeranda: (View) -> Unit = {
             val mainActivity = activity as? MainActivity
             if (mainActivity != null) {
                 mainActivity.bukaLaporan()
@@ -82,6 +81,8 @@ class BerandaFragment : Fragment() {
                 bukaTabNavigasi(R.id.nav_riwayat)
             }
         }
+        binding.cardTotalPenjualan.setOnClickListener(bukaLaporanBeranda)
+        binding.tvLihatLaporan.setOnClickListener(bukaLaporanBeranda)
         binding.tvLihatStok.setOnClickListener {
             bukaTabNavigasi(R.id.nav_stok)
         }
@@ -89,33 +90,20 @@ class BerandaFragment : Fragment() {
             bukaTabNavigasi(R.id.nav_profil)
         }
 
-        // Banner pemberitahuan stok menipis & 2 kotak ringkasan stok (Drill-down ke Stok terfilter)
-        val bukaStokMenipis: (View) -> Unit = {
+        // Banner stok menipis & 3 kartu ringkasan stok (Drill-down ke Stok terfilter)
+        fun listenerBukaStok(statusFilter: String): (View) -> Unit = {
             val mainActivity = activity as? MainActivity
             if (mainActivity != null) {
-                mainActivity.bukaStok(StokFragment.STATUS_MENIPIS)
+                mainActivity.bukaStok(statusFilter)
             } else {
                 bukaTabNavigasi(R.id.nav_stok)
             }
         }
+        val bukaStokMenipis = listenerBukaStok(StokFragment.STATUS_MENIPIS)
         binding.cardBannerStok.setOnClickListener(bukaStokMenipis)
         binding.cardStokMenipis.setOnClickListener(bukaStokMenipis)
-
-        binding.cardKadaluarsa.setOnClickListener {
-            val mainActivity = activity as? MainActivity
-            if (mainActivity != null) {
-                mainActivity.bukaStok(StokFragment.STATUS_KADALUARSA)
-            } else {
-                bukaTabNavigasi(R.id.nav_stok)
-            }
-        }
-        binding.cardObatRusak.setOnClickListener {
-            tampilkanDaftarPeringatan(
-                "Catatan Obat Rusak & Penyebab",
-                daftarPeringatanRusak,
-                "Belum ada catatan obat rusak."
-            )
-        }
+        binding.cardKadaluarsa.setOnClickListener(listenerBukaStok(StokFragment.STATUS_KADALUARSA))
+        binding.cardObatRusak.setOnClickListener(listenerBukaStok(StokFragment.STATUS_RUSAK))
 
         // Filter kategori pada Top 5 Obat Terlaris
         daftarKategoriTerlaris.clear()
@@ -240,18 +228,6 @@ class BerandaFragment : Fragment() {
         else -> "hari ini"
     }
 
-    private fun tampilkanDaftarPeringatan(judul: String, daftar: List<String>, pesanKosong: String) {
-        val pesan = if (daftar.isEmpty()) pesanKosong else daftar.joinToString("\n")
-        AlertDialog.Builder(requireContext())
-            .setTitle(judul)
-            .setMessage(pesan)
-            .setPositiveButton("Lihat Stok") { _, _ ->
-                bukaTabNavigasi(R.id.nav_stok)
-            }
-            .setNegativeButton("Tutup", null)
-            .show()
-    }
-
     private fun perbaruiKartuRingkasan(
         card: androidx.cardview.widget.CardView,
         tvLabel: TextView,
@@ -281,7 +257,7 @@ class BerandaFragment : Fragment() {
             binding.tvBannerStokIkon.background = ikonBg
             binding.tvBannerStokIkon.text = "!"
             binding.tvBannerStokJudul.setTextColor(Color.parseColor("#92400E"))
-            binding.tvBannerStokJudul.text = "Peringatan: ${namaMenipis.size} obat stok menipis (< 10)"
+            binding.tvBannerStokJudul.text = "Peringatan: ${namaMenipis.size} obat hampir habis (< 10)"
             val pratinjau = namaMenipis.take(2).joinToString(", ")
             val sisa = namaMenipis.size - 2
             val tambahan = if (sisa > 0) ", +$sisa lainnya" else ""
@@ -295,7 +271,7 @@ class BerandaFragment : Fragment() {
             binding.tvBannerStokJudul.setTextColor(Color.parseColor("#166534"))
             binding.tvBannerStokJudul.text = "Semua stok obat aman (>= 10)"
             binding.tvBannerStokIsi.setTextColor(Color.parseColor("#15803D"))
-            binding.tvBannerStokIsi.text = "Tidak ada obat yang perlu segera di-restock"
+            binding.tvBannerStokIsi.text = "Tidak ada obat hampir habis (< 10)"
         }
     }
 
@@ -579,7 +555,7 @@ class BerandaFragment : Fragment() {
                     cachePeriodeTerlaris = periodeRespon
                     tampilkanTerlarisAktif()
 
-                    // 4. Bagian Stok: Banner & Ringkasan Stok Menipis (< 10)
+                    // 4. Bagian Stok: Banner & Ringkasan Hampir Habis (< 10)
                     val peringatanObatArray = data.optJSONArray("peringatan_obat")
                     daftarPeringatanStok.clear()
                     daftarNamaStokMenipis.clear()
@@ -665,7 +641,7 @@ class BerandaFragment : Fragment() {
                         perbaruiKartuRingkasan(
                             binding.cardObatRusak, binding.tvLabelObatRusak,
                             binding.tvJumlahObatRusak, binding.tvSubObatRusak,
-                            totalUnitRusak, "${daftarPeringatanRusak.size} kasus • Tap",
+                            totalUnitRusak, "${daftarPeringatanRusak.size} kasus • Tap lihat",
                             "#FFEDD5", "#9A3412", "#EA580C"
                         )
                     } else {

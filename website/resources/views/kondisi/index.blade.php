@@ -34,9 +34,9 @@
 {{-- 4 Kartu Ringkasan Kondisi Stok --}}
 <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4 shrink-0">
     <div class="bg-pure-white border border-border-color rounded-xl p-3.5 shadow-sm">
-        <div class="text-xs text-gray-text font-semibold">Stok Menipis (&lt; 10)</div>
+        <div class="text-xs text-gray-text font-semibold">Stok Hampir Habis (&lt; 10)</div>
         <div class="text-2xl font-bold text-amber-600 mt-1">{{ $ringkasan['stok_menipis'] }}</div>
-        <div class="text-[11px] text-gray-text">Produk perlu restock</div>
+        <div class="text-[11px] text-gray-text">Produk segera restock</div>
     </div>
     <div class="bg-pure-white border border-border-color rounded-xl p-3.5 shadow-sm">
         <div class="text-xs text-gray-text font-semibold">Hampir Expired (&le; 7 hr)</div>

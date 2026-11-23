@@ -1,5 +1,6 @@
 package com.example.apotek_astria.ui.stok
 
+import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -60,6 +61,7 @@ class StokFragment : Fragment() {
         const val ARG_FILTER_STATUS = "arg_filter_status"
         const val STATUS_MENIPIS = "menipis"
         const val STATUS_KADALUARSA = "kadaluarsa"
+        const val STATUS_RUSAK = "rusak"
     }
 
     override fun onCreateView(
@@ -154,19 +156,22 @@ class StokFragment : Fragment() {
     }
 
     private fun perbaruiTampilanFilterKhusus() {
-        when (statusFilterKhusus) {
-            STATUS_MENIPIS -> {
-                binding.layoutFilterKhusus.visibility = View.VISIBLE
-                binding.tvLabelFilterKhusus.text = "Filter: Stok Menipis (< 10)"
-            }
-            STATUS_KADALUARSA -> {
-                binding.layoutFilterKhusus.visibility = View.VISIBLE
-                binding.tvLabelFilterKhusus.text = "Filter: Hampir / Sudah Kadaluarsa (≤ 7 hari)"
-            }
-            else -> {
-                binding.layoutFilterKhusus.visibility = View.GONE
-            }
+        val konfigurasi = when (statusFilterKhusus) {
+            STATUS_MENIPIS -> Triple("Filter: Hampir Habis (< 10)", "#FEF3C7", "#92400E" to "#B45309")
+            STATUS_KADALUARSA -> Triple("Filter: Hampir / Sudah Kadaluarsa (≤ 7 hari)", "#FEE2E2", "#991B1B" to "#DC2626")
+            STATUS_RUSAK -> Triple("Filter: Obat Pernah Rusak", "#FFEDD5", "#9A3412" to "#EA580C")
+            else -> null
         }
+        if (konfigurasi == null) {
+            binding.layoutFilterKhusus.visibility = View.GONE
+            return
+        }
+        val (teks, bgHex, warnaTeks) = konfigurasi
+        binding.layoutFilterKhusus.visibility = View.VISIBLE
+        binding.layoutFilterKhusus.setBackgroundColor(Color.parseColor(bgHex))
+        binding.tvLabelFilterKhusus.text = teks
+        binding.tvLabelFilterKhusus.setTextColor(Color.parseColor(warnaTeks.first))
+        binding.btnResetFilterKhusus.setTextColor(Color.parseColor(warnaTeks.second))
     }
 
     private fun muatObat() {
@@ -183,9 +188,11 @@ class StokFragment : Fragment() {
             builder.appendQueryParameter("search", kataCari)
         }
         if (statusFilterKhusus == STATUS_MENIPIS) {
-            builder.appendQueryParameter("status_stok", "menipis")
+            builder.appendQueryParameter("status_stok", "hampir_habis")
         } else if (statusFilterKhusus == STATUS_KADALUARSA) {
             builder.appendQueryParameter("status_kadaluarsa", "perhatian")
+        } else if (statusFilterKhusus == STATUS_RUSAK) {
+            builder.appendQueryParameter("status_rusak", "1")
         }
         val url = builder.build().toString()
 

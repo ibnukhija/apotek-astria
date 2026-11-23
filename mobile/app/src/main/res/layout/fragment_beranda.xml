@@ -114,9 +114,13 @@
 
             <!-- Kartu Ringkasan Penjualan Utama (Hijau Teal) -->
             <androidx.cardview.widget.CardView
+                android:id="@+id/card_total_penjualan"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="14dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?android:attr/selectableItemBackground"
                 app:cardCornerRadius="16dp"
                 app:cardElevation="2dp">
 
@@ -448,7 +452,7 @@
                     android:textStyle="bold" />
             </RelativeLayout>
 
-            <!-- Banner Pemberitahuan Stok Menipis (< 10) -->
+            <!-- Banner Pemberitahuan Hampir Habis (< 10) -->
             <androidx.cardview.widget.CardView
                 android:id="@+id/card_banner_stok"
                 android:layout_width="match_parent"
@@ -489,7 +493,7 @@
                             android:id="@+id/tv_banner_stok_judul"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Memeriksa stok menipis..."
+                            android:text="Memeriksa stok hampir habis..."
                             android:textColor="#92400E"
                             android:textSize="13sp"
                             android:textStyle="bold" />
@@ -508,7 +512,7 @@
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
-            <!-- 3 Kotak Ringkasan Berjejer: Stok Menipis, Expired (<= 7 hr), Obat Rusak -->
+            <!-- 3 Kotak Ringkasan Berjejer: Hampir Habis (< 10), Expired (<= 7 hr), Obat Rusak -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -538,7 +542,7 @@
                             android:id="@+id/tv_label_stok_menipis"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Stok Menipis"
+                            android:text="Hampir Habis"
                             android:textColor="#92400E"
                             android:textSize="11sp"
                             android:textStyle="bold" />

@@ -51,17 +51,19 @@
     </div>
 
     {{-- ================= KELOMPOK 1: KINERJA KASIR HARI INI ================= --}}
+    @php($tanggalHariIni = \Carbon\Carbon::today()->format('Y-m-d'))
     <div>
         <div class="text-xs font-bold text-gray-text uppercase tracking-wider mb-2 px-1">Penjualan Kasir Hari Ini</div>
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {{-- Omset Hari Ini --}}
-            <div class="bg-pure-white border border-border-color rounded-xl p-4 shadow-sm flex items-center justify-between">
+            <a href="{{ route('kasir.riwayat', ['tanggal' => $tanggalHariIni]) }}"
+                class="group bg-pure-white border border-border-color hover:border-soft-teal rounded-xl p-4 shadow-sm hover:shadow-md transition flex items-center justify-between">
                 <div>
                     <div class="text-xs text-gray-text font-medium">Total Penjualan</div>
                     <div class="text-xl sm:text-2xl font-bold text-soft-teal mt-0.5">
                         Rp {{ number_format($penjualanHariIni, 0, ',', '.') }}
                     </div>
-                    <div class="text-[11px] text-gray-text mt-0.5">Transaksi lunas hari ini</div>
+                    <div class="text-[11px] text-gray-text mt-0.5 group-hover:text-soft-teal transition">Transaksi lunas hari ini &rsaquo;</div>
                 </div>
                 <div class="w-12 h-12 rounded-xl bg-[#E8F4F2] flex items-center justify-center shrink-0">
                     <svg class="w-6 h-6 text-soft-teal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -69,16 +71,17 @@
                         <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
                     </svg>
                 </div>
-            </div>
+            </a>
 
             {{-- Jumlah Transaksi --}}
-            <div class="bg-pure-white border border-border-color rounded-xl p-4 shadow-sm flex items-center justify-between">
+            <a href="{{ route('kasir.riwayat', ['tanggal' => $tanggalHariIni]) }}"
+                class="group bg-pure-white border border-border-color hover:border-blue-400 rounded-xl p-4 shadow-sm hover:shadow-md transition flex items-center justify-between">
                 <div>
                     <div class="text-xs text-gray-text font-medium">Jumlah Transaksi</div>
                     <div class="text-xl sm:text-2xl font-bold text-dark-slate mt-0.5">
                         {{ $transaksiHariIni }} <span class="text-sm font-normal text-gray-text">transaksi</span>
                     </div>
-                    <div class="text-[11px] text-gray-text mt-0.5">Struk tercetak hari ini</div>
+                    <div class="text-[11px] text-gray-text mt-0.5 group-hover:text-blue-600 transition">Struk tercetak hari ini &rsaquo;</div>
                 </div>
                 <div class="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
                     <svg class="w-6 h-6 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -88,16 +91,17 @@
                         <line x1="16" y1="17" x2="8" y2="17"/>
                     </svg>
                 </div>
-            </div>
+            </a>
 
             {{-- Produk Terjual --}}
-            <div class="bg-pure-white border border-border-color rounded-xl p-4 shadow-sm flex items-center justify-between">
+            <a href="{{ route('kasir.riwayat', ['tanggal' => $tanggalHariIni]) }}"
+                class="group bg-pure-white border border-border-color hover:border-purple-400 rounded-xl p-4 shadow-sm hover:shadow-md transition flex items-center justify-between">
                 <div>
                     <div class="text-xs text-gray-text font-medium">Produk Terjual</div>
                     <div class="text-xl sm:text-2xl font-bold text-dark-slate mt-0.5">
                         {{ $itemTerjualHariIni }} <span class="text-sm font-normal text-gray-text">unit</span>
                     </div>
-                    <div class="text-[11px] text-gray-text mt-0.5">Total kuantitas item kasir</div>
+                    <div class="text-[11px] text-gray-text mt-0.5 group-hover:text-purple-600 transition">Total kuantitas item kasir &rsaquo;</div>
                 </div>
                 <div class="w-12 h-12 rounded-xl bg-purple-50 flex items-center justify-center shrink-0">
                     <svg class="w-6 h-6 text-purple-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -106,7 +110,7 @@
                         <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
                     </svg>
                 </div>
-            </div>
+            </a>
         </div>
     </div>
 
@@ -115,7 +119,8 @@
         <div class="text-xs font-bold text-gray-text uppercase tracking-wider mb-2 px-1">Ringkasan &amp; Kondisi Stok Obat</div>
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {{-- Total Obat --}}
-            <div class="bg-pure-white border border-border-color rounded-xl p-3.5 shadow-sm flex items-center gap-3">
+            <a href="{{ route('obat.index', ['status_stok' => 'tersedia']) }}"
+                class="bg-pure-white border border-border-color hover:border-soft-teal rounded-xl p-3.5 shadow-sm hover:shadow-md transition flex items-center gap-3">
                 <div class="w-10 h-10 rounded-lg bg-[#E8F4F2] flex items-center justify-center shrink-0">
                     <svg class="w-5 h-5 text-soft-teal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/>
@@ -128,10 +133,11 @@
                         {{ $totalProduk }} <span class="text-xs font-normal text-gray-text">({{ $totalKategori }} kat)</span>
                     </div>
                 </div>
-            </div>
+            </a>
 
             {{-- Stok Cukup --}}
-            <div class="bg-pure-white border border-border-color rounded-xl p-3.5 shadow-sm flex items-center gap-3">
+            <a href="{{ route('obat.index', ['status_stok' => 'cukup']) }}"
+                class="bg-pure-white border border-border-color hover:border-green-400 rounded-xl p-3.5 shadow-sm hover:shadow-md transition flex items-center gap-3">
                 <div class="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center shrink-0">
                     <svg class="w-5 h-5 text-green-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="12" cy="12" r="9"/>
@@ -139,15 +145,16 @@
                     </svg>
                 </div>
                 <div class="min-w-0">
-                    <div class="text-xs text-gray-text truncate">Stok Cukup (≥ 25)</div>
+                    <div class="text-xs text-gray-text truncate">Stok Cukup (&ge; 25)</div>
                     <div class="text-lg lg:text-xl font-bold text-green-700 leading-tight">
-                        {{ $stokCukup }} <span class="text-xs font-semibold text-green-600">Aman</span>
+                        {{ $stokCukup }} <span class="text-xs font-semibold text-green-600">Aman &rsaquo;</span>
                     </div>
                 </div>
-            </div>
+            </a>
 
             {{-- Stok Menipis --}}
-            <div class="bg-pure-white border border-border-color rounded-xl p-3.5 shadow-sm flex items-center gap-3">
+            <a href="{{ route('obat.index', ['status_stok' => 'perlu_restok']) }}"
+                class="bg-pure-white border border-border-color hover:border-amber-400 rounded-xl p-3.5 shadow-sm hover:shadow-md transition flex items-center gap-3">
                 <div class="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">
                     <svg class="w-5 h-5 text-amber-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M12 3l10 18H2L12 3z"/>
@@ -157,13 +164,14 @@
                 <div class="min-w-0">
                     <div class="text-xs text-gray-text truncate">Stok Menipis (&lt; 25)</div>
                     <div class="text-lg lg:text-xl font-bold text-amber-700 leading-tight">
-                        {{ $stokMenipis + $stokHampirHabis }} <span class="text-xs font-semibold text-red-600">({{ $stokHampirHabis }} kritis)</span>
+                        {{ $stokMenipis + $stokHampirHabis }} <span class="text-xs font-semibold text-red-600">({{ $stokHampirHabis }} kritis) &rsaquo;</span>
                     </div>
                 </div>
-            </div>
+            </a>
 
             {{-- Expired & Rusak --}}
-            <div class="bg-pure-white border border-border-color rounded-xl p-3.5 shadow-sm flex items-center gap-3">
+            <a href="{{ route('kondisi.index') }}"
+                class="bg-pure-white border border-border-color hover:border-red-400 rounded-xl p-3.5 shadow-sm hover:shadow-md transition flex items-center gap-3">
                 <div class="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center shrink-0">
                     <svg class="w-5 h-5 text-red-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="12" cy="12" r="9"/>
@@ -173,10 +181,10 @@
                 <div class="min-w-0">
                     <div class="text-xs text-gray-text truncate">Kadaluarsa &amp; Rusak</div>
                     <div class="text-lg lg:text-xl font-bold text-red-700 leading-tight">
-                        {{ $hampirExpired + $sudahExpired }} <span class="text-xs font-normal text-gray-text">exp • {{ $unitRusak }} rsk</span>
+                        {{ $hampirExpired + $sudahExpired }} <span class="text-xs font-normal text-gray-text">exp • {{ $unitRusak }} rsk &rsaquo;</span>
                     </div>
                 </div>
-            </div>
+            </a>
         </div>
     </div>
 
@@ -212,7 +220,9 @@
                         @forelse ($transaksiTerbaru as $trx)
                             <tr class="hover:bg-off-white transition">
                                 <td class="py-2.5 pr-2 font-bold text-dark-slate">
-                                    {{ $trx->no_transaksi }}
+                                    <a href="{{ route('kasir.riwayat', ['q' => $trx->no_transaksi]) }}" class="hover:text-soft-teal hover:underline">
+                                        {{ $trx->no_transaksi }}
+                                    </a>
                                     <div class="text-[10px] font-normal text-gray-text">
                                         {{ $trx->user->nama ?? 'Kasir' }} • {{ $trx->metode_bayar_label }}
                                     </div>
