@@ -36,6 +36,33 @@
             color: #FFFFFF !important;
             font-weight: 700 !important;
         }
+
+        /* Sidebar desktop collapsible mode */
+        @media (min-width: 1024px) {
+            #appSidebar.collapsed {
+                width: 4.75rem !important;
+                padding-left: 0.5rem !important;
+                padding-right: 0.5rem !important;
+            }
+            #appSidebar.collapsed .sidebar-hide-on-collapse {
+                display: none !important;
+            }
+            #appSidebar.collapsed .sidebar-header {
+                flex-direction: column !important;
+                align-items: center !important;
+                gap: 0.5rem !important;
+            }
+            #appSidebar.collapsed .sidebar-nav-link {
+                justify-content: center !important;
+                padding-left: 0 !important;
+                padding-right: 0 !important;
+            }
+            #appSidebar.collapsed .sidebar-bottom-item {
+                justify-content: center !important;
+                padding-left: 0.25rem !important;
+                padding-right: 0.25rem !important;
+            }
+        }
     </style>
 </head>
 <body class="bg-off-white text-dark-slate font-sans m-0 min-h-screen lg:h-screen lg:overflow-hidden">
@@ -94,6 +121,40 @@
             document.getElementById('sidebarBackdrop')?.classList.add('hidden');
             document.body.classList.remove('overflow-hidden');
         }
+
+        // Toggle dan sinkronisasi status sidebar desktop dengan localStorage
+        function toggleSidebarDesktop() {
+            const sidebar = document.getElementById('appSidebar');
+            if (!sidebar) return;
+            const isCollapsed = sidebar.classList.toggle('collapsed');
+            localStorage.setItem('sidebar_collapsed', isCollapsed ? 'true' : 'false');
+            const toggleIcon = document.getElementById('btnToggleDesktopIcon');
+            if (toggleIcon) {
+                toggleIcon.style.transform = isCollapsed ? 'rotate(180deg)' : 'rotate(0deg)';
+            }
+        }
+
+        function applySidebarState() {
+            if (window.innerWidth < 1024) return;
+            const isCollapsed = localStorage.getItem('sidebar_collapsed') === 'true';
+            const sidebar = document.getElementById('appSidebar');
+            const toggleIcon = document.getElementById('btnToggleDesktopIcon');
+            if (sidebar) {
+                if (isCollapsed) {
+                    sidebar.classList.add('collapsed');
+                    if (toggleIcon) toggleIcon.style.transform = 'rotate(180deg)';
+                } else {
+                    sidebar.classList.remove('collapsed');
+                    if (toggleIcon) toggleIcon.style.transform = 'rotate(0deg)';
+                }
+            }
+        }
+
+        window.addEventListener('resize', () => {
+            if (window.innerWidth >= 1024) {
+                applySidebarState();
+            }
+        });
 
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') tutupSidebar();
