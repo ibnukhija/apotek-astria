@@ -89,7 +89,7 @@ class ApiController extends Controller
         ];
 
         $grafikPenjualan = $this->hitungGrafikPenjualan($periodeGrafik, $hariIni);
-        $obatTerlaris = $this->hitungObatTerlaris($kategoriId);
+        $obatTerlaris = $this->hitungObatTerlaris($kategoriId, $periode, $hariIni);
         $daftarKategori = Kategori::orderBy('nama_kategori')->get(['id', 'nama_kategori']);
 
         // 5 transaksi terbaru (disertakan untuk kompatibilitas API)
@@ -137,11 +137,12 @@ class ApiController extends Controller
     }
 
     /**
-     * Top 5 obat paling laku berdasarkan total unit terjual keseluruhan (opsional filter per kategori).
+     * Top 5 obat paling laku berdasarkan total unit terjual (mengikuti periode & kategori jika dipilih).
      */
-    private function hitungObatTerlaris(?int $kategoriId = null): array
+    private function hitungObatTerlaris(?int $kategoriId = null, string $periode = 'keseluruhan', ?Carbon $hariIni = null): array
     {
         $query = DB::table('detail_transaksi')
+            ->join('transaksi', 'transaksi.id', '=', 'detail_transaksi.transaksi_id')
             ->join('obat', 'obat.id', '=', 'detail_transaksi.obat_id')
             ->select(
                 'obat.id as obat_id',
@@ -151,6 +152,10 @@ class ApiController extends Controller
                 DB::raw('SUM(detail_transaksi.qty) as total_terjual'),
                 DB::raw('SUM(detail_transaksi.subtotal) as total_pendapatan')
             );
+
+        if ($hariIni && $periode !== 'keseluruhan') {
+            $this->terapkanFilterPeriode($query, $periode, $hariIni, 'transaksi.created_at');
+        }
 
         if ($kategoriId) {
             $query->where('obat.kategori_id', $kategoriId);
@@ -402,6 +407,7 @@ class ApiController extends Controller
             $query->where('metode_bayar', $request->metode_bayar);
         }
 
+        $totalOmset = (int) (clone $query)->reorder()->sum('total_harga');
         $riwayat = $query->paginate(50);
 
         $data = collect($riwayat->items())->map(function (Transaksi $trx) {
@@ -418,6 +424,7 @@ class ApiController extends Controller
             'current_page' => $riwayat->currentPage(),
             'last_page'    => $riwayat->lastPage(),
             'total'        => $riwayat->total(),
+            'total_omset'  => $totalOmset,
         ]);
     }
 

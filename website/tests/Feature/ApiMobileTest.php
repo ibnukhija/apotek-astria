@@ -309,9 +309,13 @@ class ApiMobileTest extends TestCase
         $this->getJson('/api/riwayat?tanggal_mulai=2026-11-15&tanggal_selesai=2026-11-10')
             ->assertStatus(422);
 
+        $this->getJson('/api/riwayat')
+            ->assertOk()
+            ->assertJson(['success' => true, 'total' => 2, 'total_omset' => 30000]);
+
         $this->getJson('/api/riwayat?tanggal_mulai=2026-11-12')
             ->assertOk()
-            ->assertJson(['success' => true, 'total' => 1])
+            ->assertJson(['success' => true, 'total' => 1, 'total_omset' => 20000])
             ->assertJsonPath('data.0.no_transaksi', 'TRX-002');
 
         $this->getJson('/api/riwayat?tanggal_mulai=2026-11-10&tanggal_selesai=2026-11-15')
@@ -530,7 +534,7 @@ class ApiMobileTest extends TestCase
         }
     }
 
-    public function test_dashboard_mengembalikan_top_5_obat_terlaris_keseluruhan(): void
+    public function test_dashboard_mengembalikan_top_5_obat_terlaris_sesuai_periode_dan_kategori(): void
     {
         Carbon::setTestNow(Carbon::parse('2026-11-18 10:00:00'));
 
@@ -591,36 +595,45 @@ class ApiMobileTest extends TestCase
                 ['obat' => $daftarObat['A'], 'qty' => 1],
             ]);
 
-            // Meskipun periode ringkasan penjualan dipilih harian, top 5 obat terlaris tetap dihitung keseluruhan
+            // Saat periode harian dipilih, top 5 obat terlaris ikut terfilter hanya hari ini
             $topDariHarian = $this->getJson('/api/dashboard?periode=harian')
                 ->assertOk()
                 ->json('data.obat_terlaris');
-            $this->assertCount(5, $topDariHarian);
-            $this->assertSame(
-                ['Obat C', 'Obat D', 'Obat E', 'Obat F', 'Obat B'],
-                array_column($topDariHarian, 'nama_obat')
-            );
-            $this->assertSame([10, 8, 6, 5, 4], array_column($topDariHarian, 'total_terjual'));
+            $this->assertCount(2, $topDariHarian);
+            $this->assertSame(['Obat B', 'Obat A'], array_column($topDariHarian, 'nama_obat'));
+            $this->assertSame([4, 2], array_column($topDariHarian, 'total_terjual'));
 
-            $topDariBulanan = $this->getJson('/api/dashboard?periode=bulanan')
+            // Saat periode keseluruhan dipilih, top 5 menghitung seluruh rentang waktu
+            $topKeseluruhan = $this->getJson('/api/dashboard?periode=keseluruhan')
                 ->assertOk()
                 ->json('data.obat_terlaris');
-            $this->assertSame($topDariHarian, $topDariBulanan);
+            $this->assertCount(5, $topKeseluruhan);
+            $this->assertSame(
+                ['Obat C', 'Obat D', 'Obat E', 'Obat F', 'Obat B'],
+                array_column($topKeseluruhan, 'nama_obat')
+            );
+            $this->assertSame([10, 8, 6, 5, 4], array_column($topKeseluruhan, 'total_terjual'));
 
             // Response dashboard juga menyertakan daftar kategori
             $resDashboard = $this->getJson('/api/dashboard')->assertOk()->json('data');
             $this->assertArrayHasKey('kategoris', $resDashboard);
 
-            // Filter obat terlaris per kategori: obat A berada di kategori baru
+            // Filter obat terlaris per kategori mengikuti periode aktif (harian = 2, keseluruhan = 3)
             $katKhusus = Kategori::create(['nama_kategori' => 'Kategori Khusus Terlaris']);
             $daftarObat['A']->update(['kategori_id' => $katKhusus->id]);
 
-            $topPerKategori = $this->getJson('/api/dashboard?kategori_id=' . $katKhusus->id)
+            $topPerKategoriHarian = $this->getJson('/api/dashboard?periode=harian&kategori_id=' . $katKhusus->id)
                 ->assertOk()
                 ->json('data.obat_terlaris');
-            $this->assertCount(1, $topPerKategori);
-            $this->assertSame('Obat A', $topPerKategori[0]['nama_obat']);
-            $this->assertSame(3, $topPerKategori[0]['total_terjual']);
+            $this->assertCount(1, $topPerKategoriHarian);
+            $this->assertSame('Obat A', $topPerKategoriHarian[0]['nama_obat']);
+            $this->assertSame(2, $topPerKategoriHarian[0]['total_terjual']);
+
+            $topPerKategoriSemua = $this->getJson('/api/dashboard?periode=keseluruhan&kategori_id=' . $katKhusus->id)
+                ->assertOk()
+                ->json('data.obat_terlaris');
+            $this->assertCount(1, $topPerKategoriSemua);
+            $this->assertSame(3, $topPerKategoriSemua[0]['total_terjual']);
         } finally {
             Carbon::setTestNow();
         }

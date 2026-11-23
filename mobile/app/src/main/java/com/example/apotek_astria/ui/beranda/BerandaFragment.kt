@@ -290,17 +290,29 @@ class BerandaFragment : Fragment() {
         }
     }
 
-    private fun tampilkanObatTerlaris(arrayTerlaris: JSONArray?) {
-        binding.tvPeriodeTerlaris.text = "Keseluruhan"
+    private fun tampilkanObatTerlaris(arrayTerlaris: JSONArray?, periode: String = periodeAktif) {
+        val namaKategoriDipilih = if (kategoriTerlarisDipilihId != null) {
+            daftarKategoriTerlaris.firstOrNull { it.first == kategoriTerlarisDipilihId }?.second
+        } else {
+            null
+        }
+        val labelPeriode = when (periode) {
+            "mingguan" -> "Minggu Ini"
+            "bulanan" -> "Bulan Ini"
+            "keseluruhan" -> "Keseluruhan"
+            else -> "Hari Ini"
+        }
+        binding.tvPeriodeTerlaris.text = if (!namaKategoriDipilih.isNullOrBlank()) {
+            "$labelPeriode • $namaKategoriDipilih"
+        } else {
+            labelPeriode
+        }
         binding.layoutObatTerlaris.removeAllViews()
 
         if (arrayTerlaris == null || arrayTerlaris.length() == 0) {
             val emptyText = TextView(requireContext()).apply {
-                text = if (kategoriTerlarisDipilihId != null) {
-                    "Belum ada data penjualan obat untuk kategori ini"
-                } else {
-                    "Belum ada data penjualan obat"
-                }
+                val ketKat = if (!namaKategoriDipilih.isNullOrBlank()) " pada kategori $namaKategoriDipilih" else ""
+                text = "Belum ada penjualan$ketKat (${labelWaktuPeriode(periode)})"
                 setTextColor(Color.parseColor("#94A3B8"))
                 textSize = 12f
                 setPadding(0, 24, 0, 12)
@@ -447,8 +459,8 @@ class BerandaFragment : Fragment() {
                         binding.tvInfoGrafik.text = "Belum ada penjualan pada rentang ${labelChipPeriode(periodeGrafik).lowercase(Locale.ROOT)}"
                     }
 
-                    // 3. Bagian Penjualan: Top 5 Obat Paling Laku (Keseluruhan)
-                    tampilkanObatTerlaris(data.optJSONArray("obat_terlaris"))
+                    // 3. Bagian Penjualan: Top 5 Obat Paling Laku (mengikuti periode & kategori)
+                    tampilkanObatTerlaris(data.optJSONArray("obat_terlaris"), periodeRespon)
 
                     // 4. Bagian Stok: Banner & Ringkasan Stok Menipis (< 10)
                     val peringatanObatArray = data.optJSONArray("peringatan_obat")

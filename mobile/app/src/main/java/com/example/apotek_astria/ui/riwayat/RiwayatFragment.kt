@@ -63,7 +63,7 @@ class RiwayatFragment : Fragment() {
     private val daftarSaranObat = mutableListOf<String>()
     private lateinit var kategoriAdapter: ArrayAdapter<String>
     private lateinit var saranObatAdapter: ArrayAdapter<String>
-    private var periodeLaporan = "bulan_ini"
+    private var periodeLaporan = "hari_ini"
     private var kategoriLaporan = ""
     private var lapCurrentPage = 1
     private var lapLastPage = 1
@@ -135,11 +135,11 @@ class RiwayatFragment : Fragment() {
         binding.btnFilter.setOnClickListener {
             val tglMulai = binding.etTanggalMulai.text.toString().trim()
             val tglSelesai = binding.etTanggalSelesai.text.toString().trim()
-            if (tglMulai.isNotEmpty() && tglSelesai.isNotEmpty()) {
+            if (tglMulai.isNotEmpty() || tglSelesai.isNotEmpty()) {
                 currentPage = 1
                 muatDataSesuaiFilter()
             } else {
-                Toast.makeText(requireContext(), "Pilih kedua rentang tanggal", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "Pilih tanggal mulai atau tanggal selesai", Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -180,8 +180,10 @@ class RiwayatFragment : Fragment() {
 
         val builder = Uri.parse(ApiConfig.URL_RIWAYAT).buildUpon()
             .appendQueryParameter("page", currentPage.toString())
-        if (tglMulai.isNotEmpty() && tglSelesai.isNotEmpty()) {
+        if (tglMulai.isNotEmpty()) {
             builder.appendQueryParameter("tanggal_mulai", tglMulai)
+        }
+        if (tglSelesai.isNotEmpty()) {
             builder.appendQueryParameter("tanggal_selesai", tglSelesai)
         }
         loadRiwayatTransaksi(builder.build().toString())
@@ -202,6 +204,18 @@ class RiwayatFragment : Fragment() {
                     val dataArray = response.optJSONArray("data")
                     currentPage = response.optInt("current_page", 1)
                     lastPage = response.optInt("last_page", 1)
+                    val totalTrx = response.optInt("total", 0)
+                    val totalOmset = response.optLong("total_omset", 0L)
+
+                    val tglMulai = binding.etTanggalMulai.text.toString().trim()
+                    val tglSelesai = binding.etTanggalSelesai.text.toString().trim()
+                    val labelRentang = when {
+                        tglMulai.isNotEmpty() && tglMulai == tglSelesai -> ApiConfig.formatTanggal(tglMulai)
+                        tglMulai.isNotEmpty() || tglSelesai.isNotEmpty() -> "Terfilter"
+                        else -> "Semua"
+                    }
+                    binding.tvRiwayatJumlahTransaksi.text = "$totalTrx transaksi ($labelRentang)"
+                    binding.tvRiwayatTotalOmset.text = "Omzet: Rp ${formatRupiah.format(totalOmset)}"
 
                     binding.tvPageInfo.text = "Halaman $currentPage dari $lastPage"
                     binding.layoutPagination.visibility = if (lastPage > 1) View.VISIBLE else View.GONE
@@ -267,6 +281,8 @@ class RiwayatFragment : Fragment() {
                         }
                     }
                 } else {
+                    binding.tvRiwayatJumlahTransaksi.text = "0 transaksi"
+                    binding.tvRiwayatTotalOmset.text = "Omzet: Rp 0"
                     transaksiList.clear()
                     adapter.notifyDataSetChanged()
                     binding.tvEmpty.visibility = View.VISIBLE
@@ -313,9 +329,6 @@ class RiwayatFragment : Fragment() {
     // ==================== BAGIAN LAPORAN ====================
     private fun semuaRadioPeriode(): List<Pair<RadioButton, String>> = listOf(
         binding.rbPeriodeHariIni to "hari_ini",
-        binding.rbPeriodeMingguIni to "minggu_ini",
-        binding.rbPeriodeBulanIni to "bulan_ini",
-        binding.rbPeriodeTahunIni to "tahun_ini",
         binding.rbPeriodeSemua to "semua",
         binding.rbPeriodeKustom to "kustom"
     )
@@ -337,7 +350,7 @@ class RiwayatFragment : Fragment() {
     }
 
     private fun setupPanelLaporan() {
-        pilihPeriodeRadio("bulan_ini", muatUlang = false)
+        pilihPeriodeRadio("hari_ini", muatUlang = false)
         for ((rb, kode) in semuaRadioPeriode()) {
             rb.setOnClickListener { pilihPeriodeRadio(kode, muatUlang = true) }
         }
@@ -387,7 +400,7 @@ class RiwayatFragment : Fragment() {
             binding.spKategoriLaporan.setSelection(0)
             binding.actvLapNamaObat.setText("")
             sedangAturSpinner = false
-            pilihPeriodeRadio("bulan_ini", muatUlang = false)
+            pilihPeriodeRadio("hari_ini", muatUlang = false)
             lapCurrentPage = 1
             loadLaporan()
         }
@@ -430,24 +443,6 @@ class RiwayatFragment : Fragment() {
         when (periode) {
             "hari_ini" -> {
                 binding.etLapTanggalMulai.setText(hariIniStr)
-                binding.etLapTanggalSelesai.setText(hariIniStr)
-            }
-            "minggu_ini" -> {
-                val awal = Calendar.getInstance().apply {
-                    firstDayOfWeek = Calendar.MONDAY
-                    set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
-                }
-                binding.etLapTanggalMulai.setText(sdfApi.format(awal.time))
-                binding.etLapTanggalSelesai.setText(hariIniStr)
-            }
-            "bulan_ini" -> {
-                val awal = Calendar.getInstance().apply { set(Calendar.DAY_OF_MONTH, 1) }
-                binding.etLapTanggalMulai.setText(sdfApi.format(awal.time))
-                binding.etLapTanggalSelesai.setText(hariIniStr)
-            }
-            "tahun_ini" -> {
-                val awal = Calendar.getInstance().apply { set(Calendar.DAY_OF_YEAR, 1) }
-                binding.etLapTanggalMulai.setText(sdfApi.format(awal.time))
                 binding.etLapTanggalSelesai.setText(hariIniStr)
             }
             "semua" -> {

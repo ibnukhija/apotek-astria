@@ -150,6 +150,37 @@
                 android:textSize="12sp" />
         </LinearLayout>
 
+        <!-- Strip Ringkasan 1 Baris (Sinkron dengan Filter Tanggal) -->
+        <LinearLayout
+            android:id="@+id/layoutRingkasanRiwayat"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#E8F4F2"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingHorizontal="14dp"
+            android:paddingVertical="7dp">
+
+            <TextView
+                android:id="@+id/tvRiwayatJumlahTransaksi"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="0 transaksi"
+                android:textColor="#1F7A6F"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvRiwayatTotalOmset"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Omzet: Rp 0"
+                android:textColor="#166534"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
         <TextView
             android:id="@+id/tvEmpty"
             android:layout_width="wrap_content"
@@ -272,7 +303,8 @@
                                 android:textColor="#64748B"
                                 android:textSize="11sp" />
 
-                            <LinearLayout
+                            <RadioGroup
+                                android:id="@+id/rgPeriodeLaporan"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="4dp"
@@ -281,54 +313,18 @@
                                 <RadioButton
                                     android:id="@+id/rbPeriodeHariIni"
                                     android:layout_width="0dp"
-                                    android:layout_height="34dp"
-                                    android:layout_weight="1"
-                                    android:buttonTint="#2A9D8F"
-                                    android:text="Hari Ini"
-                                    android:textColor="#1E293B"
-                                    android:textSize="12sp" />
-
-                                <RadioButton
-                                    android:id="@+id/rbPeriodeMingguIni"
-                                    android:layout_width="0dp"
-                                    android:layout_height="34dp"
-                                    android:layout_weight="1"
-                                    android:buttonTint="#2A9D8F"
-                                    android:text="Minggu Ini"
-                                    android:textColor="#1E293B"
-                                    android:textSize="12sp" />
-
-                                <RadioButton
-                                    android:id="@+id/rbPeriodeBulanIni"
-                                    android:layout_width="0dp"
-                                    android:layout_height="34dp"
+                                    android:layout_height="36dp"
                                     android:layout_weight="1"
                                     android:buttonTint="#2A9D8F"
                                     android:checked="true"
-                                    android:text="Bulan Ini"
-                                    android:textColor="#1E293B"
-                                    android:textSize="12sp" />
-                            </LinearLayout>
-
-                            <LinearLayout
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:orientation="horizontal">
-
-                                <RadioButton
-                                    android:id="@+id/rbPeriodeTahunIni"
-                                    android:layout_width="0dp"
-                                    android:layout_height="34dp"
-                                    android:layout_weight="1"
-                                    android:buttonTint="#2A9D8F"
-                                    android:text="Tahun Ini"
+                                    android:text="Hari Ini"
                                     android:textColor="#1E293B"
                                     android:textSize="12sp" />
 
                                 <RadioButton
                                     android:id="@+id/rbPeriodeSemua"
                                     android:layout_width="0dp"
-                                    android:layout_height="34dp"
+                                    android:layout_height="36dp"
                                     android:layout_weight="1"
                                     android:buttonTint="#2A9D8F"
                                     android:text="Semua"
@@ -338,13 +334,13 @@
                                 <RadioButton
                                     android:id="@+id/rbPeriodeKustom"
                                     android:layout_width="0dp"
-                                    android:layout_height="34dp"
+                                    android:layout_height="36dp"
                                     android:layout_weight="1"
                                     android:buttonTint="#2A9D8F"
                                     android:text="Kustom"
                                     android:textColor="#1E293B"
                                     android:textSize="12sp" />
-                            </LinearLayout>
+                            </RadioGroup>
 
                             <!-- Baris 2: Kategori Obat -->
                             <TextView
@@ -497,7 +493,7 @@
                                 android:id="@+id/tvLapPeriodeLabel"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="Bulan Ini"
+                                android:text="Hari Ini"
                                 android:textColor="#E8F4F2"
                                 android:textSize="12sp" />
 
