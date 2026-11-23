@@ -44,8 +44,10 @@ class BerandaFragment : Fragment() {
 
     // Filter kategori untuk Top 5 Obat Terlaris
     private val daftarKategoriTerlaris = mutableListOf<Pair<Int?, String>>() // Pair(id, nama)
+    private val daftarNamaKategoriTerlaris = mutableListOf<String>()
     private lateinit var kategoriTerlarisAdapter: ArrayAdapter<String>
     private var kategoriTerlarisDipilihId: Int? = null
+    private var sedangMemperbaruiSpinner = false
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -114,14 +116,17 @@ class BerandaFragment : Fragment() {
         // Filter kategori pada Top 5 Obat Terlaris
         daftarKategoriTerlaris.clear()
         daftarKategoriTerlaris.add(Pair(null, "Semua Kategori"))
+        daftarNamaKategoriTerlaris.clear()
+        daftarNamaKategoriTerlaris.add("Semua Kategori")
         kategoriTerlarisAdapter = ArrayAdapter(
             requireContext(),
             android.R.layout.simple_spinner_dropdown_item,
-            mutableListOf("Semua Kategori")
+            daftarNamaKategoriTerlaris
         )
         binding.spKategoriTerlaris.adapter = kategoriTerlarisAdapter
         binding.spKategoriTerlaris.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, v: View?, pos: Int, id: Long) {
+                if (sedangMemperbaruiSpinner) return
                 val itemDipilih = daftarKategoriTerlaris.getOrNull(pos)
                 val idBaru = itemDipilih?.first
                 if (idBaru != kategoriTerlarisDipilihId) {
@@ -291,7 +296,11 @@ class BerandaFragment : Fragment() {
 
         if (arrayTerlaris == null || arrayTerlaris.length() == 0) {
             val emptyText = TextView(requireContext()).apply {
-                text = "Belum ada data penjualan obat"
+                text = if (kategoriTerlarisDipilihId != null) {
+                    "Belum ada data penjualan obat untuk kategori ini"
+                } else {
+                    "Belum ada data penjualan obat"
+                }
                 setTextColor(Color.parseColor("#94A3B8"))
                 textSize = 12f
                 setPadding(0, 24, 0, 12)
@@ -338,13 +347,51 @@ class BerandaFragment : Fragment() {
     }
 
     private fun loadDashboardData() {
-        val url = "${ApiConfig.URL_DASHBOARD}?periode=$periodeAktif&periode_grafik=$periodeGrafik"
+        val kategoriParam = if (kategoriTerlarisDipilihId != null) "&kategori_id=$kategoriTerlarisDipilihId" else ""
+        val url = "${ApiConfig.URL_DASHBOARD}?periode=$periodeAktif&periode_grafik=$periodeGrafik$kategoriParam"
         val request = ApiRequest(requireContext(), Request.Method.GET, url, null,
             { response ->
                 if (!isAdded || _binding == null) return@ApiRequest
 
                 if (response.optBoolean("success", false)) {
                     val data = response.getJSONObject("data")
+
+                    // Update daftar kategori spinner jika tersedia dari API
+                    val katArray = data.optJSONArray("kategoris")
+                    if (katArray != null) {
+                        val listBaru = mutableListOf<Pair<Int?, String>>()
+                        listBaru.add(Pair(null, "Semua Kategori"))
+                        for (i in 0 until katArray.length()) {
+                            val katObj = katArray.optJSONObject(i) ?: continue
+                            val id = katObj.optInt("id")
+                            val nama = katObj.optString("nama_kategori", "")
+                            if (nama.isNotBlank()) {
+                                listBaru.add(Pair(id, nama))
+                            }
+                        }
+
+                        val berbeda = listBaru.size != daftarKategoriTerlaris.size ||
+                            listBaru.indices.any { listBaru[it] != daftarKategoriTerlaris[it] }
+
+                        if (berbeda) {
+                            sedangMemperbaruiSpinner = true
+                            daftarKategoriTerlaris.clear()
+                            daftarKategoriTerlaris.addAll(listBaru)
+
+                            daftarNamaKategoriTerlaris.clear()
+                            daftarNamaKategoriTerlaris.addAll(listBaru.map { it.second })
+                            kategoriTerlarisAdapter.notifyDataSetChanged()
+
+                            val idx = daftarKategoriTerlaris.indexOfFirst { it.first == kategoriTerlarisDipilihId }
+                            if (idx >= 0) {
+                                binding.spKategoriTerlaris.setSelection(idx, false)
+                            } else {
+                                kategoriTerlarisDipilihId = null
+                                binding.spKategoriTerlaris.setSelection(0, false)
+                            }
+                            sedangMemperbaruiSpinner = false
+                        }
+                    }
 
                     // 0. Header: Nama & Status Toko (Buka / Tutup)
                     val profilObj = data.optJSONObject("profil_apotek")
