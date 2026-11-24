@@ -52,7 +52,7 @@ class KondisiStokController extends Controller
         $obats = Obat::with(['batches' => fn ($q) => $q->adaStok()->orderBy('tgl_kadaluarsa')->orderBy('id')])
             ->orderBy('nama_obat')
             ->get(['id', 'kode_obat', 'nama_obat', 'stok', 'satuan', 'tgl_kadaluarsa', 'status'])
-            ->map(function (Obat $o) {
+            ->map(function (Obat $o) use ($hariIni) {
                 $info = $o->kadaluarsa_info;
                 return [
                     'id'                => $o->id,
