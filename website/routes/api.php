@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ApiController;
 use App\Http\Controllers\Api\OwnerController;
 use App\Http\Controllers\Api\NotifikasiController;
+use App\Http\Controllers\Api\StokOpnameApiController;
 
 // Route Login yang sudah dibuat
 Route::post('/login-mobile', [AuthController::class, 'loginMobile']);
@@ -16,6 +17,10 @@ Route::post('/logout-mobile', [AuthController::class, 'logoutMobile'])->middlewa
 Route::middleware(['auth:sanctum', 'cekrole:owner'])->group(function () {
     Route::get('/dashboard', [ApiController::class, 'dashboard']);
     Route::get('/stok', [ApiController::class, 'stok']);
+
+    // Stok opname (riwayat + detail untuk mobile Owner)
+    Route::get('/stok-opname', [StokOpnameApiController::class, 'index']);
+    Route::get('/stok-opname/{stokOpname}', [StokOpnameApiController::class, 'show']);
     Route::put('/obat/{id}', [ApiController::class, 'updateObatCepat']);
     Route::get('/riwayat', [ApiController::class, 'riwayat']);
     Route::get('/laporan', [ApiController::class, 'laporan']);

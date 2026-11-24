@@ -20,9 +20,6 @@ Route::middleware(['auth', 'cekrole:karyawan'])->group(function () {
 
     Route::resource('obat', ObatController::class)->only(['index', 'store', 'update', 'destroy']);
 
-    Route::get('/stok-opname', [\App\Http\Controllers\Api\StokOpnameApiController::class, 'index']);
-    Route::get('/stok-opname/{stokOpname}', [\App\Http\Controllers\Api\StokOpnameApiController::class, 'show']);
-
     Route::get('/kondisi-stok', [KondisiStokController::class, 'index'])->name('kondisi.index');
     Route::post('/kondisi-stok', [KondisiStokController::class, 'store'])->name('kondisi.store');
 
