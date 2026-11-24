@@ -59,4 +59,22 @@ class StokOpnameController extends Controller
         return redirect()->route('stok-opname.show', $stokOpname->id)
             ->with('success', 'Stok opname difinalisasi. Stok aktif sudah disesuaikan dengan stok fisik.');
     }
+
+    /** AJAX: segarkan snapshot stok_sistem dengan stok terkini (sebelum finalisasi). */
+    public function refreshStokSistem(StokOpname $stokOpname)
+    {
+        abort_unless($stokOpname->isDraft(), 403, 'Hanya opname draft yang bisa disegarkan.');
+
+        $berubah = StokOpnameService::segarkanStokSistem($stokOpname);
+
+        if ($berubah->isEmpty()) {
+            return response()->json(['ok' => true, 'message' => 'Stok sistem sudah sama dengan snapshot, tidak ada perubahan.']);
+        }
+
+        return response()->json([
+            'ok'      => true,
+            'message' => 'Stok sistem disegarkan untuk ' . $berubah->count() . ' obat.',
+            'berubah' => $berubah,
+        ]);
+    }
 }

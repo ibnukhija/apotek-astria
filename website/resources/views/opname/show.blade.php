@@ -19,6 +19,15 @@
     <div class="flex gap-2 shrink-0">
         <a href="{{ route('stok-opname.index') }}" class="px-4 py-2.5 border border-border-color rounded-lg text-sm font-semibold hover:bg-off-white transition">&larr; Daftar</a>
         @unless ($readonly)
+            <button type="button" id="btnRefreshStok"
+                class="px-4 py-2.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg text-sm font-semibold hover:bg-blue-100 transition flex items-center gap-1.5"
+                onclick="segaranStokSistem()">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="23 4 23 10 17 10"></polyline>
+                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                </svg>
+                Segarkan Stok Sistem
+            </button>
             <form method="POST" action="{{ route('stok-opname.finalisasi', $stokOpname->id) }}" onsubmit="return konfirmasiFinal()">
                 @csrf
                 <button type="submit" class="px-5 py-2.5 bg-soft-teal text-white rounded-lg text-sm font-bold hover:opacity-90 transition shadow-sm">Finalisasi Opname</button>
@@ -237,6 +246,44 @@ function simpanBaris(tr) {
             st.style.color = '#B91C1C';
         }
     }, 500);
+}
+
+function segaranStokSistem() {
+    const btn = document.getElementById('btnRefreshStok');
+    if (!btn) return;
+    const originalHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<svg class="w-4 h-4 animate-spin" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Menyegarkan...';
+
+    fetch('{{ route("stok-opname.refresh-stok", $stokOpname->id) }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': csrfOpname,
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(r => r.json())
+    .then(data => {
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+        if (data.ok) {
+            if (data.berubah && data.berubah.length > 0) {
+                alert('Stok sistem disegarkan untuk ' + data.berubah.length + ' obat:\n' + data.berubah.slice(0, 10).join('\n') + (data.berubah.length > 10 ? '\n...' : '') + '\n\nSilakan periksa kembali selisih setiap baris.');
+            } else {
+                alert(data.message);
+            }
+            location.reload();
+        } else {
+            alert('Gagal menyegarkan: ' + (data.message ?? 'Unknown error'));
+        }
+    })
+    .catch(e => {
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+        alert('Gagal menyegarkan stok sistem: ' + e.message);
+    });
 }
 
 function konfirmasiFinal() {

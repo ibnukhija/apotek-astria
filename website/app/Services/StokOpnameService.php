@@ -72,7 +72,27 @@ class StokOpnameService
     }
 
     /**
-     * Samakan snapshot stok_sistem dengan stok sekarang (ada penjualan saat penghitungan).
+     * Bandingkan stok sistem saat ini dengan snapshot di detail.
+     * TIDAK menyimpan perubahan (hanya validasi). Lempar error jika ada selisih.
+     * @return Collection<int,string> daftar obat yang berubah
+     */
+    public static function cekStokSistem(StokOpname $opname): Collection
+    {
+        $berubah = collect();
+
+        $opname->details()->with('obat:id,nama_obat,stok')->get()->each(function ($d) use ($berubah) {
+            $sekarang = (int) $d->obat->stok;
+            if ($sekarang !== (int) $d->stok_sistem) {
+                $berubah->push("{$d->obat->nama_obat}: {$d->stok_sistem} → {$sekarang}");
+            }
+        });
+
+        return $berubah;
+    }
+
+    /**
+     * Segarkan snapshot stok_sistem di detail dengan stok sistem terkini.
+     * Dipanggil saat user klik tombol "Segarkan Stok Sistem" sebelum finalisasi.
      * @return Collection<int,string> daftar obat yang berubah
      */
     public static function segarkanStokSistem(StokOpname $opname): Collection
@@ -92,8 +112,9 @@ class StokOpnameService
 
     /**
      * Finalisasi: stok aktif disamakan dengan stok fisik.
-     *  - selisih kurang = rusak + hilang (wajib dirinci)
-     *  - selisih lebih  = penyesuaian stok (opname)
+     *  - selisih kurang = rusak + hilang (wajib dirinci) + catat JENIS_OPNAME untuk tracking
+     *  - selisih lebih  = penyesuaian stok (opname) wajib catatan
+     *  - selisih 0      = rusak & hilang harus 0
      */
     public static function finalisasi(StokOpname $opname, ?int $userId = null): StokOpname
     {
@@ -108,88 +129,106 @@ class StokOpnameService
             ]);
         }
 
-        // Di luar transaksi supaya snapshot baru tetap tersimpan walau finalisasi ditolak
-        $berubah = self::segarkanStokSistem($opname);
+        // Validasi stok sistem tidak berubah (hanya cek, tidak update snapshot)
+        $berubah = self::cekStokSistem($opname);
         if ($berubah->isNotEmpty()) {
             throw ValidationException::withMessages([
                 'opname' => 'Stok sistem berubah karena ada penjualan saat penghitungan ('
                     . $berubah->take(5)->implode('; ')
                     . ($berubah->count() > 5 ? '; dst.' : '')
-                    . '). Stok sistem sudah diperbarui, periksa kembali selisih lalu finalisasi lagi.',
+                    . '). Silakan klik tombol "Segarkan Stok Sistem" lalu periksa kembali selisih sebelum finalisasi.',
             ]);
         }
 
-        return DB::transaction(function () use ($opname, $userId) {
+        // Kumpulkan semua penyesuaian yang akan dilakukan
+        $penyesuaian = [];
+
+        foreach ($opname->details()->get() as $d) {
+            $obat   = Obat::lockForUpdate()->findOrFail($d->obat_id);
+            $sistem = (int) $obat->stok;
+
+            if ($sistem !== (int) $d->stok_sistem) {
+                throw ValidationException::withMessages([
+                    'opname' => "Stok {$obat->nama_obat} baru saja berubah ({$d->stok_sistem} → {$sistem}). Coba finalisasi lagi.",
+                ]);
+            }
+
+            $fisik   = (int) $d->stok_fisik;
+            $selisih = $fisik - $sistem;
+            $rusak   = (int) $d->jml_rusak;
+            $hilang  = (int) $d->jml_hilang;
+            $ket     = "Stok opname {$opname->kode}";
+
+            // Validasi konsistensi
+            if ($selisih === 0) {
+                if ($rusak > 0 || $hilang > 0) {
+                    throw ValidationException::withMessages([
+                        'opname' => "{$obat->nama_obat}: stok fisik sesuai sistem (selisih 0), kolom rusak dan hilang harus 0.",
+                    ]);
+                }
+            } elseif ($selisih < 0) {
+                if ($rusak + $hilang !== -$selisih) {
+                    throw ValidationException::withMessages([
+                        'opname' => "{$obat->nama_obat}: selisih kurang " . (-$selisih)
+                            . ' harus dirinci (rusak + hilang), sekarang baru ' . ($rusak + $hilang) . '.',
+                    ]);
+                }
+            } else { // selisih > 0
+                if ($rusak > 0 || $hilang > 0) {
+                    throw ValidationException::withMessages([
+                        'opname' => "{$obat->nama_obat}: tidak ada selisih kurang, kosongkan kolom rusak/hilang.",
+                    ]);
+                }
+                if (! filled($d->catatan)) {
+                    throw ValidationException::withMessages([
+                        'opname' => "{$obat->nama_obat}: selisih lebih {$selisih}, isi catatan penjelasannya.",
+                    ]);
+                }
+            }
+
+            // Kumpulkan catatan kondisi stok yang akan dibuat
+            if ($rusak > 0) {
+                $penyesuaian[] = [
+                    'obat_id'   => $obat->id,
+                    'jenis'     => KondisiStokObat::JENIS_RUSAK,
+                    'jumlah'    => $rusak,
+                    'penyebab'  => "{$ket}: rusak",
+                    'catatan'   => $d->catatan,
+                ];
+            }
+
+            if ($hilang > 0) {
+                $penyesuaian[] = [
+                    'obat_id'   => $obat->id,
+                    'jenis'     => KondisiStokObat::JENIS_HILANG,
+                    'jumlah'    => $hilang,
+                    'penyebab'  => "{$ket}: hilang / selisih pencatatan",
+                    'catatan'   => $d->catatan,
+                ];
+            }
+
+            if ($selisih !== 0) {
+                $penyesuaian[] = [
+                    'obat_id'    => $obat->id,
+                    'jenis'      => KondisiStokObat::JENIS_OPNAME,
+                    'stok_fisik' => $fisik,
+                    'penyebab'   => $selisih > 0
+                        ? "{$ket}: selisih lebih"
+                        : "{$ket}: selisih kurang (rusak {$rusak} + hilang {$hilang})",
+                    'catatan'    => $d->catatan,
+                ];
+            }
+        }
+
+        // Eksekusi semua penyesuaian dalam SATU transaksi
+        return DB::transaction(function () use ($opname, $userId, $penyesuaian) {
             $opname = StokOpname::lockForUpdate()->findOrFail($opname->id);
             if (! $opname->isDraft()) {
                 throw ValidationException::withMessages(['opname' => 'Opname ini sudah difinalisasi.']);
             }
 
-            foreach ($opname->details()->get() as $d) {
-                $obat   = Obat::lockForUpdate()->findOrFail($d->obat_id);
-                $sistem = (int) $obat->stok;
-
-                if ($sistem !== (int) $d->stok_sistem) {
-                    throw ValidationException::withMessages([
-                        'opname' => "Stok {$obat->nama_obat} baru saja berubah ({$d->stok_sistem} → {$sistem}). Coba finalisasi lagi.",
-                    ]);
-                }
-
-                $fisik   = (int) $d->stok_fisik;
-                $selisih = $fisik - $sistem;
-                $rusak   = (int) $d->jml_rusak;
-                $hilang  = (int) $d->jml_hilang;
-                $ket     = "Stok opname {$opname->kode}";
-
-                if ($selisih < 0) {
-                    if ($rusak + $hilang !== -$selisih) {
-                        throw ValidationException::withMessages([
-                            'opname' => "{$obat->nama_obat}: selisih kurang " . (-$selisih)
-                                . ' harus dirinci (rusak + hilang), sekarang baru ' . ($rusak + $hilang) . '.',
-                        ]);
-                    }
-                } else {
-                    if ($rusak + $hilang > 0) {
-                        throw ValidationException::withMessages([
-                            'opname' => "{$obat->nama_obat}: tidak ada selisih kurang, kosongkan kolom rusak/hilang.",
-                        ]);
-                    }
-                    if ($selisih > 0 && ! filled($d->catatan)) {
-                        throw ValidationException::withMessages([
-                            'opname' => "{$obat->nama_obat}: selisih lebih {$selisih}, isi catatan penjelasannya.",
-                        ]);
-                    }
-                }
-
-                if ($rusak > 0) {
-                    KondisiStokService::catat([
-                        'obat_id'  => $obat->id,
-                        'jenis'    => KondisiStokObat::JENIS_RUSAK,
-                        'jumlah'   => $rusak,
-                        'penyebab' => "{$ket}: rusak",
-                        'catatan'  => $d->catatan,
-                    ], $userId);
-                }
-
-                if ($hilang > 0) {
-                    KondisiStokService::catat([
-                        'obat_id'  => $obat->id,
-                        'jenis'    => KondisiStokObat::JENIS_HILANG,
-                        'jumlah'   => $hilang,
-                        'penyebab' => "{$ket}: hilang / selisih pencatatan",
-                        'catatan'  => $d->catatan,
-                    ], $userId);
-                }
-
-                if ($selisih > 0) {
-                    KondisiStokService::catat([
-                        'obat_id'    => $obat->id,
-                        'jenis'      => KondisiStokObat::JENIS_OPNAME,
-                        'stok_fisik' => $fisik,
-                        'penyebab'   => "{$ket}: selisih lebih",
-                        'catatan'    => $d->catatan,
-                    ], $userId);
-                }
+            foreach ($penyesuaian as $data) {
+                KondisiStokService::catat($data, $userId);
             }
 
             $opname->update([

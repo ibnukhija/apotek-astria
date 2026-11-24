@@ -31,6 +31,7 @@ Route::middleware(['auth', 'cekrole:karyawan'])->group(function () {
     Route::get('/stok-opname/{stokOpname}', [StokOpnameController::class, 'show'])->name('stok-opname.show');
     Route::post('/stok-opname/{stokOpname}/detail/{detail}', [StokOpnameController::class, 'updateDetail'])->name('stok-opname.detail');
     Route::post('/stok-opname/{stokOpname}/finalisasi', [StokOpnameController::class, 'finalisasi'])->name('stok-opname.finalisasi');
+    Route::post('/stok-opname/{stokOpname}/refresh-stok', [StokOpnameController::class, 'refreshStokSistem'])->name('stok-opname.refresh-stok');
 
     Route::resource('kategori', KategoriController::class)->only(['index', 'store', 'update', 'destroy']);
 
