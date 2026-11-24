@@ -46,6 +46,7 @@ class ObatController extends Controller
                 if (strtolower(trim((string) $request->status_kadaluarsa)) === 'perhatian') {
                     $batas = Carbon::today()->addDays(Obat::BATAS_HAMPIR_KADALUARSA);
                     $query->where('status', 'tersedia')
+                          ->where('stok', '>', 0)
                           ->whereNotNull('tgl_kadaluarsa')
                           ->whereDate('tgl_kadaluarsa', '<=', $batas);
                 }

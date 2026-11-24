@@ -21,11 +21,11 @@ class KondisiStokController extends Controller
         $aktif = Obat::where('status', 'tersedia');
         $ringkasan = [
             'stok_menipis'   => (clone $aktif)->where('stok', '<', Obat::BATAS_HAMPIR_HABIS)->count(),
-            'hampir_expired' => (clone $aktif)->whereNotNull('tgl_kadaluarsa')
+            'hampir_expired' => (clone $aktif)->where('stok', '>', 0)->whereNotNull('tgl_kadaluarsa')
                 ->whereDate('tgl_kadaluarsa', '>=', $hariIni)
                 ->whereDate('tgl_kadaluarsa', '<=', $batasHampirExpired)
                 ->count(),
-            'sudah_expired'  => (clone $aktif)->whereNotNull('tgl_kadaluarsa')
+            'sudah_expired'  => (clone $aktif)->where('stok', '>', 0)->whereNotNull('tgl_kadaluarsa')
                 ->whereDate('tgl_kadaluarsa', '<', $hariIni)
                 ->count(),
             'unit_rusak'     => (int) KondisiStokObat::where('jenis', KondisiStokObat::JENIS_RUSAK)->sum('jumlah'),
