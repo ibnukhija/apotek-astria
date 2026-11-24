@@ -52,6 +52,8 @@
                     @forelse ($obats as $obat)
                         @php($info = $obat->stok_info)
                         @php($kadaluarsa = $obat->kadaluarsa_info)
+                        @php($stokLayak = $obat->batches_exists ? (int) ($obat->stok_layak_jual ?? 0) : (int) $obat->stok)
+                        @php($stokExpired = max(0, (int) $obat->stok - $stokLayak))
                         <tr class="border-b border-border-color hover:bg-off-white transition">
                             <td class="py-2.5 px-3.5 text-xs sm:text-[13px] min-w-[190px]">
                                 <strong>{{ $obat->nama_obat }}</strong>
@@ -69,6 +71,9 @@
                             <td class="py-2.5 px-3.5 text-xs sm:text-[13px] whitespace-nowrap">{{ $obat->kategori->nama_kategori ?? '-' }}</td>
                             <td class="py-2.5 px-3.5 text-xs font-semibold whitespace-nowrap">
                                 <span class="{{ $info['kelas'] }} inline-block px-2 py-0.5 rounded-full text-[11px] whitespace-nowrap">{{ $obat->stok }} ({{ $info['label'] }})</span>
+                                @if ($stokExpired > 0)
+                                    <div class="text-[10px] text-red-600 font-medium mt-0.5">{{ $stokLayak }} layak jual &bull; {{ $stokExpired }} expired</div>
+                                @endif
                             </td>
                             <td class="py-2.5 px-3.5 text-xs sm:text-[13px] font-bold whitespace-nowrap">Rp{{ number_format($obat->harga_jual, 0, ',', '.') }}</td>
                             <td class="py-2.5 px-3.5 text-center whitespace-nowrap">
@@ -76,10 +81,11 @@
                                     data-id="{{ $obat->id }}"
                                     data-nama="{{ $obat->nama_obat }}"
                                     data-harga="{{ (int) $obat->harga_jual }}"
-                                    data-stok="{{ $obat->stok }}"
+                                    data-stok="{{ $stokLayak }}"
                                     data-kadaluarsa="{{ $kadaluarsa['label'] === 'Kadaluarsa' ? '1' : '0' }}"
                                     data-ed="{{ $obat->tgl_kadaluarsa ? $obat->tgl_kadaluarsa->format('d/m/Y') : '-' }}"
-                                    class="btn-tambah w-8 h-8 rounded-lg bg-[#E8F4F2] text-soft-teal font-bold hover:bg-soft-teal hover:text-white transition {{ $obat->stok <= 0 ? 'opacity-40 pointer-events-none' : '' }}">+</button>
+                                    @if ($stokLayak <= 0) disabled title="{{ $stokExpired > 0 ? 'Semua stok batch sudah kadaluarsa, tindak lanjuti di Kondisi Obat' : 'Stok habis' }}" @endif
+                                    class="btn-tambah w-8 h-8 rounded-lg bg-[#E8F4F2] text-soft-teal font-bold hover:bg-soft-teal hover:text-white transition {{ $stokLayak <= 0 ? 'opacity-40 pointer-events-none' : '' }}">+</button>
                             </td>
                         </tr>
                     @empty

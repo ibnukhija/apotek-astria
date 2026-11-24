@@ -48,9 +48,10 @@ class ApiController extends Controller
             ->orderBy('nama_obat')
             ->get();
 
-        // Obat tersedia yang sudah kadaluarsa atau hampir kadaluarsa (<= 7 hari)
+        // Obat tersedia berstok > 0 yang sudah kadaluarsa atau hampir kadaluarsa (<= 7 hari)
         $batasKadaluarsa = $hariIni->copy()->addDays(Obat::BATAS_HAMPIR_KADALUARSA);
-        $obatKadaluarsa = Obat::whereNotNull('tgl_kadaluarsa')
+        $obatKadaluarsa = Obat::where('stok', '>', 0)
+            ->whereNotNull('tgl_kadaluarsa')
             ->whereDate('tgl_kadaluarsa', '<=', $batasKadaluarsa)
             ->where('status', 'tersedia')
             ->orderBy('tgl_kadaluarsa')
@@ -367,6 +368,7 @@ class ApiController extends Controller
             if (in_array($valKad, ['perhatian', 'kadaluarsa', 'hampir_kadaluarsa'], true)) {
                 $batasKad = Carbon::today()->addDays(Obat::BATAS_HAMPIR_KADALUARSA);
                 $query->where('status', 'tersedia')
+                      ->where('stok', '>', 0)
                       ->whereNotNull('tgl_kadaluarsa')
                       ->whereDate('tgl_kadaluarsa', '<=', $batasKad);
             }
@@ -386,6 +388,7 @@ class ApiController extends Controller
         $batasKadaluarsa = Carbon::today()->addDays(Obat::BATAS_HAMPIR_KADALUARSA);
         $perhatianKadaluarsaTotal = (clone $ringkasanQuery)
             ->where('status', 'tersedia')
+            ->where('stok', '>', 0)
             ->whereNotNull('tgl_kadaluarsa')
             ->whereDate('tgl_kadaluarsa', '<=', $batasKadaluarsa)
             ->count();
@@ -416,7 +419,7 @@ class ApiController extends Controller
 
         $obats = collect($paginated->items())->map(function ($obat) use ($rusakPerObat, $opnameTerakhir) {
             $obat->status_stok = Obat::infoStok((int) $obat->stok)['label'];
-            $obat->status_kadaluarsa = Obat::infoKadaluarsa($obat->tgl_kadaluarsa)['label'];
+            $obat->status_kadaluarsa = $obat->kadaluarsa_info['label'];
             $obat->total_rusak = (int) ($rusakPerObat[$obat->id] ?? 0);
             $opname = $opnameTerakhir->get($obat->id);
             $obat->opname_terakhir = $opname

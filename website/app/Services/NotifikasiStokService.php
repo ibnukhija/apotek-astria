@@ -69,12 +69,13 @@ class NotifikasiStokService
             ->get(['nama_obat', 'stok']);
     }
 
-    /** Obat tersedia yang sudah kadaluarsa atau mendekati expired (<= 7 hari). */
+    /** Obat tersedia berstok > 0 yang sudah kadaluarsa atau mendekati expired (<= 7 hari). */
     public static function daftarKadaluarsa()
     {
         $batas = Carbon::today()->addDays(Obat::BATAS_HAMPIR_KADALUARSA);
 
         return Obat::where('status', 'tersedia')
+            ->where('stok', '>', 0)
             ->whereNotNull('tgl_kadaluarsa')
             ->whereDate('tgl_kadaluarsa', '<=', $batas)
             ->orderBy('tgl_kadaluarsa')

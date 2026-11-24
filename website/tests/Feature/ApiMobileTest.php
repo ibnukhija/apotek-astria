@@ -368,6 +368,13 @@ class ApiMobileTest extends TestCase
             'tgl_kadaluarsa' => now()->subDays(1)->format('Y-m-d'),
             'status'         => 'tidak',
         ]);
+        $this->buatObat([
+            'kode_obat'      => 'OBT-KOSONG',
+            'nama_obat'      => 'Obat Stok Kosong Expired',
+            'stok'           => 0,
+            'tgl_kadaluarsa' => now()->subDays(1)->format('Y-m-d'),
+            'status'         => 'tersedia',
+        ]);
 
         $dashboard = $this->getJson('/api/dashboard')->assertOk()->json('data');
         $kodesKadaluarsa = collect($dashboard['peringatan_kadaluarsa'])->pluck('status_kadaluarsa', 'kode_obat')->all();
@@ -377,6 +384,11 @@ class ApiMobileTest extends TestCase
         $this->assertSame('Hampir kadaluarsa', $kodesKadaluarsa['OBT-EXP2']);
         $this->assertArrayNotHasKey('OBT-AMAN', $kodesKadaluarsa);
         $this->assertArrayNotHasKey('OBT-OFF', $kodesKadaluarsa);
+        $this->assertArrayNotHasKey('OBT-KOSONG', $kodesKadaluarsa);
+        $this->assertFalse(NotifikasiStokService::daftarKadaluarsa()->contains('kode_obat', 'OBT-KOSONG'));
+
+        $stokPerhatian = $this->getJson('/api/stok?status_kadaluarsa=perhatian')->assertOk()->json('data');
+        $this->assertCount(2, $stokPerhatian);
 
         $stokData = $this->getJson('/api/stok')->assertOk()->json('data');
         $statusStokKadaluarsa = collect($stokData)->pluck('status_kadaluarsa', 'kode_obat')->all();
@@ -384,6 +396,7 @@ class ApiMobileTest extends TestCase
         $this->assertSame('Kadaluarsa', $statusStokKadaluarsa['OBT-EXP1']);
         $this->assertSame('Hampir kadaluarsa', $statusStokKadaluarsa['OBT-EXP2']);
         $this->assertSame('Aman', $statusStokKadaluarsa['OBT-AMAN']);
+        $this->assertSame('Stok kosong', $statusStokKadaluarsa['OBT-KOSONG']);
     }
 
     public function test_dashboard_mendukung_filter_periode_harian_mingguan_bulanan(): void

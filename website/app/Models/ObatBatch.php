@@ -30,10 +30,19 @@ class ObatBatch extends Model
         return $q->where('stok', '>', 0);
     }
 
-    /** Boleh dijual: ada stok dan belum kadaluarsa. */
+    /** Boleh dijual: ada stok dan belum kadaluarsa (atau tanpa tanggal kadaluarsa). */
     public function scopeLayakJual($q)
     {
-        return $q->adaStok()->whereDate('tgl_kadaluarsa', '>=', today());
+        return $q->adaStok()->where(function ($w) {
+            $w->whereNull('tgl_kadaluarsa')
+              ->orWhereDate('tgl_kadaluarsa', '>=', today());
+        });
+    }
+
+    /** Urutkan batch sesuai prinsip FEFO (kadaluarsa terdekat dulu; tanpa tanggal di akhir). */
+    public function scopeUrutFefo($q)
+    {
+        return $q->orderByRaw('tgl_kadaluarsa IS NULL, tgl_kadaluarsa ASC, id ASC');
     }
 
     /** Sudah kadaluarsa tapi stoknya belum dibuang/diretur. */

@@ -49,7 +49,7 @@ class KondisiStokController extends Controller
             ->paginate(15)
             ->withQueryString();
 
-        $obats = Obat::with(['batches' => fn ($q) => $q->adaStok()->orderBy('tgl_kadaluarsa')->orderBy('id')])
+        $obats = Obat::with(['batches' => fn ($q) => $q->adaStok()->urutFefo()])
             ->orderBy('nama_obat')
             ->get(['id', 'kode_obat', 'nama_obat', 'stok', 'satuan', 'tgl_kadaluarsa', 'status'])
             ->map(function (Obat $o) use ($hariIni) {
@@ -67,11 +67,11 @@ class KondisiStokController extends Controller
                         'id'         => $b->id,
                         'kode_batch' => $b->kode_batch,
                         'supplier'   => $b->supplier ?? '-',
-                        'tgl'        => $b->tgl_kadaluarsa->format('d/m/Y'),
+                        'tgl'        => $b->tgl_kadaluarsa?->format('d/m/Y') ?? '-',
                         'stok'       => (int) $b->stok,
                         'label'      => $b->kadaluarsa_info['label'],
                         'kelas'      => $b->kadaluarsa_info['kelas'],
-                        'kadaluarsa' => $b->tgl_kadaluarsa->lt($hariIni),
+                        'kadaluarsa' => (bool) ($b->tgl_kadaluarsa?->lt($hariIni)),
                     ])->values(),
                 ];
             });

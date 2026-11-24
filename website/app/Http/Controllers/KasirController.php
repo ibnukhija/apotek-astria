@@ -21,6 +21,8 @@ class KasirController extends Controller
     public function index(Request $request)
     {
         $obats = Obat::with('kategori')
+            ->withExists('batches')
+            ->withSum(['batches as stok_layak_jual' => fn ($q) => $q->layakJual()], 'stok')
             ->where('status', 'tersedia')
             ->when($request->q, function ($query, $cari) {
                 $query->where(function ($w) use ($cari) {

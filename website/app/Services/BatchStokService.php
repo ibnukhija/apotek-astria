@@ -42,12 +42,12 @@ class BatchStokService
      */
     public static function kurangiFefo(int $obatId, int $jumlah, bool $hanyaLayakJual = true): array
     {
-        $query = ObatBatch::where('obat_id', $obatId)->adaStok();
-        if ($hanyaLayakJual) {
-            $query->whereDate('tgl_kadaluarsa', '>=', today());
-        }
+        $query = ObatBatch::where('obat_id', $obatId);
+        $query = $hanyaLayakJual ? $query->layakJual() : $query->adaStok();
 
-        $batches = $query->orderBy('tgl_kadaluarsa')->orderBy('id')->lockForUpdate()->get();
+        $batches = $query->urutFefo()
+            ->lockForUpdate()
+            ->get();
 
         $tersedia = (int) $batches->sum('stok');
         if ($tersedia < $jumlah) {

@@ -145,4 +145,67 @@ class BatchFefoTest extends TestCase
         $this->assertSame(5, (int) $x->fresh()->stok);
         $this->assertSame(5, (int) $obat->fresh()->stok);
     }
+
+    public function test_fefo_membolehkan_batch_tanpa_tgl_kadaluarsa_dan_utamakan_yang_bertanggal(): void
+    {
+        $obat = $this->buatObat();
+        $obat->update(['stok' => 5, 'tgl_kadaluarsa' => null]);
+
+        $tanpaEd = \App\Models\ObatBatch::create([
+            'obat_id'        => $obat->id,
+            'kode_batch'     => 'BATCH-AWAL',
+            'tgl_terima'     => today()->toDateString(),
+            'tgl_kadaluarsa' => null,
+            'stok_awal'      => 5,
+            'stok'           => 5,
+            'harga_beli'     => 10000,
+        ]);
+
+        $bertanggal = BatchStokService::terima($obat->id, [
+            'kode_batch'     => 'B-ED-DEKAT',
+            'jumlah'         => 4,
+            'tgl_kadaluarsa' => today()->addMonths(2)->toDateString(),
+        ]);
+
+        $this->actingAs($this->buatKaryawan())->postJson('/kasir/transaksi', [
+            'items'        => [['obat_id' => $obat->id, 'jumlah' => 6]],
+            'metode_bayar' => Transaksi::METODE_QRIS,
+        ])->assertOk();
+
+        // Batch bertanggal harus terpakai habis lebih dulu baru batch tanpa tgl_kadaluarsa
+        $this->assertSame(0, (int) $bertanggal->fresh()->stok);
+        $this->assertSame(3, (int) $tanpaEd->fresh()->stok);
+        $this->assertSame(3, (int) $obat->fresh()->stok);
+    }
+
+    public function test_kasir_menampilkan_dan_membatasi_stok_layak_jual_saat_sebagian_batch_expired(): void
+    {
+        $obat = $this->buatObat();
+        BatchStokService::terima($obat->id, [
+            'kode_batch'     => 'B-EXP',
+            'jumlah'         => 5,
+            'tgl_kadaluarsa' => today()->subDays(2)->toDateString(),
+        ]);
+        BatchStokService::terima($obat->id, [
+            'kode_batch'     => 'B-AMAN',
+            'jumlah'         => 4,
+            'tgl_kadaluarsa' => today()->addMonths(4)->toDateString(),
+        ]);
+
+        $karyawan = $this->buatKaryawan();
+        $this->actingAs($karyawan)->get('/kasir')
+            ->assertOk()
+            ->assertSee('4 layak jual', false)
+            ->assertSee('data-stok="4"', false);
+
+        $this->actingAs($karyawan)->postJson('/kasir/transaksi', [
+            'items'        => [['obat_id' => $obat->id, 'jumlah' => 5]],
+            'metode_bayar' => Transaksi::METODE_QRIS,
+        ])->assertStatus(422);
+
+        $this->actingAs($karyawan)->postJson('/kasir/transaksi', [
+            'items'        => [['obat_id' => $obat->id, 'jumlah' => 4]],
+            'metode_bayar' => Transaksi::METODE_QRIS,
+        ])->assertOk();
+    }
 }

@@ -231,7 +231,7 @@
                                     'batches'    => $obat->batches->map(fn ($b) => [
                                         'kode_batch' => $b->kode_batch,
                                         'supplier'   => $b->supplier ?? '-',
-                                        'tgl'        => $b->tgl_kadaluarsa->format('d/m/Y'),
+                                        'tgl'        => $b->tgl_kadaluarsa?->format('d/m/Y') ?? '-',
                                         'stok'       => (int) $b->stok,
                                         'label'      => $b->kadaluarsa_info['label'],
                                         'kelas'      => $b->kadaluarsa_info['kelas'],

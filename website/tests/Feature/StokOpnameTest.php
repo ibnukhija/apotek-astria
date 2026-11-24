@@ -144,7 +144,7 @@ class StokOpnameTest extends TestCase
             ->assertSessionHasErrors('opname');
 
         $this->assertSame(75, (int) $obat->fresh()->stok);
-        $this->assertDatabaseCount('kondisi_stok_obat', 2);
+        $this->assertDatabaseCount('kondisi_stok_obat', 3);
     }
 
     public function test_penjualan_saat_penghitungan_memaksa_pengecekan_ulang(): void
@@ -158,13 +158,21 @@ class StokOpnameTest extends TestCase
 
         $this->isi($opname, ['stok_fisik' => 75, 'jml_rusak' => 3, 'jml_hilang' => 0]);
 
-        // Percobaan 1: ditolak, snapshot diperbarui ke 78
+        // Percobaan 1: ditolak, snapshot tetap 80 sebelum petugas menekan "Segarkan Stok Sistem"
         $this->actingAs($this->karyawan)
             ->post(route('stok-opname.finalisasi', $opname->id))
             ->assertSessionHasErrors('opname');
 
-        $this->assertSame(78, (int) $opname->details()->first()->stok_sistem);
+        $this->assertSame(80, (int) $opname->details()->first()->stok_sistem);
         $this->assertSame('draft', $opname->fresh()->status);
+
+        // Segarkan snapshot stok sistem -> terbarui ke 78
+        $this->actingAs($this->karyawan)
+            ->postJson(route('stok-opname.refresh-stok', $opname->id))
+            ->assertOk()
+            ->assertJsonPath('ok', true);
+
+        $this->assertSame(78, (int) $opname->details()->first()->stok_sistem);
 
         // Percobaan 2: selisih kini 3, rincian 3 -> berhasil
         $this->actingAs($this->karyawan)

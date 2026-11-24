@@ -16,7 +16,7 @@ class ObatController extends Controller
 {
     public function index(Request $request)
     {
-        $obats = Obat::with(['kategori', 'batches' => fn ($q) => $q->adaStok()->orderBy('tgl_kadaluarsa')->orderBy('id')])
+        $obats = Obat::with(['kategori', 'batches' => fn ($q) => $q->adaStok()->urutFefo()])
             ->withCount('batches')
             ->when($request->filled('q'), function ($query) use ($request) {
                 $kata = trim($request->q);
