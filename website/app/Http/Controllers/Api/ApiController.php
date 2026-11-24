@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Kategori;
 use App\Models\KondisiStokObat;
 use App\Models\Obat;
+use App\Models\StokOpname;
+use App\Models\StokOpnameDetail;
 use App\Models\Transaksi;
 use App\Models\ProfilApotek;
 use App\Services\LaporanExcelService;
@@ -96,6 +98,36 @@ class ApiController extends Controller
         // 5 transaksi terbaru (disertakan untuk kompatibilitas API)
         $transaksiTerbaru = Transaksi::with('user')->latest()->orderByDesc('id')->limit(5)->get();
 
+        // Opname terakhir (ringkasan untuk dashboard Owner)
+        $opnameTerakhir = StokOpname::where('status', StokOpname::STATUS_FINAL)
+            ->latest('id')->first();
+        $opnameRingkasan = null;
+        if ($opnameTerakhir) {
+            $detailAgg = StokOpnameDetail::where('stok_opname_id', $opnameTerakhir->id)
+                ->selectRaw('
+                    SUM(CASE WHEN stok_fisik IS NOT NULL AND stok_fisik <> stok_sistem THEN 1 ELSE 0 END) as obat_selisih,
+                    SUM(CASE WHEN stok_fisik IS NOT NULL AND stok_fisik < stok_sistem THEN stok_sistem - stok_fisik ELSE 0 END) as unit_kurang,
+                    SUM(CASE WHEN stok_fisik IS NOT NULL AND stok_fisik > stok_sistem THEN stok_fisik - stok_sistem ELSE 0 END) as unit_lebih,
+                    SUM(jml_rusak) as rusak,
+                    SUM(jml_hilang) as hilang
+                ')
+                ->first();
+            $opnameRingkasan = [
+                'id'           => $opnameTerakhir->id,
+                'kode'         => $opnameTerakhir->kode,
+                'periode'      => $opnameTerakhir->periode,
+                'tanggal'      => $opnameTerakhir->tanggal?->format('Y-m-d'),
+                'finalized_at' => $opnameTerakhir->finalized_at?->toIso8601String(),
+                'ringkasan'    => [
+                    'obat_selisih' => (int) ($detailAgg->obat_selisih ?? 0),
+                    'unit_kurang'  => (int) ($detailAgg->unit_kurang ?? 0),
+                    'unit_lebih'   => (int) ($detailAgg->unit_lebih ?? 0),
+                    'rusak'        => (int) ($detailAgg->rusak ?? 0),
+                    'hilang'       => (int) ($detailAgg->hilang ?? 0),
+                ],
+            ];
+        }
+
         return response()->json([
             'success' => true,
             'data' => [
@@ -113,6 +145,7 @@ class ApiController extends Controller
                 'obat_terlaris'         => $obatTerlaris,
                 'kategori_terlaris'     => $kategoriTerlaris,
                 'transaksi_terbaru'     => $transaksiTerbaru,
+                'opname_terakhir'       => $opnameRingkasan,
                 'profil_apotek'         => ProfilApotek::ambilAtauDefault()->terserialisasi(),
             ]
         ]);
@@ -366,13 +399,20 @@ class ApiController extends Controller
             ->groupBy('obat_id')
             ->pluck('total_rusak', 'obat_id');
 
-        $opnameTerakhir = KondisiStokObat::where('jenis', KondisiStokObat::JENIS_OPNAME)
-            ->whereIn('obat_id', $obatIds)
-            ->latest()
-            ->orderByDesc('id')
-            ->get(['obat_id', 'stok_sesudah', 'created_at'])
-            ->unique('obat_id')
-            ->keyBy('obat_id');
+        // Opname terakhir dari StokOpnameDetail (bukan hanya KondisiStokObat JENIS_OPNAME)
+        // Ambil opname final terbaru, lalu detail-nya
+        $opnameTerakhirId = StokOpname::where('status', StokOpname::STATUS_FINAL)
+            ->latest('id')->value('id');
+
+        $opnameTerakhir = collect();
+        if ($opnameTerakhirId) {
+            $opnameTerakhir = StokOpnameDetail::where('stok_opname_id', $opnameTerakhirId)
+                ->whereIn('obat_id', $obatIds)
+                ->whereNotNull('stok_fisik')
+                ->get(['obat_id', 'stok_fisik', 'created_at'])
+                ->unique('obat_id')
+                ->keyBy('obat_id');
+        }
 
         $obats = collect($paginated->items())->map(function ($obat) use ($rusakPerObat, $opnameTerakhir) {
             $obat->status_stok = Obat::infoStok((int) $obat->stok)['label'];
@@ -380,7 +420,7 @@ class ApiController extends Controller
             $obat->total_rusak = (int) ($rusakPerObat[$obat->id] ?? 0);
             $opname = $opnameTerakhir->get($obat->id);
             $obat->opname_terakhir = $opname
-                ? ($opname->created_at?->format('d/m/Y') . ' (Fisik: ' . $opname->stok_sesudah . ')')
+                ? ($opname->created_at?->format('d/m/Y') . ' (Fisik: ' . $opname->stok_fisik . ')')
                 : '';
             return $obat;
         })->values();
