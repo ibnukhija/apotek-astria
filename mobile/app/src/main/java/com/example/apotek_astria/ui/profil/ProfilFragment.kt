@@ -28,7 +28,13 @@ import com.example.apotek_astria.network.ApiRequest
 import com.example.apotek_astria.ui.karyawan.KaryawanActivity
 import org.json.JSONArray
 import org.json.JSONObject
+<<<<<<< Updated upstream
 import com.example.apotek_astria.ui.chat.ChatActivity
+=======
+import com.example.apotek_astria.PengaturanNotifikasi
+import com.example.apotek_astria.PengaturanNotifikasiRepo
+import com.example.apotek_astria.StokMessagingService
+>>>>>>> Stashed changes
 
 class ProfilFragment : Fragment() {
 

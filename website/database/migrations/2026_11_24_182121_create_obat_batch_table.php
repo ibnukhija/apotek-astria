@@ -15,7 +15,7 @@ return new class extends Migration
             $table->string('kode_batch', 50);
             $table->string('supplier', 100)->nullable();
             $table->date('tgl_terima');
-            $table->date('tgl_kadaluarsa');
+            $table->date('tgl_kadaluarsa')->nullable();
             $table->integer('stok_awal');
             $table->integer('stok');
             $table->integer('harga_beli')->nullable();
@@ -32,7 +32,7 @@ return new class extends Migration
                 'obat_id'        => $o->id,
                 'kode_batch'     => 'BATCH-AWAL',
                 'tgl_terima'     => now()->toDateString(),
-                'tgl_kadaluarsa' => $o->tgl_kadaluarsa,
+                'tgl_kadaluarsa' => $o->tgl_kadaluarsa ?? '2099-12-31',
                 'stok_awal'      => $o->stok,
                 'stok'           => $o->stok,
                 'harga_beli'     => $o->harga_beli ?? null,

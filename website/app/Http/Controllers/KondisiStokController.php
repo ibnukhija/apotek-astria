@@ -84,7 +84,7 @@ class KondisiStokController extends Controller
         $data = $request->validate([
             'obat_id'    => 'required|exists:obat,id',
             'batch_id'   => ['nullable', Rule::exists('obat_batch', 'id')->where('obat_id', $request->input('obat_id'))],
-            'jenis'      => 'required|in:rusak,retur_supplier,musnah_expired,stok_opname',
+            'jenis'      => 'required|in:rusak,hilang,retur_supplier,musnah_expired,stok_opname',
             'jumlah'     => 'required_unless:jenis,stok_opname|nullable|integer|min:1',
             'stok_fisik' => 'required_if:jenis,stok_opname|nullable|integer|min:0',
             'penyebab'   => 'required|string|max:255',

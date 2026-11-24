@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('obat', function (Blueprint $table) {
-            $table->date('tgl_kadaluarsa')->after('stok');
+            $table->date('tgl_kadaluarsa')->nullable()->after('stok');
         });
     }
 

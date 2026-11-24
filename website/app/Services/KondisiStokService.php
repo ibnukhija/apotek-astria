@@ -37,6 +37,7 @@ class KondisiStokService
                         ->orderByDesc('tgl_kadaluarsa')->orderByDesc('id')->lockForUpdate()->first();
                     $batch->update(['stok' => $batch->stok + ($stokSesudah - $stokSebelum)]);
                     $batchId = $batch->id;
+                    BatchStokService::sinkronTanggal($obat); 
                 }
             } else {
                 $jumlah = (int) $data['jumlah'];

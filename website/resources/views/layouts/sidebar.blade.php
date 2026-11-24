@@ -78,6 +78,15 @@
             </svg>
             <span class="sidebar-hide-on-collapse truncate">Kondisi &amp; Opname</span>
         </a>
+        <a href="{{ route('stok-opname.index') }}"
+            title="Stok Opname"
+            class="sidebar-nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm {{ request()->routeIs('stok-opname.*') ? 'font-bold bg-[#E8F4F2] text-soft-teal' : 'font-medium text-gray-text hover:bg-off-white' }} transition">
+            <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 11l3 3L22 4"/>
+                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+            </svg>
+            <span class="sidebar-hide-on-collapse truncate">Stok Opname</span>
+        </a>
         <a href="{{ route('kategori.index') }}"
             title="Kelola Kategori"
             class="sidebar-nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm {{ request()->routeIs('kategori.*') ? 'font-bold bg-[#E8F4F2] text-soft-teal' : 'font-medium text-gray-text hover:bg-off-white' }} transition">

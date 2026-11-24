@@ -11,9 +11,12 @@ class KondisiStokObat extends Model
     public const JENIS_RETUR = 'retur_supplier';
     public const JENIS_MUSNAH = 'musnah_expired';
     public const JENIS_OPNAME = 'stok_opname';
+    public const JENIS_HILANG = 'hilang';
+
 
     public const DAFTAR_JENIS = [
         self::JENIS_RUSAK  => 'Obat Rusak',
+        self::JENIS_HILANG => 'Obat Hilang',
         self::JENIS_RETUR  => 'Retur ke Supplier',
         self::JENIS_MUSNAH => 'Musnahkan (Expired)',
         self::JENIS_OPNAME => 'Cek Stok Fisik (Opname)',

@@ -8,6 +8,7 @@ use App\Http\Controllers\KategoriController;
 use App\Http\Controllers\KasirController;
 use App\Http\Controllers\KondisiStokController;
 use App\Http\Controllers\ProfilKaryawanController;
+use App\Http\Controllers\StokOpnameController;
 
 Route::get('/', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
@@ -19,8 +20,17 @@ Route::middleware(['auth', 'cekrole:karyawan'])->group(function () {
 
     Route::resource('obat', ObatController::class)->only(['index', 'store', 'update', 'destroy']);
 
+    Route::get('/stok-opname', [\App\Http\Controllers\Api\StokOpnameApiController::class, 'index']);
+    Route::get('/stok-opname/{stokOpname}', [\App\Http\Controllers\Api\StokOpnameApiController::class, 'show']);
+
     Route::get('/kondisi-stok', [KondisiStokController::class, 'index'])->name('kondisi.index');
     Route::post('/kondisi-stok', [KondisiStokController::class, 'store'])->name('kondisi.store');
+
+    Route::get('/stok-opname', [StokOpnameController::class, 'index'])->name('stok-opname.index');
+    Route::post('/stok-opname', [StokOpnameController::class, 'store'])->name('stok-opname.store');
+    Route::get('/stok-opname/{stokOpname}', [StokOpnameController::class, 'show'])->name('stok-opname.show');
+    Route::post('/stok-opname/{stokOpname}/detail/{detail}', [StokOpnameController::class, 'updateDetail'])->name('stok-opname.detail');
+    Route::post('/stok-opname/{stokOpname}/finalisasi', [StokOpnameController::class, 'finalisasi'])->name('stok-opname.finalisasi');
 
     Route::resource('kategori', KategoriController::class)->only(['index', 'store', 'update', 'destroy']);
 

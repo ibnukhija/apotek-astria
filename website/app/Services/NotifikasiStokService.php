@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\KondisiStokObat;
 use App\Models\Obat;
 use App\Models\PengaturanNotifikasi;
+use App\Models\StokOpname;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Kreait\Firebase\Exception\Messaging\NotFound;
@@ -32,7 +33,7 @@ class NotifikasiStokService
         }
 
         try {
-            $pesan = CloudMessage::withTarget('token', $p->fcm_token)
+            $pesan = CloudMessage::new()->toToken($p->fcm_token)
                 ->withNotification(Notification::create($judul, $isi))
                 ->withData([
                     'tujuan' => 'stok',
@@ -176,7 +177,9 @@ class NotifikasiStokService
 
     /**
      * Dipanggil setelah pencatatan kondisi obat atau stok opname oleh kasir.
-     * Mengirim notif obat rusak/opname dan memeriksa apakah stok ikut turun melewati batas.
+     * Mengirim notif obat rusak/hilang/opname dan memeriksa apakah stok ikut turun melewati batas.
+     * Catatan yang berasal dari opname bulanan tidak dikirim satu per satu
+     * (cukup ringkasan lewat kirimHasilOpname), tapi cek stok menipis tetap jalan.
      */
     public static function cekSetelahKondisiStok(KondisiStokObat $catat, int $stokSebelum): void
     {
@@ -195,12 +198,22 @@ class NotifikasiStokService
             }
 
             $stokSesudah = (int) $catat->stok_sesudah;
+            $dariOpnameBulanan = str_starts_with((string) $catat->penyebab, 'Stok opname OPN-');
 
             foreach ($pengaturan as $p) {
-                if ($p->notif_rusak && in_array($catat->jenis, [KondisiStokObat::JENIS_RUSAK, KondisiStokObat::JENIS_OPNAME], true)) {
+                $jenisDilaporkan = [
+                    KondisiStokObat::JENIS_RUSAK,
+                    KondisiStokObat::JENIS_HILANG,
+                    KondisiStokObat::JENIS_OPNAME,
+                ];
+
+                if (!$dariOpnameBulanan && $p->notif_rusak && in_array($catat->jenis, $jenisDilaporkan, true)) {
                     if ($catat->jenis === KondisiStokObat::JENIS_RUSAK) {
                         $judul = 'Laporan obat rusak';
                         $isi = "{$obat->nama_obat} rusak {$catat->jumlah} {$obat->satuan} ({$catat->penyebab}). Sisa stok: {$stokSesudah}.";
+                    } elseif ($catat->jenis === KondisiStokObat::JENIS_HILANG) {
+                        $judul = 'Laporan obat hilang';
+                        $isi = "{$obat->nama_obat} hilang {$catat->jumlah} {$obat->satuan} ({$catat->penyebab}). Sisa stok: {$stokSesudah}.";
                     } else {
                         $selisih = $stokSesudah - $stokSebelum;
                         $tanda = $selisih > 0 ? "+{$selisih}" : (string) $selisih;
@@ -220,6 +233,30 @@ class NotifikasiStokService
             }
         } catch (\Throwable $e) {
             Log::warning('Cek notifikasi kondisi stok gagal: ' . $e->getMessage());
+        }
+    }
+
+    /** Ringkasan hasil opname bulanan untuk Owner (sekali setelah finalisasi). */
+    public static function kirimHasilOpname(StokOpname $opname): void
+    {
+        try {
+            $details = $opname->details;
+            $kurang  = (int) $details->sum(fn ($d) => max(0, $d->stok_sistem - $d->stok_fisik));
+            $lebih   = (int) $details->sum(fn ($d) => max(0, $d->stok_fisik - $d->stok_sistem));
+            $rusak   = (int) $details->sum('jml_rusak');
+            $hilang  = (int) $details->sum('jml_hilang');
+            $obatSelisih = $details->filter(fn ($d) => (int) $d->stok_fisik !== (int) $d->stok_sistem)->count();
+
+            $isi = $obatSelisih === 0
+                ? "Opname {$opname->kode} selesai: semua stok fisik sesuai sistem."
+                : "Opname {$opname->kode} selesai: {$obatSelisih} obat selisih. Kurang {$kurang} (rusak {$rusak}, hilang {$hilang}), lebih {$lebih}.";
+
+            PengaturanNotifikasi::whereNotNull('fcm_token')
+                ->where('notif_rusak', true)
+                ->get()
+                ->each(fn ($p) => self::kirim($p, 'Hasil stok opname bulanan', $isi, self::CHANNEL_RUSAK, 'obat_rusak'));
+        } catch (\Throwable $e) {
+            Log::warning('Notifikasi hasil opname gagal: ' . $e->getMessage());
         }
     }
 
