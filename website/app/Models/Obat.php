@@ -46,6 +46,12 @@ class Obat extends Model
         return $this->hasMany(KondisiStokObat::class, 'obat_id');
     }
 
+    /** Daftar batch (tiap penerimaan stok punya tanggal kadaluarsa sendiri). */
+    public function batches(): HasMany
+    {
+        return $this->hasMany(ObatBatch::class, 'obat_id');
+    }
+
     /**
      * Harga jual otomatis = harga beli + margin (persen atau nominal).
      */
