@@ -13,6 +13,7 @@ class PengaturanNotifikasi extends Model
         'aktif'            => true,
         'notif_kadaluarsa' => true,
         'notif_rusak'      => true,
+        'notif_opname'     => true,
         'batas_stok'       => 10,
     ];
 
@@ -22,6 +23,7 @@ class PengaturanNotifikasi extends Model
             'aktif'            => 'boolean',
             'notif_kadaluarsa' => 'boolean',
             'notif_rusak'      => 'boolean',
+            'notif_opname'     => 'boolean',
         ];
     }
 }

@@ -20,6 +20,9 @@ class NotifikasiStokService
     public const CHANNEL_KADALUARSA = 'kadaluarsa';
     public const CHANNEL_RUSAK = 'obat_rusak';
 
+    /** Penanda agar peringatan stok menipis tidak dobel saat satu obat punya beberapa catatan opname. */
+    private static array $menipisOpnameTerkirim = [];
+
     /** Kirim 1 push FCM ke perangkat owner pada channel dan jenis tertentu. */
     public static function kirim(
         PengaturanNotifikasi $p,
@@ -198,7 +201,8 @@ class NotifikasiStokService
             }
 
             $stokSesudah = (int) $catat->stok_sesudah;
-            $dariOpnameBulanan = str_starts_with((string) $catat->penyebab, 'Stok opname OPN-');
+            // Opname bulanan: item per item tidak dinotifikasi, cukup 1 ringkasan hasil opname.
+            $dariOpnameBulanan = self::dariOpnameBulanan($catat);
 
             foreach ($pengaturan as $p) {
                 $jenisDilaporkan = [
@@ -228,6 +232,15 @@ class NotifikasiStokService
 
                 $batas = (int) $p->batas_stok;
                 if ($p->aktif && $stokSesudah <= $batas && $stokSebelum > $batas) {
+                    // Saat opname bulanan satu obat bisa punya beberapa catatan (rusak, hilang, opname);
+                    // kirim peringatan menipis cukup sekali per obat per proses.
+                    if ($dariOpnameBulanan) {
+                        if (isset(self::$menipisOpnameTerkirim[$p->id][$obat->id])) {
+                            continue;
+                        }
+                        self::$menipisOpnameTerkirim[$p->id][$obat->id] = true;
+                    }
+
                     self::kirim($p, 'Stok obat menipis', self::ringkas(collect([$obat])), self::CHANNEL_STOK, 'stok_menipis');
                 }
             }
@@ -240,9 +253,10 @@ class NotifikasiStokService
     public static function kirimHasilOpname(StokOpname $opname): void
     {
         try {
+            $opname->loadMissing('details');
             $details = $opname->details;
-            $kurang  = (int) $details->sum(fn ($d) => max(0, $d->stok_sistem - $d->stok_fisik));
-            $lebih   = (int) $details->sum(fn ($d) => max(0, $d->stok_fisik - $d->stok_sistem));
+            $kurang  = (int) $details->sum(fn ($d) => max(0, (int) $d->stok_sistem - (int) $d->stok_fisik));
+            $lebih   = (int) $details->sum(fn ($d) => max(0, (int) $d->stok_fisik - (int) $d->stok_sistem));
             $rusak   = (int) $details->sum('jml_rusak');
             $hilang  = (int) $details->sum('jml_hilang');
             $obatSelisih = $details->filter(fn ($d) => (int) $d->stok_fisik !== (int) $d->stok_sistem)->count();
@@ -252,12 +266,18 @@ class NotifikasiStokService
                 : "Opname {$opname->kode} selesai: {$obatSelisih} obat selisih. Kurang {$kurang} (rusak {$rusak}, hilang {$hilang}), lebih {$lebih}.";
 
             PengaturanNotifikasi::whereNotNull('fcm_token')
-                ->where('notif_rusak', true)
+                ->where('notif_opname', true)
                 ->get()
                 ->each(fn ($p) => self::kirim($p, 'Hasil stok opname bulanan', $isi, self::CHANNEL_RUSAK, 'obat_rusak'));
         } catch (\Throwable $e) {
             Log::warning('Notifikasi hasil opname gagal: ' . $e->getMessage());
         }
+    }
+
+    /** True jika catatan kondisi stok dibuat otomatis oleh finalisasi opname bulanan. */
+    private static function dariOpnameBulanan(KondisiStokObat $catat): bool
+    {
+        return (bool) preg_match('/^Stok opname OPN-\S+/', (string) $catat->penyebab);
     }
 
     private static function ringkas($daftar): string
