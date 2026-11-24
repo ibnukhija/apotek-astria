@@ -703,9 +703,11 @@
             <Button
                 android:id="@+id/btnBukaChatbot"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="48dp"
                 android:layout_marginTop="12dp"
-                android:text="Asisten AI (Chatbot)" />
+                android:backgroundTint="#2A9D8F"
+                android:text="Asisten AI (Chatbot)"
+                android:textColor="#FFFFFF" />
         </LinearLayout>
 
     </LinearLayout>
