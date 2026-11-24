@@ -76,7 +76,7 @@
         <table class="w-full text-left border-collapse">
             <thead class="sticky top-0 bg-off-white z-10">
                 <tr>
-                    @foreach (['WAKTU', 'OBAT', 'JENIS', 'PERUBAHAN STOK', 'JUMLAH / SELISIH', 'PENYEBAB & CATATAN', 'PETUGAS'] as $judul)
+                    @foreach (['WAKTU', 'OBAT', 'BATCH', 'JENIS', 'PERUBAHAN STOK', 'JUMLAH / SELISIH', 'PENYEBAB & CATATAN', 'PETUGAS'] as $judul)
                         <th class="py-2.5 px-3 text-[11px] text-gray-text font-bold uppercase border-b border-border-color whitespace-nowrap">{{ $judul }}</th>
                     @endforeach
                 </tr>
@@ -97,6 +97,14 @@
                         <td class="py-2.5 px-3">
                             <div class="font-bold text-dark-slate">{{ $row->obat->nama_obat ?? '-' }}</div>
                             <div class="text-[11px] text-gray-text font-mono">{{ $row->obat->kode_obat ?? '-' }}</div>
+                        </td>
+                        <td class="py-2.5 px-3 whitespace-nowrap">
+                            @if ($row->batch)
+                                <div class="font-mono text-dark-slate">{{ $row->batch->kode_batch }}</div>
+                                <div class="text-[11px] text-gray-text">ED {{ $row->batch->tgl_kadaluarsa?->format('d/m/Y') }}</div>
+                            @else
+                                <span class="text-gray-text">-</span>
+                            @endif
                         </td>
                         <td class="py-2.5 px-3 whitespace-nowrap">
                             <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold {{ $badgeKelas }}">{{ $row->jenis_label }}</span>
@@ -121,7 +129,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="7" class="p-10 text-center text-gray-text text-sm">Belum ada catatan kondisi obat atau stok opname.</td>
+                        <td colspan="8" class="p-10 text-center text-gray-text text-sm">Belum ada catatan kondisi obat atau stok opname.</td>
                     </tr>
                 @endforelse
             </tbody>
@@ -186,6 +194,14 @@
                 <div id="infoPanduanJenis" class="mt-1.5 text-[11px] px-3 py-2 rounded-lg bg-[#E8F4F2] text-soft-teal font-medium"></div>
             </div>
 
+            {{-- Pilih batch (rusak / retur / musnah) --}}
+            <div id="wrapBatch" class="hidden">
+                <label for="f_batch_id" class="block text-xs font-bold text-dark-slate mb-1">Batch</label>
+                <select name="batch_id" id="f_batch_id" onchange="aturMaksJumlah()" disabled
+                    class="w-full py-2.5 px-3 border border-border-color rounded-lg text-sm outline-none focus:border-soft-teal bg-white"></select>
+                <div id="infoBatch" class="mt-1.5 text-[11px] text-gray-text"></div>
+            </div>
+
             <div id="wrapJumlah">
                 <label for="f_jumlah" class="block text-xs font-bold text-dark-slate mb-1">Jumlah Unit *</label>
                 <input type="number" name="jumlah" id="f_jumlah" min="1" value="{{ old('jumlah', 1) }}"
@@ -216,7 +232,7 @@
 
             <div>
                 <label for="f_catatan" class="block text-xs font-bold text-dark-slate mb-1">Catatan Tambahan (opsional)</label>
-                <textarea name="catatan" id="f_catatan" rows="2" placeholder="Nomor batch, nama supplier retur, atau berita acara pemusnahan..."
+                <textarea name="catatan" id="f_catatan" rows="2" placeholder="Nama supplier retur atau berita acara pemusnahan..."
                     class="w-full py-2 px-3 border border-border-color rounded-lg text-sm outline-none focus:border-soft-teal">{{ old('catatan') }}</textarea>
             </div>
 
@@ -237,6 +253,7 @@
 <script>
 const $k = (id) => document.getElementById(id);
 const daftarObat = @json($obats, JSON_HEX_TAG | JSON_UNESCAPED_SLASHES);
+const batchLama = @json(old('batch_id'));
 let obatTerpilih = null;
 
 function cariObatById(id) {
@@ -297,13 +314,13 @@ function renderDaftarObat() {
     }
 }
 
-function pilihObat(o) {
+function pilihObat(o, batchId = null) {
     obatTerpilih = o;
     $k('f_obat_id').value = o.id;
     $k('f_obat_search').value = `${o.kode_obat} - ${o.nama_obat}`;
     $k('btnClearObat').classList.remove('hidden');
     $k('f_obat_dropdown').classList.add('hidden');
-    perbaruiInfoObat();
+    perbaruiInfoObat(batchId);
 }
 
 function hapusPilihanObat() {
@@ -342,10 +359,82 @@ document.addEventListener('click', (e) => {
     }
 });
 
+/* ---------- BATCH ---------- */
+function batchTerpilih() {
+    const sel = $k('f_batch_id');
+    if (!obatTerpilih || sel.disabled || !sel.value) return null;
+    return obatTerpilih.batches.find(b => String(b.id) === String(sel.value)) || null;
+}
+
+function renderBatch(pilihId = null) {
+    const wrap = $k('wrapBatch');
+    const sel = $k('f_batch_id');
+    const jenis = $k('f_jenis').value;
+    const pakai = jenis !== 'stok_opname' && obatTerpilih && obatTerpilih.batches.length > 0;
+
+    wrap.classList.toggle('hidden', !pakai);
+    sel.disabled = !pakai;   // disabled -> tidak ikut terkirim
+    if (!pakai) {
+        sel.innerHTML = '';
+        aturMaksJumlah();
+        return;
+    }
+
+    const sebelumnya = pilihId ?? sel.value;
+    sel.innerHTML = '';
+
+    const kosong = document.createElement('option');
+    kosong.value = '';
+    kosong.textContent = 'Otomatis (kadaluarsa terdekat lebih dulu)';
+    sel.appendChild(kosong);
+
+    obatTerpilih.batches.forEach(b => {
+        const opt = document.createElement('option');
+        opt.value = b.id;
+        opt.textContent = `${b.kode_batch} • ED ${b.tgl} • stok ${b.stok} ${obatTerpilih.satuan}` + (b.kadaluarsa ? ' • KADALUARSA' : '');
+        if (b.kadaluarsa) opt.style.color = '#B91C1C';
+        sel.appendChild(opt);
+    });
+
+    let nilai = '';
+    if (sebelumnya && obatTerpilih.batches.some(b => String(b.id) === String(sebelumnya))) {
+        nilai = String(sebelumnya);
+    } else if (jenis === 'musnah_expired') {
+        // Musnahkan: langsung arahkan ke batch kadaluarsa pertama
+        const ed = obatTerpilih.batches.find(b => b.kadaluarsa);
+        if (ed) nilai = String(ed.id);
+    }
+    sel.value = nilai;
+    aturMaksJumlah();
+}
+
+function aturMaksJumlah() {
+    const jumlah = $k('f_jumlah');
+    const info = $k('infoBatch');
+    const b = batchTerpilih();
+
+    if (b) {
+        jumlah.max = b.stok;
+        info.innerHTML = `Stok batch: <strong>${b.stok} ${escapeHtml(obatTerpilih.satuan)}</strong> <span class="${escapeHtml(b.kelas)} ml-1 px-2 py-0.5 rounded-full text-[10px] font-semibold">${escapeHtml(b.label)}</span>`;
+        if (Number(jumlah.value) > b.stok) jumlah.value = b.stok;
+    } else {
+        jumlah.removeAttribute('max');
+        info.textContent = $k('f_batch_id').disabled
+            ? ''
+            : 'Tanpa memilih batch, stok dikurangi dari batch yang kadaluarsanya paling dekat.';
+    }
+}
+
 function validasiFormKondisi() {
     if (!$k('f_obat_id').value) {
         alert('Silakan pilih obat dari daftar hasil pencarian terlebih dahulu.');
         $k('f_obat_search').focus();
+        return false;
+    }
+    const b = batchTerpilih();
+    if (b && $k('f_jenis').value !== 'stok_opname' && Number($k('f_jumlah').value) > b.stok) {
+        alert(`Jumlah melebihi stok batch ${b.kode_batch} (${b.stok}).`);
+        $k('f_jumlah').focus();
         return false;
     }
     return true;
@@ -355,7 +444,7 @@ function bukaModalKondisi() {
     $k('modalKondisi').classList.remove('hidden');
     if (!obatTerpilih && $k('f_obat_id').value) {
         const awal = cariObatById($k('f_obat_id').value);
-        if (awal) pilihObat(awal);
+        if (awal) pilihObat(awal, batchLama);
     }
     perbaruiInfoObat();
     sesuaikanFieldJenis();
@@ -365,8 +454,9 @@ function tutupModalKondisi() {
     $k('modalKondisi').classList.add('hidden');
 }
 
-function perbaruiInfoObat() {
+function perbaruiInfoObat(batchId = null) {
     const box = $k('infoObatTerpilih');
+    renderBatch(batchId);
     if (!obatTerpilih) {
         box.classList.add('hidden');
         return;
@@ -385,12 +475,13 @@ function sesuaikanFieldJenis() {
     $k('f_stok_fisik').required = isOpname;
 
     const panduan = {
-        rusak: 'Stok obat akan dikurangi sesuai jumlah unit rusak.',
-        retur_supplier: 'Untuk obat mendekati expired (<= 7 hari) yang dikembalikan ke supplier; stok aktif akan dikurangi.',
-        musnah_expired: 'Untuk obat yang sudah lewat tanggal expired dan dimusnahkan; stok aktif akan dikurangi.',
+        rusak: 'Stok obat akan dikurangi sesuai jumlah unit rusak. Pilih batch yang rusak bila diketahui.',
+        retur_supplier: 'Untuk obat mendekati expired (<= 7 hari) yang dikembalikan ke supplier; stok batch dan stok aktif dikurangi.',
+        musnah_expired: 'Untuk obat yang sudah lewat tanggal expired dan dimusnahkan; stok batch dan stok aktif dikurangi.',
         stok_opname: 'Masukkan hasil hitung stok fisik di rak; sistem otomatis menghitung selisih dan menyamakan stok sistem.'
     };
     $k('infoPanduanJenis').textContent = panduan[jenis] || '';
+    renderBatch();
     hitungSelisihOpname();
 }
 
