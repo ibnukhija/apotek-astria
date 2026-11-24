@@ -4,10 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\KondisiStokObat;
 use App\Models\Obat;
+use App\Models\ObatBatch;
 use App\Services\KondisiStokService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class KondisiStokController extends Controller
 {
@@ -29,7 +31,7 @@ class KondisiStokController extends Controller
             'unit_rusak'     => (int) KondisiStokObat::where('jenis', KondisiStokObat::JENIS_RUSAK)->sum('jumlah'),
         ];
 
-        $riwayat = KondisiStokObat::with(['obat', 'user'])
+        $riwayat = KondisiStokObat::with(['obat', 'user', 'batch'])
             ->when($request->filled('jenis'), fn ($q) => $q->where('jenis', $request->jenis))
             ->when($request->filled('q'), function ($q) use ($request) {
                 $kata = trim($request->q);
@@ -47,7 +49,8 @@ class KondisiStokController extends Controller
             ->paginate(15)
             ->withQueryString();
 
-        $obats = Obat::orderBy('nama_obat')
+        $obats = Obat::with(['batches' => fn ($q) => $q->adaStok()->orderBy('tgl_kadaluarsa')->orderBy('id')])
+            ->orderBy('nama_obat')
             ->get(['id', 'kode_obat', 'nama_obat', 'stok', 'satuan', 'tgl_kadaluarsa', 'status'])
             ->map(function (Obat $o) {
                 $info = $o->kadaluarsa_info;
@@ -60,6 +63,16 @@ class KondisiStokController extends Controller
                     'tgl_kadaluarsa'    => $o->tgl_kadaluarsa?->format('d/m/Y') ?? '-',
                     'status_kadaluarsa' => $info['label'],
                     'kelas_kadaluarsa'  => $info['kelas'],
+                    'batches'           => $o->batches->map(fn (ObatBatch $b) => [
+                        'id'         => $b->id,
+                        'kode_batch' => $b->kode_batch,
+                        'supplier'   => $b->supplier ?? '-',
+                        'tgl'        => $b->tgl_kadaluarsa->format('d/m/Y'),
+                        'stok'       => (int) $b->stok,
+                        'label'      => $b->kadaluarsa_info['label'],
+                        'kelas'      => $b->kadaluarsa_info['kelas'],
+                        'kadaluarsa' => $b->tgl_kadaluarsa->lt($hariIni),
+                    ])->values(),
                 ];
             });
 
@@ -70,6 +83,7 @@ class KondisiStokController extends Controller
     {
         $data = $request->validate([
             'obat_id'    => 'required|exists:obat,id',
+            'batch_id'   => ['nullable', Rule::exists('obat_batch', 'id')->where('obat_id', $request->input('obat_id'))],
             'jenis'      => 'required|in:rusak,retur_supplier,musnah_expired,stok_opname',
             'jumlah'     => 'required_unless:jenis,stok_opname|nullable|integer|min:1',
             'stok_fisik' => 'required_if:jenis,stok_opname|nullable|integer|min:0',
@@ -77,6 +91,7 @@ class KondisiStokController extends Controller
             'catatan'    => 'nullable|string|max:1000',
         ], [
             'obat_id.required'       => 'Obat wajib dipilih.',
+            'batch_id.exists'        => 'Batch yang dipilih bukan milik obat ini.',
             'jenis.required'         => 'Jenis tindakan/kondisi wajib dipilih.',
             'jumlah.required_unless' => 'Jumlah unit wajib diisi.',
             'jumlah.min'             => 'Jumlah unit minimal 1.',

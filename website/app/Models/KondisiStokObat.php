@@ -33,6 +33,11 @@ class KondisiStokObat extends Model
         return $this->belongsTo(User::class, 'user_id');
     }
 
+    public function batch(): BelongsTo
+    {
+        return $this->belongsTo(ObatBatch::class, 'batch_id');
+    }
+
     public function getJenisLabelAttribute(): string
     {
         return self::DAFTAR_JENIS[$this->jenis] ?? ucfirst((string) $this->jenis);

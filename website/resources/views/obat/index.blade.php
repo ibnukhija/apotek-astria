@@ -215,10 +215,31 @@
                                     'stok'           => $obat->stok,
                                     'tgl_kadaluarsa' => $obat->tgl_kadaluarsa?->format('Y-m-d'),
                                     'status'         => $obat->status,
+                                    'punya_batch'    => $obat->batches_count > 0,
                                 ]) }}"
                                 onclick="bukaModal('edit', JSON.parse(this.dataset.obat))"
                                 class="text-soft-teal font-semibold mr-2.5 hover:underline">
                                 ✎ Edit
+                            </button>
+
+                            <button type="button"
+                                data-batch="{{ json_encode([
+                                    'id'         => $obat->id,
+                                    'nama_obat'  => $obat->nama_obat,
+                                    'satuan'     => $obat->satuan,
+                                    'harga_beli' => $obat->harga_beli,
+                                    'batches'    => $obat->batches->map(fn ($b) => [
+                                        'kode_batch' => $b->kode_batch,
+                                        'supplier'   => $b->supplier ?? '-',
+                                        'tgl'        => $b->tgl_kadaluarsa->format('d/m/Y'),
+                                        'stok'       => (int) $b->stok,
+                                        'label'      => $b->kadaluarsa_info['label'],
+                                        'kelas'      => $b->kadaluarsa_info['kelas'],
+                                    ])->values(),
+                                ]) }}"
+                                onclick="bukaBatch(JSON.parse(this.dataset.batch))"
+                                class="text-green-700 font-semibold mr-2.5 hover:underline">
+                                📦 Batch
                             </button>
 
                             <a href="{{ route('kondisi.index', ['obat_id' => $obat->id]) }}"
@@ -377,6 +398,71 @@
                     class="px-5 py-2.5 border-none bg-soft-teal text-white rounded-lg font-bold hover:opacity-90 shadow-sm transition">
                     Simpan Produk
                 </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{{-- ================= MODAL BATCH & TERIMA STOK ================= --}}
+<div id="batchModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center backdrop-blur-sm p-4">
+    <div class="bg-pure-white w-full max-w-2xl rounded-xl p-5 sm:p-7 shadow-xl max-h-[90vh] overflow-y-auto">
+        <h3 id="batchJudul" class="mt-0 text-lg sm:text-xl font-bold mb-1">Batch Obat</h3>
+        <p class="text-xs sm:text-sm text-gray-text mb-4">Penjualan mengurangi batch dengan kadaluarsa paling dekat lebih dulu (FEFO). Batch kadaluarsa tidak bisa dijual.</p>
+
+        <div class="overflow-x-auto border border-border-color rounded-lg mb-5">
+            <table class="w-full text-left border-collapse text-xs">
+                <thead class="bg-off-white">
+                    <tr>
+                        <th class="py-2 px-3 font-bold text-gray-text uppercase text-[11px]">Kode Batch</th>
+                        <th class="py-2 px-3 font-bold text-gray-text uppercase text-[11px]">Supplier</th>
+                        <th class="py-2 px-3 font-bold text-gray-text uppercase text-[11px]">Kadaluarsa</th>
+                        <th class="py-2 px-3 font-bold text-gray-text uppercase text-[11px]">Stok</th>
+                    </tr>
+                </thead>
+                <tbody id="batchBody"></tbody>
+            </table>
+        </div>
+
+        <h4 class="m-0 mb-3 text-sm font-bold">+ Terima Stok Baru</h4>
+        <form id="batchForm" method="POST" action="">
+            @csrf
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                <div>
+                    <label class="block mb-1.5 text-xs font-semibold">Kode Batch</label>
+                    <input type="text" name="kode_batch" required maxlength="50" placeholder="Contoh: B-2026-11"
+                        class="w-full p-2.5 border border-border-color rounded-lg text-sm outline-none focus:border-soft-teal">
+                </div>
+                <div>
+                    <label class="block mb-1.5 text-xs font-semibold">Supplier</label>
+                    <input type="text" name="supplier" maxlength="100"
+                        class="w-full p-2.5 border border-border-color rounded-lg text-sm outline-none focus:border-soft-teal">
+                </div>
+                <div>
+                    <label class="block mb-1.5 text-xs font-semibold">Tanggal Terima</label>
+                    <input type="date" name="tgl_terima" id="b_tgl_terima"
+                        class="w-full p-2.5 border border-border-color rounded-lg text-sm outline-none focus:border-soft-teal">
+                </div>
+                <div>
+                    <label class="block mb-1.5 text-xs font-semibold">Tanggal Kadaluarsa</label>
+                    <input type="date" name="tgl_kadaluarsa" required
+                        class="w-full p-2.5 border border-border-color rounded-lg text-sm outline-none focus:border-soft-teal">
+                </div>
+                <div>
+                    <label class="block mb-1.5 text-xs font-semibold">Jumlah Masuk</label>
+                    <input type="number" name="jumlah" min="1" required
+                        class="w-full p-2.5 border border-border-color rounded-lg text-sm outline-none focus:border-soft-teal">
+                </div>
+                <div>
+                    <label class="block mb-1.5 text-xs font-semibold">Harga Beli (Rp, opsional)</label>
+                    <input type="number" name="harga_beli" id="b_harga_beli" min="0"
+                        class="w-full p-2.5 border border-border-color rounded-lg text-sm outline-none focus:border-soft-teal">
+                </div>
+            </div>
+            <div class="flex justify-end gap-3">
+                <button type="button" onclick="tutupBatch()"
+                    class="px-5 py-2.5 border border-border-color bg-pure-white rounded-lg font-bold hover:bg-off-white transition">Tutup</button>
+                <button type="submit"
+                    class="px-5 py-2.5 border-none bg-soft-teal text-white rounded-lg font-bold hover:opacity-90 shadow-sm transition">Simpan Batch</button>
             </div>
         </form>
     </div>
@@ -590,9 +676,59 @@ function bukaModal(mode, data = {}) {
     $('formMethod').disabled = !edit;
     $('formMethod').value = 'PUT';
     isiForm(edit ? data : {});
+    // Obat yang sudah punya batch: stok & kadaluarsa ditentukan oleh batch, bukan form ini
+    const kunci = edit && data.punya_batch === true;
+    $('f_stok').readOnly = kunci;
+    $('f_tgl_kadaluarsa').readOnly = kunci;
+    $('f_stok').classList.toggle('bg-gray-100', kunci);
+    $('f_tgl_kadaluarsa').classList.toggle('bg-gray-100', kunci);
+    $('f_stok').title = kunci ? 'Stok diatur lewat tombol Batch (terima stok), penjualan, atau Kondisi Obat.' : '';
     // Mode tambah: ambil kode berikutnya (kecuali form dibuka ulang dengan kode lama setelah validasi gagal)
     if (!edit && !data.kode_obat) isiKodeBaru();
     $('productModal').classList.remove('hidden');
+}
+
+/* ---------- MODAL BATCH & TERIMA STOK ---------- */
+function bukaBatch(d) {
+    $('batchJudul').textContent = 'Batch: ' + d.nama_obat;
+    $('batchForm').action = urlObat + '/' + d.id + '/terima-stok';
+    $('batchForm').reset();
+    $('b_tgl_terima').value = new Date().toISOString().slice(0, 10);
+    $('b_harga_beli').value = d.harga_beli ? Math.round(Number(d.harga_beli)) : '';
+
+    const body = $('batchBody');
+    body.innerHTML = '';
+    if (!d.batches.length) {
+        body.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-gray-text italic">Belum ada batch yang masih memiliki stok.</td></tr>';
+    }
+    d.batches.forEach(b => {
+        const tr = document.createElement('tr');
+        tr.className = 'border-t border-border-color';
+        const sel = (teks, kelas) => {
+            const td = document.createElement('td');
+            td.className = 'py-2 px-3';
+            td.textContent = teks;
+            if (kelas) td.className += ' ' + kelas;
+            return td;
+        };
+        tr.appendChild(sel(b.kode_batch, 'font-mono'));
+        tr.appendChild(sel(b.supplier));
+        const tdKad = document.createElement('td');
+        tdKad.className = 'py-2 px-3 whitespace-nowrap';
+        tdKad.append(b.tgl + ' ');
+        const badge = document.createElement('span');
+        badge.className = b.kelas + ' px-2 py-0.5 rounded-full font-semibold';
+        badge.textContent = b.label;
+        tdKad.appendChild(badge);
+        tr.appendChild(tdKad);
+        tr.appendChild(sel(b.stok + ' ' + d.satuan, 'font-semibold'));
+        body.appendChild(tr);
+    });
+    $('batchModal').classList.remove('hidden');
+}
+
+function tutupBatch() {
+    $('batchModal').classList.add('hidden');
 }
 
 function tutupModal() {
