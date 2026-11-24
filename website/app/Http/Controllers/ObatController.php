@@ -4,15 +4,20 @@ namespace App\Http\Controllers;
 
 use App\Models\Kategori;
 use App\Models\Obat;
+use App\Models\ObatBatch;
+use App\Services\BatchStokService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class ObatController extends Controller
 {
     public function index(Request $request)
     {
-        $obats = Obat::with('kategori')
+        $obats = Obat::with(['kategori', 'batches' => fn ($q) => $q->adaStok()->orderBy('tgl_kadaluarsa')->orderBy('id')])
+            ->withCount('batches')
             ->when($request->filled('q'), function ($query) use ($request) {
                 $kata = trim($request->q);
                 $query->where(function ($w) use ($kata) {
@@ -41,6 +46,7 @@ class ObatController extends Controller
                 if (strtolower(trim((string) $request->status_kadaluarsa)) === 'perhatian') {
                     $batas = Carbon::today()->addDays(Obat::BATAS_HAMPIR_KADALUARSA);
                     $query->where('status', 'tersedia')
+                          ->where('stok', '>', 0)
                           ->whereNotNull('tgl_kadaluarsa')
                           ->whereDate('tgl_kadaluarsa', '<=', $batas);
                 }
@@ -69,7 +75,10 @@ class ObatController extends Controller
     {
         $data = $this->validasi($request);
 
-        Obat::create($data);
+        DB::transaction(function () use ($data) {
+            $obat = Obat::create($data);
+            $this->pastikanBatchAwal($obat);
+        });
 
         return redirect()->route('obat.index')->with('success', 'Data obat berhasil ditambahkan!');
     }
@@ -79,9 +88,49 @@ class ObatController extends Controller
         $obat = Obat::findOrFail($id);
         $data = $this->validasi($request, $obat->id);
 
-        $obat->update($data);
+        DB::transaction(function () use ($obat, $data) {
+            // Stok & tanggal kadaluarsa obat yang sudah punya batch diturunkan dari batch,
+            // jadi tidak boleh ditimpa dari form edit.
+            if ($obat->batches()->exists()) {
+                unset($data['stok'], $data['tgl_kadaluarsa']);
+            }
+
+            $obat->update($data);
+            $this->pastikanBatchAwal($obat->refresh());
+        });
 
         return redirect()->route('obat.index')->with('success', 'Data obat berhasil diperbarui!');
+    }
+
+    /** Terima stok baru sebagai batch (kode batch, supplier, kadaluarsa sendiri). */
+    public function terimaStok(Request $request, $id)
+    {
+        $obat = Obat::findOrFail($id);
+
+        $data = $request->validate([
+            'kode_batch'     => ['required', 'string', 'max:50',
+                Rule::unique('obat_batch', 'kode_batch')->where('obat_id', $obat->id)],
+            'supplier'       => 'nullable|string|max:100',
+            'tgl_terima'     => 'nullable|date|before_or_equal:today',
+            'tgl_kadaluarsa' => 'required|date|after:today',
+            'jumlah'         => 'required|integer|min:1',
+            'harga_beli'     => 'nullable|integer|min:0',
+        ], [
+            'kode_batch.required'      => 'Kode batch wajib diisi.',
+            'kode_batch.unique'        => 'Kode batch ini sudah dipakai untuk obat yang sama.',
+            'tgl_kadaluarsa.required'  => 'Tanggal kadaluarsa batch wajib diisi.',
+            'tgl_kadaluarsa.after'     => 'Tanggal kadaluarsa batch harus setelah hari ini.',
+            'jumlah.required'          => 'Jumlah stok masuk wajib diisi.',
+            'jumlah.min'               => 'Jumlah stok masuk minimal 1.',
+        ]);
+
+        DB::transaction(function () use ($obat, $data) {
+            $this->pastikanBatchAwal($obat);
+            BatchStokService::terima($obat->id, $data);
+        });
+
+        return redirect()->route('obat.index')
+            ->with('success', "Batch {$data['kode_batch']} ({$obat->nama_obat}) berhasil diterima: {$data['jumlah']} {$obat->satuan}.");
     }
 
     public function destroy($id)
@@ -96,7 +145,23 @@ class ObatController extends Controller
     {
         return response()->json(['kode' => Obat::buatKode()]);
     }
-        
+
+    /** Obat yang punya stok tapi belum punya batch dibuatkan satu batch awal. */
+    private function pastikanBatchAwal(Obat $obat): void
+    {
+        if ((int) $obat->stok > 0 && ! $obat->batches()->exists()) {
+            ObatBatch::create([
+                'obat_id'        => $obat->id,
+                'kode_batch'     => 'BATCH-AWAL',
+                'tgl_terima'     => today()->toDateString(),
+                'tgl_kadaluarsa' => $obat->tgl_kadaluarsa,
+                'stok_awal'      => (int) $obat->stok,
+                'stok'           => (int) $obat->stok,
+                'harga_beli'     => $obat->harga_beli,
+            ]);
+        }
+    }
+
     /**
      * Validasi input dan hitung harga jual otomatis di server
      * (nilai harga_jual dari browser tidak dipercaya).

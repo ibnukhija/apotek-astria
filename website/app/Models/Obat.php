@@ -46,6 +46,12 @@ class Obat extends Model
         return $this->hasMany(KondisiStokObat::class, 'obat_id');
     }
 
+    /** Daftar batch (tiap penerimaan stok punya tanggal kadaluarsa sendiri). */
+    public function batches(): HasMany
+    {
+        return $this->hasMany(ObatBatch::class, 'obat_id');
+    }
+
     /**
      * Harga jual otomatis = harga beli + margin (persen atau nominal).
      */
@@ -87,9 +93,7 @@ class Obat extends Model
             return ['label' => 'Menipis', 'kelas' => 'bg-yellow-100 text-yellow-700'];
         }
 
-        if ($stok >= self::BATAS_CUKUP) {
-            return ['label' => 'Cukup', 'kelas' => 'bg-green-100 text-green-700'];
-        }
+        return ['label' => 'Cukup', 'kelas' => 'bg-green-100 text-green-700'];
     }
 
     public function getStokInfoAttribute(): array
@@ -123,8 +127,13 @@ class Obat extends Model
         return ['label' => 'Aman', 'kelas' => 'bg-green-100 text-green-700'];
     }
 
+    /** Obat tanpa stok tidak dianggap kadaluarsa (tidak ada barang yang perlu ditindak). */
     public function getKadaluarsaInfoAttribute(): array
     {
+        if ((int) $this->stok <= 0) {
+            return ['label' => 'Stok kosong', 'kelas' => 'bg-gray-100 text-gray-text'];
+        }
+
         return self::infoKadaluarsa($this->tgl_kadaluarsa);
     }
 

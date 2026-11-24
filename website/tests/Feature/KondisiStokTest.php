@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Kategori;
 use App\Models\KondisiStokObat;
 use App\Models\Obat;
+use App\Models\ObatBatch;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -44,6 +45,19 @@ class KondisiStokTest extends TestCase
             'stok'           => 20,
             'status'         => 'tersedia',
             'tgl_kadaluarsa' => now()->addDays(5)->format('Y-m-d'),
+        ]);
+    }
+
+    private function buatBatch(Obat $obat, string $kode, int $stok, int $hariKadaluarsa): ObatBatch
+    {
+        return ObatBatch::create([
+            'obat_id'        => $obat->id,
+            'kode_batch'     => $kode,
+            'tgl_terima'     => today()->toDateString(),
+            'tgl_kadaluarsa' => now()->addDays($hariKadaluarsa)->format('Y-m-d'),
+            'stok_awal'      => $stok,
+            'stok'           => $stok,
+            'harga_beli'     => 10000,
         ]);
     }
 
@@ -149,5 +163,64 @@ class KondisiStokTest extends TestCase
             ->assertOk()
             ->assertJsonPath('total_unit_rusak', 3)
             ->assertJsonPath('data.0.total_rusak', 3);
+    }
+
+    public function test_batch_milik_obat_lain_ditolak(): void
+    {
+        $kat = Kategori::firstOrCreate(['nama_kategori' => 'Analgesik']);
+        $obatLain = Obat::create([
+            'kategori_id'    => $kat->id,
+            'kode_obat'      => 'KND-002',
+            'nama_obat'      => 'Ibuprofen 400mg',
+            'satuan'         => 'Strip',
+            'harga_beli'     => 5000,
+            'margin'         => 50,
+            'tipe_margin'    => 'persen',
+            'harga_jual'     => 7500,
+            'stok'           => 10,
+            'status'         => 'tersedia',
+            'tgl_kadaluarsa' => now()->addDays(60)->format('Y-m-d'),
+        ]);
+
+        $this->buatBatch($this->obat, 'A-1', 20, 5);
+        $batchLain = $this->buatBatch($obatLain, 'B-1', 10, 60);
+
+        // Obat = Amoxicillin, tetapi batch milik Ibuprofen
+        $this->actingAs($this->karyawan)->post('/kondisi-stok', [
+            'obat_id'  => $this->obat->id,
+            'batch_id' => $batchLain->id,
+            'jenis'    => KondisiStokObat::JENIS_RUSAK,
+            'jumlah'   => 2,
+            'penyebab' => 'Percobaan batch obat lain',
+        ])->assertSessionHasErrors('batch_id');
+
+        $this->assertSame(20, (int) $this->obat->fresh()->stok);
+        $this->assertSame(10, (int) $batchLain->fresh()->stok);
+        $this->assertDatabaseCount('kondisi_stok_obat', 0);
+    }
+
+    public function test_catat_kondisi_dengan_batch_sendiri_mengurangi_batch_dan_tampil_di_riwayat(): void
+    {
+        $batch = $this->buatBatch($this->obat, 'A-1', 20, 5);
+
+        $this->actingAs($this->karyawan)->post('/kondisi-stok', [
+            'obat_id'  => $this->obat->id,
+            'batch_id' => $batch->id,
+            'jenis'    => KondisiStokObat::JENIS_RUSAK,
+            'jumlah'   => 4,
+            'penyebab' => 'Kemasan sobek',
+        ])->assertRedirect('/kondisi-stok')->assertSessionHasNoErrors();
+
+        $this->assertSame(16, (int) $batch->fresh()->stok);
+        $this->assertSame(16, (int) $this->obat->fresh()->stok);
+        $this->assertDatabaseHas('kondisi_stok_obat', [
+            'obat_id'  => $this->obat->id,
+            'batch_id' => $batch->id,
+            'jenis'    => KondisiStokObat::JENIS_RUSAK,
+        ]);
+
+        $this->actingAs($this->karyawan)->get('/kondisi-stok')
+            ->assertOk()
+            ->assertSee('A-1');
     }
 }

@@ -15,6 +15,7 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 Route::middleware(['auth', 'cekrole:karyawan'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::post('/obat/{id}/terima-stok', [ObatController::class, 'terimaStok'])->name('obat.terimaStok');
 
     Route::resource('obat', ObatController::class)->only(['index', 'store', 'update', 'destroy']);
 

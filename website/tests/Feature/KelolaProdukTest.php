@@ -174,11 +174,86 @@ class KelolaProdukTest extends TestCase
         $obat = Obat::first();
         $this->assertSame($tglBaru, $obat->tgl_kadaluarsa->format('Y-m-d'));
 
+        // Obat ini sudah punya BATCH-AWAL (stok 50), jadi tanggal kadaluarsa
+        // diturunkan dari batch dan tidak berubah lewat form edit.
         $tglUpdate = now()->addDays(15)->format('Y-m-d');
         $this->put('/obat/' . $obat->id, $this->dataObat(['tgl_kadaluarsa' => $tglUpdate]))
             ->assertRedirect('/obat');
 
+        $this->assertSame($tglBaru, $obat->fresh()->tgl_kadaluarsa->format('Y-m-d'));
+    }
+
+    /* ---------- BARU: batch awal & penguncian stok/kadaluarsa ---------- */
+
+    public function test_obat_baru_dengan_stok_otomatis_punya_batch_awal(): void
+    {
+        $this->login();
+        $this->post('/obat', $this->dataObat(['stok' => 10]));
+        $obat = Obat::firstOrFail();
+
+        $this->assertDatabaseHas('obat_batch', [
+            'obat_id'    => $obat->id,
+            'kode_batch' => 'BATCH-AWAL',
+            'stok'       => 10,
+        ]);
+    }
+
+    public function test_stok_dan_kadaluarsa_obat_berbatch_tidak_berubah_lewat_form_edit(): void
+    {
+        $this->login();
+        $this->post('/obat', $this->dataObat(['stok' => 50]));
+        $obat = Obat::firstOrFail();
+        $tglAsli = $obat->tgl_kadaluarsa->format('Y-m-d');
+
+        $this->put('/obat/' . $obat->id, $this->dataObat([
+            'nama_obat'      => 'Paracetamol Baru',
+            'stok'           => 5,
+            'tgl_kadaluarsa' => now()->addDays(3)->format('Y-m-d'),
+        ]))->assertRedirect('/obat');
+
+        $obat = $obat->fresh();
+        $this->assertSame('Paracetamol Baru', $obat->nama_obat);   // field lain tetap berubah
+        $this->assertEquals(50, $obat->stok);                       // stok dikunci
+        $this->assertSame($tglAsli, $obat->tgl_kadaluarsa->format('Y-m-d'));
+    }
+
+    public function test_tgl_kadaluarsa_obat_tanpa_batch_bisa_diedit(): void
+    {
+        $this->login();
+        $this->post('/obat', $this->dataObat(['stok' => 0]));   // stok 0 -> tanpa batch
+        $obat = Obat::firstOrFail();
+        $this->assertDatabaseCount('obat_batch', 0);
+
+        $tglUpdate = now()->addDays(15)->format('Y-m-d');
+        $this->put('/obat/' . $obat->id, $this->dataObat(['stok' => 0, 'tgl_kadaluarsa' => $tglUpdate]))
+            ->assertRedirect('/obat');
+
         $this->assertSame($tglUpdate, $obat->fresh()->tgl_kadaluarsa->format('Y-m-d'));
+    }
+
+    public function test_terima_stok_menambah_batch_dan_total_stok(): void
+    {
+        $this->login();
+        $this->post('/obat', $this->dataObat(['stok' => 50]));
+        $obat = Obat::firstOrFail();
+
+        $this->post('/obat/' . $obat->id . '/terima-stok', [
+            'kode_batch'     => 'B-2026-11',
+            'supplier'       => 'PT Contoh',
+            'tgl_kadaluarsa' => now()->addMonths(18)->format('Y-m-d'),
+            'jumlah'         => 20,
+            'harga_beli'     => 8000,
+        ])->assertRedirect('/obat')->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('obat_batch', ['obat_id' => $obat->id, 'kode_batch' => 'B-2026-11', 'stok' => 20]);
+        $this->assertEquals(70, $obat->fresh()->stok);
+
+        // Kode batch yang sama untuk obat yang sama ditolak
+        $this->post('/obat/' . $obat->id . '/terima-stok', [
+            'kode_batch'     => 'B-2026-11',
+            'tgl_kadaluarsa' => now()->addMonths(18)->format('Y-m-d'),
+            'jumlah'         => 5,
+        ])->assertSessionHasErrors('kode_batch');
     }
 
     /* ---------- Halaman ---------- */

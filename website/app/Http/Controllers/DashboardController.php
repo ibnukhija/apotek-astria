@@ -36,13 +36,15 @@ class DashboardController extends Controller
             ->count();
         $stokHampirHabis = (clone $obatAktif)->where('stok', '<', Obat::BATAS_HAMPIR_HABIS)->count();
 
-        // 3. Peringatan Kadaluarsa & Rusak
+        // 3. Peringatan Kadaluarsa & Rusak (obat tanpa stok tidak dihitung kadaluarsa)
         $hampirExpired = (clone $obatAktif)
+            ->where('stok', '>', 0)
             ->whereNotNull('tgl_kadaluarsa')
             ->whereDate('tgl_kadaluarsa', '>=', $hariIni)
             ->whereDate('tgl_kadaluarsa', '<=', $batasHampirExpired)
             ->count();
         $sudahExpired = (clone $obatAktif)
+            ->where('stok', '>', 0)
             ->whereNotNull('tgl_kadaluarsa')
             ->whereDate('tgl_kadaluarsa', '<', $hariIni)
             ->count();
@@ -59,7 +61,8 @@ class DashboardController extends Controller
             ->where(function ($q) use ($hariIni, $batasHampirExpired) {
                 $q->where('stok', '<', Obat::BATAS_HAMPIR_HABIS)
                   ->orWhere(function ($exp) use ($hariIni, $batasHampirExpired) {
-                      $exp->whereNotNull('tgl_kadaluarsa')
+                      $exp->where('stok', '>', 0)
+                          ->whereNotNull('tgl_kadaluarsa')
                           ->whereDate('tgl_kadaluarsa', '<=', $batasHampirExpired);
                   });
             })
