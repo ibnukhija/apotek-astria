@@ -23,13 +23,14 @@ class NotifikasiStokService
     /** Penanda agar peringatan stok menipis tidak dobel saat satu obat punya beberapa catatan opname. */
     private static array $menipisOpnameTerkirim = [];
 
-    /** Kirim 1 push FCM ke perangkat owner pada channel dan jenis tertentu. */
+    /** Kirim 1 push FCM ke perangkat owner pada channel, jenis, dan tujuan layar tertentu. */
     public static function kirim(
         PengaturanNotifikasi $p,
         string $judul,
         string $isi,
         string $channelId = self::CHANNEL_STOK,
-        string $jenis = 'stok_menipis'
+        string $jenis = 'stok_menipis',
+        string $tujuan = 'stok'
     ): bool {
         if (!$p->fcm_token) {
             return false;
@@ -39,7 +40,7 @@ class NotifikasiStokService
             $pesan = CloudMessage::new()->toToken($p->fcm_token)
                 ->withNotification(Notification::create($judul, $isi))
                 ->withData([
-                    'tujuan' => 'stok',
+                    'tujuan' => $tujuan,
                     'jenis'  => $jenis,
                     'title'  => $judul,
                     'body'   => $isi,
@@ -269,7 +270,7 @@ class NotifikasiStokService
             PengaturanNotifikasi::whereNotNull('fcm_token')
                 ->where('notif_opname', true)
                 ->get()
-                ->each(fn ($p) => self::kirim($p, 'Hasil stok opname bulanan', $isi, self::CHANNEL_RUSAK, 'obat_rusak'));
+                ->each(fn ($p) => self::kirim($p, 'Hasil stok opname bulanan', $isi, self::CHANNEL_RUSAK, 'stok_opname', 'opname'));
         } catch (\Throwable $e) {
             Log::warning('Notifikasi hasil opname gagal: ' . $e->getMessage());
         }

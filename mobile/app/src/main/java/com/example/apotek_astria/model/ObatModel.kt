@@ -1,5 +1,13 @@
 package com.example.apotek_astria.model
 
+data class ObatBatchModel(
+    val kodeBatch: String,
+    val supplier: String,
+    val tglKadaluarsa: String,
+    val stok: Int,
+    val statusKadaluarsa: String
+)
+
 data class ObatModel(
     val id: Int,
     val kodeObat: String,
@@ -16,7 +24,8 @@ data class ObatModel(
     val tglKadaluarsa: String = "",
     val statusKadaluarsa: String = "",
     val totalRusak: Int = 0,
-    val opnameTerakhir: String = ""
+    val opnameTerakhir: String = "",
+    val batches: List<ObatBatchModel> = emptyList()
 )
 
 data class KaryawanModel(

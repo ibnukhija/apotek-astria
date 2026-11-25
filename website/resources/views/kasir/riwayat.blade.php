@@ -5,7 +5,7 @@
 @section('content')
 
 {{-- ================= JUDUL HALAMAN ================= --}}
-<div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 mb-4 shrink-0">
+<div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 mb-3 shrink-0">
     <div>
         <h2 class="m-0 text-xl lg:text-2xl font-bold">Riwayat Transaksi</h2>
         <span class="text-gray-text text-xs sm:text-sm">Histori dan arsip penjualan obat di kasir</span>
@@ -19,10 +19,10 @@
 </div>
 
 {{-- ================= KOTAK RINGKASAN ================= --}}
-<div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4 shrink-0">
-    <div class="bg-pure-white border border-border-color rounded-xl p-3 flex items-center gap-3 shadow-sm">
-        <div class="w-10 h-10 rounded-lg bg-[#E8F4F2] flex items-center justify-center shrink-0">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2A9D8F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mb-3 shrink-0">
+    <div class="bg-pure-white border border-border-color rounded-xl px-3 py-2 flex items-center gap-2.5 shadow-sm">
+        <div class="w-8 h-8 rounded-lg bg-[#E8F4F2] flex items-center justify-center shrink-0">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2A9D8F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                 <polyline points="14 2 14 8 20 8"></polyline>
                 <line x1="16" y1="13" x2="8" y2="13"></line>
@@ -31,41 +31,41 @@
             </svg>
         </div>
         <div class="min-w-0">
-            <div class="text-xs text-gray-text font-medium truncate">{{ $ringkasan['label_transaksi'] ?? 'Total Transaksi Keseluruhan' }}</div>
-            <div class="text-xl lg:text-2xl font-bold text-dark-slate leading-tight truncate">
-                {{ number_format($ringkasan['total_transaksi'] ?? $transaksis->total(), 0, ',', '.') }}
-                <span class="text-xs font-normal text-gray-text">transaksi</span>
+            <div class="text-[11px] text-gray-text font-semibold truncate">{{ $ringkasan['label_transaksi'] ?? 'Total Transaksi Keseluruhan' }}</div>
+            <div class="mt-0.5 flex items-baseline gap-1.5 min-w-0 leading-tight">
+                <span class="text-lg font-bold text-dark-slate shrink-0">{{ number_format($ringkasan['total_transaksi'] ?? $transaksis->total(), 0, ',', '.') }}</span>
+                <span class="text-[11px] text-gray-text truncate">transaksi</span>
             </div>
         </div>
     </div>
 
-    <div class="bg-pure-white border border-border-color rounded-xl p-3 flex items-center gap-3 shadow-sm">
-        <div class="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <div class="bg-pure-white border border-border-color rounded-xl px-3 py-2 flex items-center gap-2.5 shadow-sm">
+        <div class="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="12" y1="1" x2="12" y2="23"></line>
                 <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
             </svg>
         </div>
         <div class="min-w-0">
-            <div class="text-xs text-gray-text font-medium truncate">{{ $ringkasan['label_omset'] ?? 'Penjualan Hari Ini' }}</div>
-            <div class="text-xl lg:text-2xl font-bold text-emerald-600 leading-tight truncate">
+            <div class="text-[11px] text-gray-text font-semibold truncate">{{ $ringkasan['label_omset'] ?? 'Penjualan Hari Ini' }}</div>
+            <div class="mt-0.5 text-lg font-bold text-emerald-600 leading-tight truncate">
                 Rp{{ number_format($ringkasan['total_omset'] ?? 0, 0, ',', '.') }}
             </div>
         </div>
     </div>
 
-    <div class="bg-pure-white border border-border-color rounded-xl p-3 flex items-center gap-3 shadow-sm">
-        <div class="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <div class="bg-pure-white border border-border-color rounded-xl px-3 py-2 flex items-center gap-2.5 shadow-sm">
+        <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
                 <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
             </svg>
         </div>
         <div class="min-w-0">
-            <div class="text-xs text-gray-text font-medium truncate">{{ $ringkasan['label_item'] ?? 'Produk Terjual Keseluruhan' }}</div>
-            <div class="text-xl lg:text-2xl font-bold text-dark-slate leading-tight truncate">
-                {{ number_format($ringkasan['total_item'] ?? 0, 0, ',', '.') }}
-                <span class="text-xs font-normal text-gray-text">item</span>
+            <div class="text-[11px] text-gray-text font-semibold truncate">{{ $ringkasan['label_item'] ?? 'Produk Terjual Keseluruhan' }}</div>
+            <div class="mt-0.5 flex items-baseline gap-1.5 min-w-0 leading-tight">
+                <span class="text-lg font-bold text-dark-slate shrink-0">{{ number_format($ringkasan['total_item'] ?? 0, 0, ',', '.') }}</span>
+                <span class="text-[11px] text-gray-text truncate">item</span>
             </div>
         </div>
     </div>

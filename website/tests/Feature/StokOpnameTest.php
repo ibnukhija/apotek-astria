@@ -203,6 +203,13 @@ class StokOpnameTest extends TestCase
         $this->assertDatabaseHas('kondisi_stok_obat', [
             'obat_id' => $obat->id, 'jenis' => KondisiStokObat::JENIS_OPNAME, 'jumlah' => 2,
         ]);
+
+        // Mode Final menampilkan catatan sebagai teks membungkus penuh (bukan input disabled w-44 yang terpotong)
+        $this->actingAs($this->karyawan)
+            ->get(route('stok-opname.show', $opname->id))
+            ->assertOk()
+            ->assertSee('Ditemukan 2 strip terselip')
+            ->assertDontSee('class="in-catatan', false);
     }
 
     public function test_hanya_satu_draft_dalam_satu_waktu(): void

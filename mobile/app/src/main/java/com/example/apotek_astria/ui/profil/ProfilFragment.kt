@@ -153,6 +153,7 @@ class ProfilFragment : Fragment() {
         binding.switchNotifikasi.isChecked = p.notifAktif
         binding.switchNotifKadaluarsa.isChecked = p.notifKadaluarsa
         binding.switchNotifRusak.isChecked = p.notifRusak
+        binding.switchNotifOpname.isChecked = p.notifOpname
         binding.etBatasStok.setText(p.batasStok.toString())
         jamTerpilih = p.jam
         binding.btnJamNotifikasi.text = p.jam
@@ -181,6 +182,7 @@ class ProfilFragment : Fragment() {
             notifAktif = binding.switchNotifikasi.isChecked,
             notifKadaluarsa = binding.switchNotifKadaluarsa.isChecked,
             notifRusak = binding.switchNotifRusak.isChecked,
+            notifOpname = binding.switchNotifOpname.isChecked,
             batasStok = batas,
             jam = jamTerpilih
         )

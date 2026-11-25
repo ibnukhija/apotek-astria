@@ -1,5 +1,6 @@
 package com.example.apotek_astria.ui.beranda
 
+import android.content.Intent
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
@@ -22,6 +23,7 @@ import com.example.apotek_astria.R
 import com.example.apotek_astria.databinding.FragmentBerandaBinding
 import com.example.apotek_astria.network.ApiConfig
 import com.example.apotek_astria.network.ApiRequest
+import com.example.apotek_astria.ui.opname.StokOpnameActivity
 import com.example.apotek_astria.ui.stok.StokFragment
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import org.json.JSONArray
@@ -104,6 +106,9 @@ class BerandaFragment : Fragment() {
         binding.cardStokMenipis.setOnClickListener(bukaStokMenipis)
         binding.cardKadaluarsa.setOnClickListener(listenerBukaStok(StokFragment.STATUS_KADALUARSA))
         binding.cardObatRusak.setOnClickListener(listenerBukaStok(StokFragment.STATUS_RUSAK))
+        binding.cardOpnameTerakhir.setOnClickListener {
+            startActivity(Intent(requireContext(), StokOpnameActivity::class.java))
+        }
 
         // Filter kategori pada Top 5 Obat Terlaris
         daftarKategoriTerlaris.clear()
@@ -651,6 +656,26 @@ class BerandaFragment : Fragment() {
                             0, "Tidak ada rusak",
                             "#F0FDF4", "#166534", "#15803D"
                         )
+                    }
+
+                    // 7. Bagian Stok: Ringkasan Stok Opname Bulanan Terakhir
+                    val opname = data.optJSONObject("opname_terakhir")
+                    if (opname != null) {
+                        val kodeOpname = opname.optString("kode", "-")
+                        val periodeOpname = opname.optString("periode", "-")
+                        val r = opname.optJSONObject("ringkasan")
+                        val obatSelisih = r?.optInt("obat_selisih", 0) ?: 0
+                        val unitKurang = r?.optInt("unit_kurang", 0) ?: 0
+                        val unitLebih = r?.optInt("unit_lebih", 0) ?: 0
+                        binding.tvOpnameJudul.text = "Opname Terakhir ($periodeOpname)"
+                        binding.tvOpnameRingkasan.text = if (obatSelisih == 0) {
+                            "$kodeOpname • Semua stok sesuai sistem"
+                        } else {
+                            "$kodeOpname • $obatSelisih obat selisih (Kurang $unitKurang, Lebih $unitLebih)"
+                        }
+                    } else {
+                        binding.tvOpnameJudul.text = "Stok Opname Bulanan"
+                        binding.tvOpnameRingkasan.text = "Belum ada sesi opname yang difinalisasi"
                     }
                 }
                 binding.swipeRefreshLayout.isRefreshing = false

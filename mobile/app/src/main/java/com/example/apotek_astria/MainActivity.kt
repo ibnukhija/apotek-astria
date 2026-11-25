@@ -137,6 +137,7 @@ class MainActivity : AppCompatActivity() {
         when (tujuan) {
             "stok" -> bottomNav.selectedItemId = R.id.nav_stok
             "laporan" -> bukaLaporan()
+            "opname" -> startActivity(Intent(this, com.example.apotek_astria.ui.opname.StokOpnameActivity::class.java))
         }
     }
 

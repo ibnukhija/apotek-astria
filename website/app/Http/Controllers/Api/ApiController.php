@@ -338,7 +338,7 @@ class ApiController extends Controller
     // 2. Untuk StokFragment (Monitoring & Penyesuaian Cepat)
     public function stok(Request $request)
     {
-        $query = Obat::with('kategori');
+        $query = Obat::with(['kategori', 'batches' => fn ($q) => $q->adaStok()->urutFefo()]);
 
         if ($request->filled('search')) {
             $kata = trim($request->search);
@@ -425,6 +425,15 @@ class ApiController extends Controller
             $obat->opname_terakhir = $opname
                 ? ($opname->created_at?->format('d/m/Y') . ' (Fisik: ' . $opname->stok_fisik . ')')
                 : '';
+            $obat->daftar_batch = $obat->batches->map(fn ($b) => [
+                'id'                => $b->id,
+                'kode_batch'        => $b->kode_batch,
+                'supplier'          => $b->supplier ?? '-',
+                'tgl_kadaluarsa'    => $b->tgl_kadaluarsa?->format('Y-m-d'),
+                'stok'              => (int) $b->stok,
+                'status_kadaluarsa' => $b->kadaluarsa_info['label'],
+            ])->values();
+            $obat->makeHidden('batches');
             return $obat;
         })->values();
 

@@ -16,6 +16,7 @@ class DatabaseSeeder extends Seeder
             KategoriSeeder::class,
             ObatSeeder::class,
             TransaksiSeeder::class,
+            BatchDanOpnameSeeder::class,
         ]);
     }
 }

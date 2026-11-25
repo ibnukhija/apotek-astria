@@ -5,7 +5,7 @@
 @section('content')
 
 {{-- ================= JUDUL HALAMAN ================= --}}
-<div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4 shrink-0">
+<div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-3 shrink-0">
     <div>
         <h2 class="m-0 text-xl lg:text-2xl font-bold">Kelola Data Produk</h2>
         <span class="text-gray-text text-xs sm:text-sm">Pantau stok, kategori, dan harga obat</span>
@@ -46,55 +46,54 @@
 @php
     $aktifStok = strtolower((string) request('status_stok'));
     $aktifKad  = strtolower((string) request('status_kadaluarsa'));
+    $kartuObat = [
+        [
+            'status' => 'tersedia', 'label' => 'Total produk aktif', 'nilai' => $ringkasan['total'] ?? 0,
+            'sub' => ($ringkasan['kategori'] ?? 0) . ' kategori', 'subCls' => 'text-gray-text',
+            'aktifCls' => 'border-soft-teal ring-2 ring-soft-teal/20', 'hoverCls' => 'hover:border-soft-teal',
+            'ikonBg' => 'bg-[#E8F4F2]',
+            'svg' => '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2A9D8F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>',
+        ],
+        [
+            'status' => 'cukup', 'label' => 'Stok cukup', 'nilai' => $ringkasan['cukup'] ?? 0,
+            'sub' => 'aman', 'subCls' => 'text-green-700',
+            'aktifCls' => 'border-green-500 ring-2 ring-green-200', 'hoverCls' => 'hover:border-green-400',
+            'ikonBg' => 'bg-green-100',
+            'svg' => '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#15803D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></svg>',
+        ],
+        [
+            'status' => 'menipis', 'label' => 'Stok menipis', 'nilai' => $ringkasan['menipis'] ?? 0,
+            'sub' => 'perlu restok', 'subCls' => 'text-yellow-700',
+            'aktifCls' => 'border-amber-500 ring-2 ring-amber-200', 'hoverCls' => 'hover:border-amber-400',
+            'ikonBg' => 'bg-yellow-100',
+            'svg' => '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l10 18H2L12 3z"/><path d="M12 10v5M12 18v.5"/></svg>',
+        ],
+        [
+            'status' => 'hampir_habis', 'label' => 'Hampir habis', 'nilai' => $ringkasan['hampir_habis'] ?? 0,
+            'sub' => 'segera restok', 'subCls' => 'text-red-700',
+            'aktifCls' => 'border-red-500 ring-2 ring-red-200', 'hoverCls' => 'hover:border-red-400',
+            'ikonBg' => 'bg-red-100',
+            'svg' => '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#B91C1C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5v.5"/></svg>',
+        ],
+    ];
 @endphp
-<div class="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-4 shrink-0" id="ringkasanObatGrid">
-    <a href="{{ route('obat.index', array_filter(['q' => request('q'), 'kategori' => request('kategori'), 'status_stok' => 'tersedia'])) }}"
-       data-status-stok="tersedia" onclick="return pilihFilterRingkasan('tersedia')"
-       class="kartu-ringkasan bg-pure-white border {{ $aktifStok === 'tersedia' ? 'border-soft-teal ring-2 ring-soft-teal/20' : 'border-border-color hover:border-soft-teal' }} rounded-xl p-3 flex items-center gap-3 shadow-sm hover:shadow-md transition">
-        <div class="w-10 h-10 rounded-lg bg-[#E8F4F2] flex items-center justify-center shrink-0">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2A9D8F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>
-        </div>
-        <div class="min-w-0">
-            <div class="text-xs text-gray-text truncate">Total produk aktif</div>
-            <div class="leading-tight"><span class="text-xl lg:text-2xl font-bold">{{ $ringkasan['total'] ?? 0 }}</span> <span class="text-xs text-gray-text whitespace-nowrap">{{ $ringkasan['kategori'] ?? 0 }} kategori</span></div>
-        </div>
-    </a>
-
-    <a href="{{ route('obat.index', array_filter(['q' => request('q'), 'kategori' => request('kategori'), 'status_stok' => 'cukup'])) }}"
-       data-status-stok="cukup" onclick="return pilihFilterRingkasan('cukup')"
-       class="kartu-ringkasan bg-pure-white border {{ $aktifStok === 'cukup' ? 'border-green-500 ring-2 ring-green-200' : 'border-border-color hover:border-green-400' }} rounded-xl p-3 flex items-center gap-3 shadow-sm hover:shadow-md transition">
-        <div class="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center shrink-0">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#15803D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></svg>
-        </div>
-        <div class="min-w-0">
-            <div class="text-xs text-gray-text truncate">Stok cukup</div>
-            <div class="leading-tight"><span class="text-xl lg:text-2xl font-bold">{{ $ringkasan['cukup'] ?? 0 }}</span> <span class="text-xs text-green-700">aman</span></div>
-        </div>
-    </a>
-
-    <a href="{{ route('obat.index', array_filter(['q' => request('q'), 'kategori' => request('kategori'), 'status_stok' => 'menipis'])) }}"
-       data-status-stok="menipis" onclick="return pilihFilterRingkasan('menipis')"
-       class="kartu-ringkasan bg-pure-white border {{ $aktifStok === 'menipis' ? 'border-amber-500 ring-2 ring-amber-200' : 'border-border-color hover:border-amber-400' }} rounded-xl p-3 flex items-center gap-3 shadow-sm hover:shadow-md transition">
-        <div class="w-10 h-10 rounded-lg bg-yellow-100 flex items-center justify-center shrink-0">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l10 18H2L12 3z"/><path d="M12 10v5M12 18v.5"/></svg>
-        </div>
-        <div class="min-w-0">
-            <div class="text-xs text-gray-text truncate">Stok menipis</div>
-            <div class="leading-tight"><span class="text-xl lg:text-2xl font-bold">{{ $ringkasan['menipis'] ?? 0 }}</span> <span class="text-xs text-yellow-700 whitespace-nowrap">perlu restok</span></div>
-        </div>
-    </a>
-
-    <a href="{{ route('obat.index', array_filter(['q' => request('q'), 'kategori' => request('kategori'), 'status_stok' => 'hampir_habis'])) }}"
-       data-status-stok="hampir_habis" onclick="return pilihFilterRingkasan('hampir_habis')"
-       class="kartu-ringkasan bg-pure-white border {{ $aktifStok === 'hampir_habis' ? 'border-red-500 ring-2 ring-red-200' : 'border-border-color hover:border-red-400' }} rounded-xl p-3 flex items-center gap-3 shadow-sm hover:shadow-md transition">
-        <div class="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center shrink-0">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#B91C1C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5v.5"/></svg>
-        </div>
-        <div class="min-w-0">
-            <div class="text-xs text-gray-text truncate">Hampir habis</div>
-            <div class="leading-tight"><span class="text-xl lg:text-2xl font-bold">{{ $ringkasan['hampir_habis'] ?? 0 }}</span> <span class="text-xs text-red-700 whitespace-nowrap">segera restok</span></div>
-        </div>
-    </a>
+<div class="grid grid-cols-2 xl:grid-cols-4 gap-2.5 mb-3 shrink-0" id="ringkasanObatGrid">
+    @foreach ($kartuObat as $k)
+        <a href="{{ route('obat.index', array_filter(['q' => request('q'), 'kategori' => request('kategori'), 'status_stok' => $k['status']])) }}"
+           data-status-stok="{{ $k['status'] }}" onclick="return pilihFilterRingkasan('{{ $k['status'] }}')"
+           class="kartu-ringkasan bg-pure-white border {{ $aktifStok === $k['status'] ? $k['aktifCls'] : 'border-border-color ' . $k['hoverCls'] }} rounded-xl px-3 py-2 flex items-center gap-2.5 shadow-sm hover:shadow-md transition">
+            <div class="w-8 h-8 rounded-lg {{ $k['ikonBg'] }} flex items-center justify-center shrink-0">
+                {!! $k['svg'] !!}
+            </div>
+            <div class="min-w-0">
+                <div class="text-[11px] text-gray-text font-semibold truncate">{{ $k['label'] }}</div>
+                <div class="mt-0.5 flex items-baseline gap-1.5 min-w-0 leading-tight">
+                    <span class="text-lg font-bold shrink-0">{{ $k['nilai'] }}</span>
+                    <span class="text-[11px] {{ $k['subCls'] }} truncate">{{ $k['sub'] }}</span>
+                </div>
+            </div>
+        </a>
+    @endforeach
 </div>
 
 {{-- ================= AREA KONTEN UTAMA (TABEL & SEARCH) ================= --}}

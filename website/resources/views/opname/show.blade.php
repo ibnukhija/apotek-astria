@@ -123,10 +123,14 @@
                             <input type="number" min="0" value="{{ $d->jml_hilang }}" @disabled($readonly)
                                 class="in-hilang w-16 py-1.5 px-2 border border-border-color rounded-lg text-sm outline-none focus:border-soft-teal disabled:bg-gray-100">
                         </td>
-                        <td class="py-2 px-3">
-                            <input type="text" maxlength="255" value="{{ $d->catatan }}" @disabled($readonly)
-                                placeholder="Wajib bila selisih lebih"
-                                class="in-catatan w-44 py-1.5 px-2 border border-border-color rounded-lg text-sm outline-none focus:border-soft-teal">
+                        <td class="py-2 px-3 min-w-[220px] max-w-[340px]">
+                            @if ($readonly)
+                                <div class="text-xs sm:text-[13px] text-dark-slate whitespace-normal break-words leading-snug">{{ filled($d->catatan) ? $d->catatan : '-' }}</div>
+                            @else
+                                <textarea maxlength="255" rows="2"
+                                    placeholder="Wajib bila selisih lebih"
+                                    class="in-catatan w-56 sm:w-64 py-1.5 px-2 border border-border-color rounded-lg text-xs sm:text-sm outline-none focus:border-soft-teal resize-y leading-snug">{{ $d->catatan }}</textarea>
+                            @endif
                         </td>
                         <td class="status py-2 px-3 text-[11px] text-gray-text whitespace-nowrap"></td>
                     </tr>

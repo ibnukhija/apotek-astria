@@ -3,7 +3,7 @@
 @section('title', 'Kondisi Obat & Stok Opname - Apotek Astria 2')
 
 @section('content')
-<div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-4 shrink-0">
+<div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-3 shrink-0">
     <div>
         <h2 class="m-0 text-xl lg:text-2xl font-bold">Kondisi Obat &amp; Stok Opname</h2>
         <span class="text-gray-text text-xs sm:text-sm">Pencatatan obat rusak, retur/pemusnahan kadaluarsa, dan cek stok fisik</span>
@@ -32,27 +32,24 @@
 @endif
 
 {{-- 4 Kartu Ringkasan Kondisi Stok --}}
-<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4 shrink-0">
-    <div class="bg-pure-white border border-border-color rounded-xl p-3.5 shadow-sm">
-        <div class="text-xs text-gray-text font-semibold">Stok Hampir Habis (&lt; 10)</div>
-        <div class="text-2xl font-bold text-amber-600 mt-1">{{ $ringkasan['stok_menipis'] }}</div>
-        <div class="text-[11px] text-gray-text">Produk segera restock</div>
-    </div>
-    <div class="bg-pure-white border border-border-color rounded-xl p-3.5 shadow-sm">
-        <div class="text-xs text-gray-text font-semibold">Hampir Expired (&le; 7 hr)</div>
-        <div class="text-2xl font-bold text-yellow-700 mt-1">{{ $ringkasan['hampir_expired'] }}</div>
-        <div class="text-[11px] text-gray-text">Masih bisa retur ke supplier</div>
-    </div>
-    <div class="bg-pure-white border border-border-color rounded-xl p-3.5 shadow-sm">
-        <div class="text-xs text-gray-text font-semibold">Sudah Expired</div>
-        <div class="text-2xl font-bold text-red-600 mt-1">{{ $ringkasan['sudah_expired'] }}</div>
-        <div class="text-[11px] text-gray-text">Harus segera dimusnahkan</div>
-    </div>
-    <div class="bg-pure-white border border-border-color rounded-xl p-3.5 shadow-sm">
-        <div class="text-xs text-gray-text font-semibold">Total Unit Rusak</div>
-        <div class="text-2xl font-bold text-muted-coral mt-1">{{ $ringkasan['unit_rusak'] }}</div>
-        <div class="text-[11px] text-gray-text">Tercatat pada riwayat rusak</div>
-    </div>
+@php
+    $kartuKondisi = [
+        ['label' => 'Stok Hampir Habis (< 10)', 'nilai' => $ringkasan['stok_menipis'], 'warna' => 'text-amber-600', 'sub' => 'Produk segera restock'],
+        ['label' => 'Hampir Expired (≤ 7 hr)', 'nilai' => $ringkasan['hampir_expired'], 'warna' => 'text-yellow-700', 'sub' => 'Masih bisa retur ke supplier'],
+        ['label' => 'Sudah Expired', 'nilai' => $ringkasan['sudah_expired'], 'warna' => 'text-red-600', 'sub' => 'Harus segera dimusnahkan'],
+        ['label' => 'Total Unit Rusak', 'nilai' => $ringkasan['unit_rusak'], 'warna' => 'text-muted-coral', 'sub' => 'Tercatat pada riwayat rusak'],
+    ];
+@endphp
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-2.5 mb-3 shrink-0">
+    @foreach ($kartuKondisi as $kartu)
+        <div class="bg-pure-white border border-border-color rounded-xl px-3 py-2 shadow-sm">
+            <div class="text-[11px] text-gray-text font-semibold truncate">{{ $kartu['label'] }}</div>
+            <div class="mt-0.5 flex items-baseline gap-1.5 min-w-0">
+                <span class="text-lg font-bold {{ $kartu['warna'] }} leading-tight shrink-0">{{ $kartu['nilai'] }}</span>
+                <span class="text-[11px] text-gray-text truncate" title="{{ $kartu['sub'] }}">{{ $kartu['sub'] }}</span>
+            </div>
+        </div>
+    @endforeach
 </div>
 
 {{-- Panel Tabel Riwayat Kondisi & Opname --}}

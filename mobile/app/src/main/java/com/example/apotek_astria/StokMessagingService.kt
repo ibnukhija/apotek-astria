@@ -27,6 +27,7 @@ class StokMessagingService : FirebaseMessagingService() {
 
         val aktif = when (jenis) {
             "kadaluarsa" -> pref.notifKadaluarsa
+            "stok_opname" -> pref.notifOpname
             "obat_rusak" -> pref.notifRusak
             else -> pref.notifAktif
         }
@@ -34,11 +35,12 @@ class StokMessagingService : FirebaseMessagingService() {
 
         val channelId = when (jenis) {
             "kadaluarsa" -> CHANNEL_KADALUARSA
-            "obat_rusak" -> CHANNEL_RUSAK
+            "obat_rusak", "stok_opname" -> CHANNEL_RUSAK
             else -> CHANNEL_STOK
         }
         val defaultJudul = when (jenis) {
             "kadaluarsa" -> "Peringatan Kadaluarsa"
+            "stok_opname" -> "Hasil Stok Opname Bulanan"
             "obat_rusak" -> "Laporan Obat Rusak"
             else -> "Stok Menipis"
         }

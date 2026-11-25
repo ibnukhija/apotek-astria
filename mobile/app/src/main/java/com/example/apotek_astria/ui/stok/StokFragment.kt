@@ -1,5 +1,6 @@
 package com.example.apotek_astria.ui.stok
 
+import android.content.Intent
 import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
@@ -22,9 +23,11 @@ import com.android.volley.Request
 import com.android.volley.toolbox.Volley
 import com.example.apotek_astria.R
 import com.example.apotek_astria.databinding.FragmentStokBinding
+import com.example.apotek_astria.model.ObatBatchModel
 import com.example.apotek_astria.model.ObatModel
 import com.example.apotek_astria.network.ApiConfig
 import com.example.apotek_astria.network.ApiRequest
+import com.example.apotek_astria.ui.opname.StokOpnameActivity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -88,6 +91,10 @@ class StokFragment : Fragment() {
             perbaruiTampilanFilterKhusus()
             currentPage = 1
             muatObat()
+        }
+
+        binding.tvBukaOpnameStok.setOnClickListener {
+            startActivity(Intent(requireContext(), StokOpnameActivity::class.java))
         }
 
         // ListView
@@ -234,6 +241,22 @@ class StokFragment : Fragment() {
                 for (i in 0 until arr.length()) {
                     val o = arr.getJSONObject(i)
                     val rawExp = if (o.isNull("tgl_kadaluarsa")) "" else o.optString("tgl_kadaluarsa", "")
+                    val batchList = mutableListOf<ObatBatchModel>()
+                    val batchArr = o.optJSONArray("daftar_batch")
+                    if (batchArr != null) {
+                        for (j in 0 until batchArr.length()) {
+                            val b = batchArr.getJSONObject(j)
+                            batchList.add(
+                                ObatBatchModel(
+                                    kodeBatch = b.optString("kode_batch", "-"),
+                                    supplier = if (b.isNull("supplier")) "-" else b.optString("supplier", "-"),
+                                    tglKadaluarsa = if (b.isNull("tgl_kadaluarsa")) "" else b.optString("tgl_kadaluarsa", ""),
+                                    stok = b.optInt("stok", 0),
+                                    statusKadaluarsa = b.optString("status_kadaluarsa", "Belum diatur")
+                                )
+                            )
+                        }
+                    }
                     temporaryList.add(
                         ObatModel(
                             id = o.optInt("id"),
@@ -251,7 +274,8 @@ class StokFragment : Fragment() {
                             tglKadaluarsa = rawExp,
                             statusKadaluarsa = o.optString("status_kadaluarsa", "Belum diatur"),
                             totalRusak = o.optInt("total_rusak", 0),
-                            opnameTerakhir = o.optString("opname_terakhir", "")
+                            opnameTerakhir = o.optString("opname_terakhir", ""),
+                            batches = batchList
                         )
                     )
                 }
@@ -341,12 +365,19 @@ class StokFragment : Fragment() {
         }
         val infoRusak = if (obat.totalRusak > 0) "\nUnit Rusak : ${obat.totalRusak}" else ""
         val infoOpname = if (obat.opnameTerakhir.isNotBlank()) "\nStok Opname: ${obat.opnameTerakhir}" else ""
+        val infoBatch = if (obat.batches.isNotEmpty()) {
+            val barisBatch = obat.batches.joinToString("\n") { b ->
+                val expB = ApiConfig.formatTanggal(b.tglKadaluarsa).ifBlank { "-" }
+                "  • ${b.kodeBatch}: ${b.stok} ${obat.satuan} • Exp $expB (${b.statusKadaluarsa})"
+            }
+            "\nBatch Aktif:\n$barisBatch"
+        } else ""
 
         val pesan = "Kode       : ${obat.kodeObat}\n" +
                 "Kategori   : ${obat.kategori}\n" +
                 "Satuan     : ${obat.satuan}\n" +
                 "Stok       : ${obat.stok} (${obat.statusStok})\n" +
-                "Kadaluarsa : $infoExp$saranExp$infoRusak$infoOpname\n" +
+                "Kadaluarsa : $infoExp$saranExp$infoRusak$infoOpname$infoBatch\n" +
                 "Status     : ${if (obat.status == "tersedia") "Tersedia" else "Tidak tersedia"}\n" +
                 "Harga      : Rp ${rupiah.format(obat.hargaJual)}"
         AlertDialog.Builder(requireContext())

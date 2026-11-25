@@ -739,6 +739,7 @@ class ApiMobileTest extends TestCase
                     'aktif'            => true,
                     'notif_kadaluarsa' => true,
                     'notif_rusak'      => true,
+                    'notif_opname'     => true,
                     'batas_stok'       => 10,
                     'jam_ringkasan'    => null,
                 ],
@@ -748,6 +749,7 @@ class ApiMobileTest extends TestCase
             'aktif'            => false,
             'notif_kadaluarsa' => false,
             'notif_rusak'      => true,
+            'notif_opname'     => false,
             'batas_stok'       => 15,
             'jam_ringkasan'    => '09:30',
             'fcm_token'        => 'token-fcm-contoh',
@@ -758,6 +760,7 @@ class ApiMobileTest extends TestCase
             'aktif'            => 0,
             'notif_kadaluarsa' => 0,
             'notif_rusak'      => 1,
+            'notif_opname'     => 0,
             'batas_stok'       => 15,
             'jam_ringkasan'    => '09:30',
             'fcm_token'        => 'token-fcm-contoh',
@@ -771,6 +774,7 @@ class ApiMobileTest extends TestCase
                     'aktif'            => false,
                     'notif_kadaluarsa' => false,
                     'notif_rusak'      => true,
+                    'notif_opname'     => false,
                     'batas_stok'       => 15,
                     'jam_ringkasan'    => '09:30',
                 ],
@@ -1251,5 +1255,130 @@ class ApiMobileTest extends TestCase
         $drillRusak = $this->getJson('/api/stok?status_rusak=1')->assertOk()->json('data');
         $this->assertCount(1, $drillRusak);
         $this->assertSame($expAktif->kode_obat, $drillRusak[0]['kode_obat']);
+    }
+
+    public function test_api_stok_opname_dan_daftar_batch_untuk_owner(): void
+    {
+        $karyawan = User::create([
+            'nama'     => 'Kasir Opname API',
+            'username' => 'kasir_opn_api',
+            'password' => Hash::make('rahasia123'),
+            'role'     => 'karyawan',
+            'status'   => 'aktif',
+        ]);
+
+        // Endpoint opname menolak token karyawan & tamu
+        $this->getJson('/api/stok-opname')->assertStatus(401);
+        Sanctum::actingAs($karyawan);
+        $this->getJson('/api/stok-opname')->assertStatus(403);
+
+        $this->loginSebagaiOwner();
+
+        $obat = $this->buatObat([
+            'kode_obat' => 'BTH-001',
+            'nama_obat' => 'Ambroxol Batch',
+            'stok'      => 0,
+        ]);
+
+        // Tambah 2 batch (tgl lebih jauh dulu agar teruji urutan FEFO di API stok)
+        \App\Services\BatchStokService::terima($obat->id, [
+            'kode_batch'     => 'B-JAUH',
+            'supplier'       => 'PT Jauh',
+            'jumlah'         => 12,
+            'tgl_kadaluarsa' => now()->addMonths(8)->toDateString(),
+        ]);
+        \App\Services\BatchStokService::terima($obat->id, [
+            'kode_batch'     => 'B-DEKAT',
+            'supplier'       => 'PT Dekat',
+            'jumlah'         => 8,
+            'tgl_kadaluarsa' => now()->addMonths(2)->toDateString(),
+        ]);
+
+        // Verifikasi urutan FEFO batch di /api/stok
+        $stokAwal = $this->getJson('/api/stok?search=BTH-001')->assertOk()->json('data.0');
+        $this->assertCount(2, $stokAwal['daftar_batch']);
+        $this->assertSame('B-DEKAT', $stokAwal['daftar_batch'][0]['kode_batch']);
+        $this->assertSame('B-JAUH', $stokAwal['daftar_batch'][1]['kode_batch']);
+        $this->assertSame('', $stokAwal['opname_terakhir']);
+
+        // Jalankan sesi stok opname bulanan (sistem 20, fisik 17, rusak 1, hilang 2)
+        $opname = \App\Services\StokOpnameService::mulai($karyawan->id);
+        $detail = $opname->details()->where('obat_id', $obat->id)->firstOrFail();
+        \App\Services\StokOpnameService::simpanDetail($opname, $detail, [
+            'stok_fisik' => 17,
+            'jml_rusak'  => 1,
+            'jml_hilang' => 2,
+            'catatan'    => 'Kemasan penyok dan kurang rak',
+        ]);
+        \App\Services\StokOpnameService::finalisasi($opname, $karyawan->id);
+
+        // /api/dashboard harus memuat ringkasan opname_terakhir
+        $this->getJson('/api/dashboard')
+            ->assertOk()
+            ->assertJsonPath('data.opname_terakhir.kode', $opname->kode)
+            ->assertJsonPath('data.opname_terakhir.ringkasan.obat_selisih', 1)
+            ->assertJsonPath('data.opname_terakhir.ringkasan.unit_kurang', 3)
+            ->assertJsonPath('data.opname_terakhir.ringkasan.rusak', 1)
+            ->assertJsonPath('data.opname_terakhir.ringkasan.hilang', 2);
+
+        // /api/stok harus memperbarui opname_terakhir dari StokOpnameDetail
+        $stokSesudah = $this->getJson('/api/stok?search=BTH-001')->assertOk()->json('data.0');
+        $this->assertStringContainsString('(Fisik: 17)', $stokSesudah['opname_terakhir']);
+
+        // /api/stok-opname dan /api/stok-opname/{id}
+        $this->getJson('/api/stok-opname')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.kode', $opname->kode)
+            ->assertJsonPath('data.0.petugas', 'Kasir Opname API');
+
+        $this->getJson("/api/stok-opname/{$opname->id}")
+            ->assertOk()
+            ->assertJsonPath('data.kode', $opname->kode)
+            ->assertJsonPath('data.ringkasan.obat_selisih', 1)
+            ->assertJsonPath('data.ringkasan.unit_kurang', 3)
+            ->assertJsonPath('data.selisih.0.kode_obat', 'BTH-001')
+            ->assertJsonPath('data.selisih.0.selisih', -3)
+            ->assertJsonPath('data.selisih.0.state', 'kurang');
+    }
+
+    public function test_notifikasi_hasil_opname_mengikuti_preferensi_notif_opname(): void
+    {
+        $owner = $this->loginSebagaiOwner();
+
+        $terkirim = [];
+        $messagingMock = \Mockery::mock();
+        $messagingMock->shouldReceive('send')
+            ->andReturnUsing(function (CloudMessage $pesan) use (&$terkirim) {
+                $terkirim[] = $pesan->jsonSerialize();
+                return [];
+            });
+        Firebase::shouldReceive('messaging')->andReturn($messagingMock);
+
+        $obat = $this->buatObat(['kode_obat' => 'OPN-NTF', 'stok' => 10]);
+        $opname = \App\Services\StokOpnameService::mulai($owner->id);
+        $detail = $opname->details()->where('obat_id', $obat->id)->firstOrFail();
+        \App\Services\StokOpnameService::simpanDetail($opname, $detail, ['stok_fisik' => 10]);
+        $opname->update(['status' => \App\Models\StokOpname::STATUS_FINAL, 'finalized_at' => now()]);
+
+        $pref = PengaturanNotifikasi::create([
+            'user_id'          => $owner->id,
+            'fcm_token'        => 'fcm-token-opname',
+            'aktif'            => false,
+            'notif_kadaluarsa' => false,
+            'notif_rusak'      => false,
+            'notif_opname'     => true,
+        ]);
+
+        NotifikasiStokService::kirimHasilOpname($opname->fresh('details'));
+        $this->assertCount(1, $terkirim);
+        $this->assertSame('stok_opname', $terkirim[0]['data']['jenis']);
+        $this->assertSame('opname', $terkirim[0]['data']['tujuan']);
+
+        // Matikan notif_opname -> tidak mengirim push opname lagi
+        $terkirim = [];
+        $pref->update(['notif_opname' => false]);
+        NotifikasiStokService::kirimHasilOpname($opname->fresh('details'));
+        $this->assertCount(0, $terkirim);
     }
 }

@@ -15,6 +15,7 @@ data class PengaturanNotifikasi(
     val notifAktif: Boolean = true,
     val notifKadaluarsa: Boolean = true,
     val notifRusak: Boolean = true,
+    val notifOpname: Boolean = true,
     val batasStok: Int = 10,
     val jam: String = "08:00"
 )
@@ -45,6 +46,7 @@ object PengaturanNotifikasiRepo {
                         notifAktif = data.optBoolean("aktif", lokal.notifAktif),
                         notifKadaluarsa = data.optBoolean("notif_kadaluarsa", lokal.notifKadaluarsa),
                         notifRusak = data.optBoolean("notif_rusak", lokal.notifRusak),
+                        notifOpname = data.optBoolean("notif_opname", lokal.notifOpname),
                         batasStok = data.optInt("batas_stok", lokal.batasStok),
                         jam = jamServer.ifBlank { lokal.jam }
                     )
@@ -81,6 +83,7 @@ object PengaturanNotifikasiRepo {
                     notifAktif = d.getBoolean("notif_aktif") ?: lokal.notifAktif,
                     notifKadaluarsa = d.getBoolean("notif_kadaluarsa") ?: lokal.notifKadaluarsa,
                     notifRusak = d.getBoolean("notif_rusak") ?: lokal.notifRusak,
+                    notifOpname = d.getBoolean("notif_opname") ?: lokal.notifOpname,
                     batasStok = d.getLong("batas_stok")?.toInt() ?: lokal.batasStok,
                     jam = d.getString("jam_notifikasi") ?: lokal.jam
                 )
@@ -108,6 +111,7 @@ object PengaturanNotifikasiRepo {
                 "notif_aktif" to p.notifAktif,
                 "notif_kadaluarsa" to p.notifKadaluarsa,
                 "notif_rusak" to p.notifRusak,
+                "notif_opname" to p.notifOpname,
                 "batas_stok" to p.batasStok,
                 "jam_notifikasi" to p.jam,
                 "updated_at" to Timestamp.now()
@@ -125,6 +129,7 @@ object PengaturanNotifikasiRepo {
                 .put("aktif", p.notifAktif)
                 .put("notif_kadaluarsa", p.notifKadaluarsa)
                 .put("notif_rusak", p.notifRusak)
+                .put("notif_opname", p.notifOpname)
                 .put("batas_stok", p.batasStok)
                 .put("jam_ringkasan", p.jam)
             if (!fcmToken.isNullOrBlank()) {
@@ -207,6 +212,7 @@ object PengaturanNotifikasiRepo {
             notifAktif = p.getBoolean("NOTIF_STOK", true),
             notifKadaluarsa = p.getBoolean("NOTIF_KADALUARSA", true),
             notifRusak = p.getBoolean("NOTIF_RUSAK", true),
+            notifOpname = p.getBoolean("NOTIF_OPNAME", true),
             batasStok = p.getInt("BATAS_STOK", 10),
             jam = p.getString("JAM_NOTIF", "08:00") ?: "08:00"
         )
@@ -217,6 +223,7 @@ object PengaturanNotifikasiRepo {
             .putBoolean("NOTIF_STOK", p.notifAktif)
             .putBoolean("NOTIF_KADALUARSA", p.notifKadaluarsa)
             .putBoolean("NOTIF_RUSAK", p.notifRusak)
+            .putBoolean("NOTIF_OPNAME", p.notifOpname)
             .putInt("BATAS_STOK", p.batasStok)
             .putString("JAM_NOTIF", p.jam)
             .apply()

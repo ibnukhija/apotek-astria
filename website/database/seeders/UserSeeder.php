@@ -11,19 +11,25 @@ class UserSeeder extends Seeder
     public function run(): void
     {
         // Akun Karyawan/Kasir
-        User::create([
-            'nama' => 'Karyawan1',
-            'username' => 'kasir1',
-            'password' => Hash::make('kasir123'), // Password wajib di-hash
-            'role' => 'karyawan'
-        ]);
+        User::firstOrCreate(
+            ['username' => 'kasir1'],
+            [
+                'nama'     => 'Karyawan1',
+                'password' => Hash::make('kasir123'), // Password wajib di-hash
+                'role'     => 'karyawan',
+                'status'   => 'aktif',
+            ]
+        );
 
         // Akun Owner
-        User::create([
-            'nama' => 'Owner Apotek',
-            'username' => 'owner',
-            'password' => Hash::make('owner123'),
-            'role' => 'owner'
-        ]);
+        User::firstOrCreate(
+            ['username' => 'owner'],
+            [
+                'nama'     => 'Owner Apotek',
+                'password' => Hash::make('owner123'),
+                'role'     => 'owner',
+                'status'   => 'aktif',
+            ]
+        );
     }
 }
